@@ -1,0 +1,33 @@
+# --- Privacy -------------------------------------------------------------
+# Real volunteer data (form answers with e-mail addresses, schedules with
+# names) must never end up on GitHub. Keep it local only.
+ReferenceDocuments/
+*.ods
+*.xlsx
+*.csv
+# Small made-up example files used by the tests are allowed:
+!tests/data/**
+
+# --- Python --------------------------------------------------------------
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+.pytest_cache/
+.coverage
+htmlcov/
+*.egg-info/
+build/
+dist/
+
+# --- Editors and operating systems ----------------------------------------
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# LibreOffice / Excel lock files while a sheet is open
+.~lock.*#
+~$*
