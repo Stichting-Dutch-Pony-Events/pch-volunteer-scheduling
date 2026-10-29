@@ -42,11 +42,18 @@ the code**. Explain, keep code plain and well commented, no clever tricks.
 
 ## Privacy (important)
 
-The repo is on GitHub (`Stichting-Dutch-Pony-Events/pch-volunteer-scheduling`, GPL-3.0),
-likely public. **No real volunteer data in git**: no form answers (they contain e-mail
+The repo is on GitHub (`Stichting-Dutch-Pony-Events/pch-volunteer-scheduling`, GPL-3.0).
+It is currently private, but **always treat it as public**. The user asked to be warned
+whenever they are (or might be) putting privacy-sensitive data into the repo: check
+`git status` / new files when relevant, and speak up rather than assume it's fine.
+
+**No real volunteer data in git**: no form answers (they contain e-mail
 addresses and real names), no schedules with nicknames, no notes about specific people.
 `.gitignore` excludes `ReferenceDocuments/` and all `.ods`, `.xlsx`, `.csv` (except
 `tests/data/**`). Tests use small **made-up** examples only.
+
+Fictional nicknames for tests and examples (never use real nicknames):
+**Mock Mane, Testy Hooves, Dummy Dash, Sample Sparkle, Placeholder Pip.**
 
 ## Technology
 
@@ -129,4 +136,38 @@ Cleanup, Post-con cleanup and a few Friday-only posts.
 - [ ] Write output Excel (overview, per post, per volunteer; show changes vs previous run)
 - [ ] Maybe: Streamlit UI
 
-Current position: hello world passes; next is proposing the Step 1 tests.
+Current position: hello world passes and is committed. Step 1 has been proposed (below)
+and the user is now trying to write a Step 1 test themselves. Review their test kindly,
+then continue with the proposal. Two choices were still awaiting confirmation: skills
+stored inside each Volunteer, and English names in the code.
+
+## Step 1 proposal (agreed in outline, not yet written)
+
+Minimal scheduler, no Excel, tiny made-up data built in the tests.
+
+`scheduler/model.py`, plain dataclasses:
+```python
+Volunteer(name="Mock Mane", skills={"Tickets": 3, "Infobooth": 1})
+Post(name="Tickets")
+Problem(volunteers=[...], posts=[...], demand={("Tickets", 0): 2, ...})
+Schedule(assignments={("Mock Mane", "Tickets", 0), ...})
+#   Schedule.people_at(post, block) and Schedule.posts_of(volunteer, block)
+```
+Time blocks are plain integers (each = 15 min) for now. Demand maps (post, block) to
+people needed; missing = closed.
+
+`scheduler/solver.py`: `solve(problem) -> Schedule` and exception `NoScheduleFound`.
+One boolean variable per (volunteer, post, block) where the volunteer has a skill score
+(no variable at all for unqualified combinations).
+
+Tests in `tests/test_solver_basics.py`:
+1. test_single_volunteer_fills_single_post
+2. test_post_gets_exactly_the_number_needed (needs 2, 3 qualified -> exactly 2)
+3. test_nobody_works_a_closed_post
+4. test_volunteer_without_skill_is_never_scheduled
+5. test_nobody_is_in_two_places_at_once
+6. test_too_few_volunteers_raises_no_schedule_found
+7. test_nobody_qualified_raises_no_schedule_found
+
+Plan: write the test file plus empty stubs in model.py/solver.py (so tests fail on
+behaviour, not on imports), user runs them (red), then implement (green).

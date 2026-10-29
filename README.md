@@ -54,9 +54,11 @@ before (Saturday 01:00 is the Saturday night).
 pch-volunteer-scheduling/
 ├── ReferenceDocuments/      real data, NOT in git (see Privacy)
 ├── scheduler/
+│   ├── hello.py             setup check (Python, pytest and OR-Tools work)
 │   ├── model.py             data classes
 │   └── solver.py            builds and solves the schedule
 ├── tests/
+│   ├── test_hello.py
 │   └── test_solver_basics.py
 ├── requirements.txt
 └── README.md
@@ -76,7 +78,7 @@ new behaviour, see them fail, then write just enough code to make them pass.
 
 ### Setup (Windows)
 
-Requires Python 3.10 or newer.
+Requires Python 3.14 (OR-Tools has no wheels for 3.15 yet).
 
 ```powershell
 cd C:\repos\pch-volunteer-scheduling
