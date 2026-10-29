@@ -31,6 +31,3 @@ desktop.ini
 # LibreOffice / Excel lock files while a sheet is open
 .~lock.*#
 ~$*
-
-# --- Local notes for Claude sessions ----------------------------------------
-CLAUDE.md
