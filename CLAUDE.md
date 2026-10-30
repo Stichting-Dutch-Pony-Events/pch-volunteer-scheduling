@@ -191,8 +191,8 @@ come after, the user can fix details by hand meanwhile):
         `time_of` uses `day_of` for its range check. Tests in test_time_blocks.py use
         `@pytest.mark.parametrize` for the invalid inputs (agreed: fine, each case is
         reported as its own test; a for-loop inside one test is not).
-  - [ ] rules.py: rename `_blocks_of_day` to e.g. `_blocks_of_event`; replace `// 15`
-        with `MINUTES_PER_BLOCK` (refactor, tests stay green)
+  - [x] rules.py: renamed `_blocks_of_day` to `_blocks_of_event`; `// 15` replaced
+        with `MINUTES_PER_BLOCK` (refactor, tests stayed green)
   - [ ] one or two solver tests across a day boundary as guards (e.g. only Mock Mane,
         Tickets Saturday night 03:00 to Sunday 06:45 = 16 blocks -> NoScheduleFound)
 - [ ] Availability per day (e.g. a volunteer only there Friday and Sunday)
@@ -236,12 +236,11 @@ After the minimal viable scheduler:
 Current position: Steps 1 and 2 are done. Hard rules in rules.py: demand, no double
 booking, maximum stretch (sliding window), minimum break (forbid "work, short gap,
 work"), minimum stretch (forbid "free, short run, free", with an escape variable per
-matching short piece of demand). Helpers: `_blocks_of_day`, `_variables_of`,
+matching short piece of demand). Helpers: `_blocks_of_event`, `_variables_of`,
 `_short_pieces` in rules.py; `runs_of_consecutive_blocks` in model.py (shared, tested).
-Now working on **several days (option A)**: constants, `Settings.days` and the time
-helpers `block_of`, `time_of`, `day_of` are done and tested; all 49 tests green.
-Next: rename `_blocks_of_day` and replace `// 15` with `MINUTES_PER_BLOCK` in
-rules.py, then a cross-day solver test (see roadmap).
+Now working on **several days (option A)**: constants, `Settings.days`, the time
+helpers `block_of`, `time_of`, `day_of`, and the rules.py rename are done; all 49 tests
+green. Next: a cross-day solver test as a guard (see roadmap).
 Claude reviews and explains; only changes code when asked.
 
 ## Step 2 plan: work stretches and breaks

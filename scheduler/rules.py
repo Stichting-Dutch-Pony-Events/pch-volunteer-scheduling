@@ -6,7 +6,7 @@ same arguments: the model, the problem, and the works variables from solver.py
 """
 from ortools.sat.python import cp_model
 
-from scheduler.model import Problem, runs_of_consecutive_blocks
+from scheduler.model import MINUTES_PER_BLOCK, Problem, runs_of_consecutive_blocks
 
 
 def add_demand_rule(model: cp_model.CpModel, problem: Problem, works: dict):
@@ -24,7 +24,7 @@ def add_demand_rule(model: cp_model.CpModel, problem: Problem, works: dict):
 
 def add_no_double_booking_rule(model: cp_model.CpModel, problem: Problem, works: dict):
     """Hard rule: no volunteer works more than one post in the same block."""
-    for block in _blocks_of_day(problem):
+    for block in _blocks_of_event(problem):
         for volunteer in problem.volunteers:
             # Collect the variables of every post this volunteer could work in this block.
             posts_here = _variables_of(works, volunteer.name, block, block + 1)
@@ -36,10 +36,10 @@ def add_no_double_booking_rule(model: cp_model.CpModel, problem: Problem, works:
 
 def add_maximum_stretch_rule(model: cp_model.CpModel, problem: Problem, works: dict):
     """Hard rule: no volunteer works longer than the maximum number of blocks in a row."""
-    max_number_of_blocks = problem.settings.max_stretch_minutes // 15
+    max_number_of_blocks = problem.settings.max_stretch_minutes // MINUTES_PER_BLOCK
 
     for volunteer in problem.volunteers:
-        for window_start in _blocks_of_day(problem):
+        for window_start in _blocks_of_event(problem):
             # Collect this volunteer's variables (any post) inside the moving window.
             posts_in_window = _variables_of(works, volunteer.name, window_start,
                                             window_start + max_number_of_blocks + 1)
@@ -49,12 +49,12 @@ def add_maximum_stretch_rule(model: cp_model.CpModel, problem: Problem, works: d
 
 def add_minimum_break_rule(model: cp_model.CpModel, problem: Problem, works: dict):
     """Hard rule: no volunteer has a break shorter than the minimum break."""
-    min_break_blocks = problem.settings.min_break_minutes // 15
+    min_break_blocks = problem.settings.min_break_minutes // MINUTES_PER_BLOCK
     if min_break_blocks <= 1:
         return
 
     for volunteer in problem.volunteers:
-        for block in _blocks_of_day(problem):
+        for block in _blocks_of_event(problem):
             for gap_length in range(1, min_break_blocks):
                 # We look at a gap in blocks block + 1 .. block_after_gap - 1.
                 block_after_gap = block + gap_length + 1
@@ -78,14 +78,14 @@ def add_minimum_stretch_rule(model: cp_model.CpModel, problem: Problem, works: d
     Exception: a shorter stretch is allowed if it is exactly one short piece of demand
     (see _short_pieces), worked entirely at that piece's post.
     """
-    min_stretch_blocks = problem.settings.min_stretch_minutes // 15
+    min_stretch_blocks = problem.settings.min_stretch_minutes // MINUTES_PER_BLOCK
     if min_stretch_blocks <= 1:
         return
 
     short_pieces = _short_pieces(problem)  # worked out once, used for every volunteer
 
     for volunteer in problem.volunteers:
-        for block in _blocks_of_day(problem):
+        for block in _blocks_of_event(problem):
             for run_length in range(1, min_stretch_blocks):
                 # We look at a run of work in blocks block .. block_after_run - 1.
                 block_after_run = block + run_length
@@ -132,10 +132,12 @@ def _blocks_in_demand(problem: Problem):
     return blocks
 
 
-def _blocks_of_day(problem: Problem) -> range:
+def _blocks_of_event(problem: Problem) -> range:
     """All blocks from the first to the last block in the demand, in order.
 
-    Returns an empty range when there is no demand, so loops over it simply don't run.
+    This spans the whole event, across days and nights: night blocks without demand
+    have no variables, so the rules simply skip them. Returns an empty range when there
+    is no demand, so loops over it simply don't run.
     """
     blocks = _blocks_in_demand(problem)
     if len(blocks) == 0:
@@ -166,7 +168,7 @@ def _short_pieces(problem: Problem) -> set[tuple[str, int, int]]:
     piece. Example: Tickets needs 2, 2, 1, 1, 1, 1 in blocks 0-5. Layer 2 is blocks 0-1,
     so ("Tickets", 0, 2) is a short piece.
     """
-    min_blocks = problem.settings.min_stretch_minutes // 15
+    min_blocks = problem.settings.min_stretch_minutes // MINUTES_PER_BLOCK
 
     # Which posts have demand, and the most people each post ever needs.
     highest_demand = {}
