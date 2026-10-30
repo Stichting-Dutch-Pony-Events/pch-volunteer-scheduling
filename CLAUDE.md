@@ -147,7 +147,10 @@ Time: **15-minute blocks** (the event schedule uses 15 min). Times before the da
 boundary (06:00) belong to the night after that convention day (Saturday 01:00 =
 Saturday night). **Block 0 = 06:00, every day**, so even blocks fall on :00/:30.
 For now blocks are plain integers within one day; how to handle several days is
-still to decide.
+still to decide. Night work exists (e.g. Saturday music night until 02:00, people
+around until ~03:00). **Daylight saving time is ignored for now** (assume no clock
+changes; in 2026 the switch to winter time made 02:00 happen twice). Possible future
+improvement.
 
 Meals: Saturday lunch 12:00-14:00, Saturday dinner 18:00-19:00, Sunday lunch 12:00-14:00.
 
