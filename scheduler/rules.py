@@ -6,7 +6,7 @@ same arguments: the model, the problem, and the works variables from solver.py
 """
 from ortools.sat.python import cp_model
 
-from scheduler.model import Problem
+from scheduler.model import Problem, runs_of_consecutive_blocks
 
 
 def add_demand_rule(model: cp_model.CpModel, problem: Problem, works: dict):
@@ -158,27 +158,6 @@ def _variables_of(works: dict, volunteer_name: str, first_block: int,
     return variables
 
 
-def _runs_of_consecutive_blocks(blocks) -> list[tuple[int, int]]:
-    """Split blocks into runs of consecutive blocks, as (first_block, block_after_last).
-
-    Example: {0, 1, 2, 5, 6} -> [(0, 3), (5, 7)]
-    """
-    runs = []
-    start = None      # first block of the run we are building
-    previous = None   # the block we looked at just before this one
-    for block in sorted(blocks):
-        if start is None:
-            start = block
-        elif block != previous + 1:
-            runs.append((start, previous + 1))  # gap: close this run
-            start = block                       # ...and start a new one
-        previous = block
-
-    if start is not None:
-        runs.append((start, previous + 1))      # the last run has no gap after it
-    return runs
-
-
 def _short_pieces(problem: Problem) -> set[tuple[str, int, int]]:
     """Pieces of demand shorter than the minimum stretch, as (post, first_block, block_after_last).
 
@@ -204,7 +183,7 @@ def _short_pieces(problem: Problem) -> set[tuple[str, int, int]]:
                 if demand_post == post and needed >= layer:
                     blocks_in_layer.append(block)
 
-            for first_block, block_after_last in _runs_of_consecutive_blocks(blocks_in_layer):
+            for first_block, block_after_last in runs_of_consecutive_blocks(blocks_in_layer):
                 if block_after_last - first_block < min_blocks:
                     pieces.add((post, first_block, block_after_last))
     return pieces

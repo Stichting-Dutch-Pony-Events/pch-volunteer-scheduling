@@ -1,6 +1,28 @@
 from dataclasses import dataclass
 
 
+def runs_of_consecutive_blocks(blocks) -> list[tuple[int, int]]:
+    """Split blocks into runs of consecutive blocks, as (first_block, block_after_last).
+
+    The blocks may be in any order; duplicates count once.
+    Example: {0, 1, 2, 5, 6} -> [(0, 3), (5, 7)]
+    """
+    runs = []
+    start = None      # first block of the run we are building
+    previous = None   # the block we looked at just before this one
+    for block in sorted(set(blocks)):
+        if start is None:
+            start = block
+        elif block != previous + 1:
+            runs.append((start, previous + 1))  # gap: close this run
+            start = block                       # ...and start a new one
+        previous = block
+
+    if start is not None:
+        runs.append((start, previous + 1))      # the last run has no gap after it
+    return runs
+
+
 @dataclass
 class Volunteer:
     name: str
@@ -58,21 +80,4 @@ class Schedule:
             if assigned_volunteer_name == volunteer_name:
                 blocks.add(assigned_block)
 
-        # Walk through the blocks in time order. A stretch continues as long as each
-        # block directly follows the previous one; a gap closes it and starts a new one.
-        work_stretches = []
-        start = None      # first block of the stretch we are building
-        previous = None   # the block we looked at just before this one
-        for block in sorted(blocks):
-            if start is None:
-                start = block                                 # very first block
-            elif block != previous + 1:
-                work_stretches.append((start, previous + 1))  # gap: close this stretch
-                start = block                                 # ...and start a new one
-            previous = block
-
-        # The last stretch has no gap after it, so close it here (if there was any work).
-        if start is not None:
-            work_stretches.append((start, previous + 1))
-
-        return work_stretches
+        return runs_of_consecutive_blocks(blocks)
