@@ -7,6 +7,7 @@ from dataclasses import dataclass
 # runs from 06:00 to 06:00 the next morning, so it has 24 * 4 = 96 blocks.
 MINUTES_PER_BLOCK = 15
 BLOCKS_PER_DAY = 96
+DAY_STARTS_AT_HOUR = 6
 
 
 def runs_of_consecutive_blocks(blocks) -> list[tuple[int, int]]:
@@ -104,14 +105,54 @@ def block_of(day: str, time: str, settings: Settings) -> int:
     Times before 06:00 belong to the night after that day: ("Saturday", "01:00") is
     the Saturday night, in the early hours of Sunday.
     """
-    return 0  # not implemented yet
+    # 1. The day must be one of the convention days.
+    if day not in settings.days:
+        raise ValueError(f"Unknown day {day!r}, expected one of {settings.days}.")
+    day_number = settings.days.index(day)
+
+    # 2. The time must look like "HH:MM", with valid hours and minutes.
+    try:
+        hours_text, minutes_text = time.split(":")
+        hours = int(hours_text)
+        minutes = int(minutes_text)
+    except ValueError:
+        raise ValueError(f"Time {time!r} is not in the format 'HH:MM'.") from None
+    if not 0 <= hours < 24:
+        raise ValueError(f"Time {time!r} has an invalid hour (expected 0-23).")
+    if not 0 <= minutes < 60:
+        raise ValueError(f"Time {time!r} has invalid minutes (expected 0-59).")
+
+    # 3. The time must fall exactly on the start of a block.
+    if minutes % MINUTES_PER_BLOCK != 0:
+        raise ValueError(f"Time {time!r} is not on a {MINUTES_PER_BLOCK}-minute step.")
+
+    # Minutes since the start of the convention day. % 24 wraps the night around:
+    # 01:00 gives (1 - 6) % 24 = 19 hours after 06:00.
+    hours_since_day_start = (hours - DAY_STARTS_AT_HOUR) % 24
+    minutes_since_day_start = hours_since_day_start * 60 + minutes
+
+    return day_number * BLOCKS_PER_DAY + minutes_since_day_start // MINUTES_PER_BLOCK
 
 
 def time_of(block: int, settings: Settings) -> tuple[str, str]:
     """The convention day and start time of a block, e.g. 172 -> ("Saturday", "01:00")."""
-    return ("", "")  # not implemented yet
+    day = day_of(block, settings)   # also checks that the block is within the convention days
+
+    # Minutes since the start of this convention day (06:00).
+    block_in_day = block % BLOCKS_PER_DAY
+    minutes_since_day_start = block_in_day * MINUTES_PER_BLOCK
+
+    # Back to the clock: add the 6 hours and wrap around midnight.
+    # Block 172 is 76 blocks into Saturday = 19 hours after 06:00, so (19 + 6) % 24 = 01:00.
+    hours = (minutes_since_day_start // 60 + DAY_STARTS_AT_HOUR) % 24
+    minutes = minutes_since_day_start % 60
+
+    return (day, f"{hours:02d}:{minutes:02d}")
 
 
 def day_of(block: int, settings: Settings) -> str:
     """The convention day a block belongs to, e.g. 172 -> "Saturday"."""
-    return ""  # not implemented yet
+    if block < 0 or block >= len(settings.days) * BLOCKS_PER_DAY:
+        raise ValueError(f"Block {block} is out of convention days {settings.days}.")
+
+    return settings.days[block // BLOCKS_PER_DAY]

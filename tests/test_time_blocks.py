@@ -112,8 +112,15 @@ def test_unknown_day_raises_value_error():
         block_of("Monday", "10:00", settings)
 
 
-def test_time_not_on_a_15_minute_step_raises_value_error():
-    """A time between two blocks, like 13:10, gives a clear error."""
+# parametrize runs this test once for every time in the list; pytest reports each one
+# as its own test, named after the text in ids (e.g. "...[hour too high]").
+@pytest.mark.parametrize(
+    "invalid_time",
+    ["25:00", "24:00", "-1:00", "13:75", "13:60", "12:11", "1330", "12:30:00", "ab:cd", ""],
+    ids=["hour too high", "hour 24", "negative hour", "minutes too high", "minutes 60",
+         "not on a 15 min step", "no colon", "two colons", "not numbers", "empty"])
+def test_invalid_time_raises_value_error(invalid_time):
+    """A time that is not a valid HH:MM on a 15-minute step gives a clear error."""
     # Arrange
     settings = Settings()
 
@@ -122,4 +129,34 @@ def test_time_not_on_a_15_minute_step_raises_value_error():
 
     # Assert
     with pytest.raises(ValueError):
-        block_of("Friday", "13:10", settings)
+        block_of("Friday", invalid_time, settings)
+
+
+# With the default three days, blocks 0-287 exist. -1 would silently become the last day
+# (Python's days[-1]); 288 is the first block after Sunday.
+@pytest.mark.parametrize("block", [-1, 288], ids=["before the first day", "after the last day"])
+def test_day_of_a_block_outside_the_convention_days_raises_value_error(block):
+    """A block before the first day or after the last day gives a clear error."""
+    # Arrange
+    settings = Settings()
+
+    # Act
+    # (Act and Assert are combined, pytest.raises checks the exception while day_of runs.)
+
+    # Assert
+    with pytest.raises(ValueError):
+        day_of(block, settings)
+
+
+@pytest.mark.parametrize("block", [-1, 288], ids=["before the first day", "after the last day"])
+def test_time_of_a_block_outside_the_convention_days_raises_value_error(block):
+    """A block before the first day or after the last day gives a clear error."""
+    # Arrange
+    settings = Settings()
+
+    # Act
+    # (Act and Assert are combined, pytest.raises checks the exception while time_of runs.)
+
+    # Assert
+    with pytest.raises(ValueError):
+        time_of(block, settings)
