@@ -13,12 +13,24 @@ class Post:
     name: str
 
 
+# frozen=True: settings cannot be changed after creation. That also lets Python
+# accept Settings() as the default value in Problem below.
+@dataclass(frozen=True)
+class Settings:
+    # A work stretch is continuous work, also across posts.
+    min_stretch_minutes: int = 60
+    max_stretch_minutes: int = 180
+    # Minimum break between two work stretches.
+    min_break_minutes: int = 30
+
+
 @dataclass
 class Problem:
     volunteers: list[Volunteer]
     posts: list[Post]
     # (post, block) -> number of volunteers needed (missing = closed)
     demand: dict[tuple[str, int], int]
+    settings: Settings = Settings()
 
 
 @dataclass

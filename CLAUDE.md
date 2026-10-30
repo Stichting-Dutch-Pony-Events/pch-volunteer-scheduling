@@ -14,6 +14,8 @@ Making the schedule by hand takes the volunteer manager about 3 days.
 
 The volunteer manager is good with Python and wants to **follow along and understand
 the code**. Explain, keep code plain and well commented, no clever tricks.
+The user is also using this project to get reacquainted with Python and TDD, and
+likes to write tests (and often code) themselves; Claude reviews and explains.
 
 ## How we work (agreed, please follow)
 
@@ -36,6 +38,9 @@ the code**. Explain, keep code plain and well commented, no clever tricks.
    commit message when a step is done. Read-only git commands (status, log, branch) are fine.
 5. **Python only.** Python **3.14** in `.venv` (OR-Tools has no 3.15 wheels yet).
    Use the newer lowercase OR-Tools API (`new_int_var`, `add`, `solve`, `value`).
+   **Line length: soft limit of 100 characters** (not PEP 8's 79). The user has a
+   ruler at 100 in their local `.vscode/settings.json` (not in git), which also sets
+   `files.eol` to CRLF and trims trailing whitespace on save.
 6. Files use **Windows line endings (CRLF)**; keep them that way when editing. A
    Linux-based shell can show line-ending noise in `git status` (e.g. LICENSE) that is
    not a real change; use `git -c core.autocrlf=true status`.
@@ -74,7 +79,8 @@ Fictional nicknames for tests and examples (never use real nicknames):
 ```
 ReferenceDocuments/   (not in git) real data, DATA_NOTES.md, draft input workbook
 scheduler/            model.py (data classes), solver.py, hello.py (setup check)
-tests/                test_hello.py, test_solver_basics.py
+tests/                test_hello.py, test_model.py, test_solver_basics.py,
+                      test_solver_work_stretches.py
 requirements.txt      ortools>=9.15, openpyxl>=3.1, pytest>=8.0
 ```
 
@@ -101,9 +107,18 @@ Hard (never broken):
 - every post gets exactly the number of people needed at each time block
 - only volunteers with a skill score for that post
 - nobody in two places at once
-- shift length at least 60 min, at most 180 min; at most 180 min continuous work,
-  also across two posts
-- shifts start on the hour or half hour
+- a **work stretch** (continuous work, also across posts) is at least
+  `min_stretch_minutes` (60) and at most `max_stretch_minutes` (180).
+  Exception (agreed, revised): a stretch shorter than the minimum is allowed only if
+  it is spent at one post and covers exactly one short piece of that post's demand:
+  a run of consecutive blocks in which the post needs at least k people (for some k)
+  that is shorter than the minimum. Example: Tickets needs 2 in blocks 0-1 and 1 in
+  blocks 2-7, so the second person may work just blocks 0-1. A post open only
+  06:00-06:30 is the same case with k = 1. The whole piece goes to one person.
+- a break between two work stretches is at least `min_break_minutes` (30) (in
+  practice usually ~2 hours: the user aims for roughly 50% work, 50% play)
+- these three limits are in `Settings` (model.py, in minutes; the solver divides by
+  15) so other users can choose e.g. a 30 min minimum
 - a meal break inside each meal window for everyone working around it
 - availability per day; fixed shifts placed by hand are kept
 
@@ -111,12 +126,18 @@ Soft (weighted, tunable in Settings):
 - avoid working during REALLY-want events (weight 100) and like-to-attend events (20)
 - prefer higher skill scores
 - prefer shifts of at most 120 min
+- prefer shifts that start and end on the hour or half hour (soft so the user can
+  deviate by 15 min when needed)
+- prefer staying at one post for a whole work stretch (few post switches)
+- avoid short stretches (the exception above): try to have them work elsewhere too
 - spread hours fairly
 - (later, maybe) Question vetting, Manestage clean and Sardine duty by the same person
 
 Time: **15-minute blocks** (the event schedule uses 15 min). Times before the day
 boundary (06:00) belong to the night after that convention day (Saturday 01:00 =
-Saturday night).
+Saturday night). **Block 0 = 06:00, every day**, so even blocks fall on :00/:30.
+For now blocks are plain integers within one day; how to handle several days is
+still to decide.
 
 Meals: Saturday lunch 12:00-14:00, Saturday dinner 18:00-19:00, Sunday lunch 12:00-14:00.
 
@@ -133,9 +154,10 @@ Cleanup, Post-con cleanup and a few Friday-only posts.
 ## Roadmap
 
 - [x] Project structure, .gitignore, README, venv, hello-world test
-- [ ] Step 1: minimal solver with in-code test data. Hard rules: demand met exactly,
-      only qualified volunteers, no double booking; clear error when infeasible
-- [ ] Shift lengths
+- [x] Step 1: minimal solver with in-code test data. Hard rules: demand met exactly,
+      only qualified volunteers, no double booking; NoScheduleFound when infeasible
+- [ ] Step 2: work stretches (60-180 min, short-post exception) and 30 min breaks
+- [ ] Soft rules: start/end on :00/:30, stay at one post (first objective)
 - [ ] Meal breaks
 - [ ] Event wishes
 - [ ] Maximum hours and fair spread
@@ -146,40 +168,47 @@ Cleanup, Post-con cleanup and a few Friday-only posts.
 - [ ] Write output Excel (overview, per post, per volunteer; show changes vs previous run)
 - [ ] Maybe: Streamlit UI
 
-Current position: Step 1 in progress. Committed (e2c540a): dataclasses in model.py,
-a `solve` stub, and the user's first test `test_single_volunteer_fills_single_post`
-(red). Skills inside each Volunteer and English names in the code are confirmed (in
-use). `people_at` and a minimal CP-SAT `solve` (demand met exactly, only qualified)
-are written and test 1 passes (not yet committed at time of writing). Next: tests 2-7
-below; the user types code themselves, Claude only suggests code (agreed).
+Current position: Step 1 is done (7 solver tests green, solver refactored into one
+helper per rule). Step 2: `Settings` dataclass added to model.py (Problem.settings,
+defaults 60/180/30). The user is writing the solver tests in
+test_solver_work_stretches.py themselves (1-4 written; 5 renamed for the revised rule,
+its body still expects the old behaviour); placeholders use pytest.skip. Order agreed:
+finish solver tests 5-9, then helper `work_stretches_of` (tests a-d, red/green), then
+test 10, then implement the rules in the solver. Claude reviews tests
+and only changes code when asked.
 
-## Step 1 proposal (agreed in outline, not yet written)
+## Step 2 plan: work stretches and breaks
 
-Minimal scheduler, no Excel, tiny made-up data built in the tests.
+Blocks: 1 block = 15 min, 4 = 60 min, 12 = 180 min. One day only for now.
 
-`scheduler/model.py`, plain dataclasses:
-```python
-Volunteer(name="Mock Mane", skills={"Tickets": 3, "Infobooth": 1})
-Post(name="Tickets")
-Problem(volunteers=[...], posts=[...], demand={("Tickets", 0): 2, ...})
-Schedule(assignments={("Mock Mane", "Tickets", 0), ...})
-#   Schedule.people_at(post, block) and Schedule.posts_of(volunteer, block)
-```
-Time blocks are plain integers (each = 15 min) for now. Demand maps (post, block) to
-people needed; missing = closed.
+Helper `Schedule.work_stretches_of(volunteer) -> list[(first_block, block_after_last)]`,
+regardless of post. Pure Python tests (red first):
+a. test_consecutive_blocks_form_one_work_stretch (Tickets 0-3 -> [(0, 4)])
+b. test_a_gap_splits_work_into_two_stretches (0-3, 6-9 -> [(0, 4), (6, 10)])
+c. test_switching_post_continues_the_same_stretch (Tickets 0-3, Infobooth 4-7 -> [(0, 8)])
+d. test_volunteer_without_assignments_has_no_stretches (-> [])
 
-`scheduler/solver.py`: `solve(problem) -> Schedule` and exception `NoScheduleFound`.
-One boolean variable per (volunteer, post, block) where the volunteer has a skill score
-(no variable at all for unqualified combinations).
-
-Tests in `tests/test_solver_basics.py`:
-1. test_single_volunteer_fills_single_post
-2. test_post_gets_exactly_the_number_needed (needs 2, 3 qualified -> exactly 2)
-3. test_nobody_works_a_closed_post
-4. test_volunteer_without_skill_is_never_scheduled
-5. test_nobody_is_in_two_places_at_once
-6. test_too_few_volunteers_raises_no_schedule_found
-7. test_nobody_qualified_raises_no_schedule_found
-
-Plan: write the test file plus empty stubs in model.py/solver.py (so tests fail on
-behaviour, not on imports), user runs them (red), then implement (green).
+Solver tests (forced = only one outcome obeys the rules, so reliably red first):
+1. test_work_stretch_longer_than_180_minutes_raises_no_schedule_found
+   (only Mock Mane, Tickets 0-15) forced
+2. test_continuous_work_across_two_posts_is_at_most_180_minutes
+   (only Mock Mane, Tickets 0-7 then Infobooth 8-15) forced, raises
+3. test_break_of_15_minutes_raises_no_schedule_found
+   (only Mock Mane, Tickets 0-7, gap 1 block, Tickets 9-16) forced
+4. test_break_of_30_minutes_is_allowed
+   (only Mock Mane, Tickets 0-7, gap 2 blocks, Tickets 10-17) guard, succeeds
+5. test_extra_person_needed_for_30_minutes_may_work_just_those_30_minutes
+   (Mock Mane + Testy Hooves, Tickets needs 2 in blocks 0-1, 1 in blocks 2-7) succeeds
+6. test_two_posts_together_can_make_up_the_60_minutes
+   (as 5, plus Infobooth 2-3 that only Testy Hooves can do) guard, succeeds
+7. test_post_open_less_than_60_minutes_can_be_worked
+   (only Mock Mane, Tickets 0-1) guard for the short-piece exception
+8. test_work_stretch_shorter_than_minimum_raises_no_schedule_found
+   (Settings min 150, max 180; Mock Mane + Testy Hooves; Tickets needs 1 in 0-15:
+   any split leaves a piece under 150 min) forced. With min 60 no tiny forced
+   scenario was found, hence the setting.
+9. test_minimum_stretch_can_be_changed_in_the_settings
+   (scenario impossible with min 60 but fine with min 30; still to design)
+10. test_long_opening_is_split_into_stretches_of_allowed_length
+   (Tickets 0-15, Mock Mane + Testy Hooves: every stretch 4-12 blocks) property,
+   needs the helper, so written after it
