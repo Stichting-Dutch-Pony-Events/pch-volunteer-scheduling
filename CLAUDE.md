@@ -90,7 +90,7 @@ ReferenceDocuments/   (not in git) real data, DATA_NOTES.md, draft input workboo
 scheduler/            model.py (data classes), solver.py, rules.py (hard rules),
                       hello.py (setup check)
 tests/                test_hello.py, test_model.py, test_solver_basics.py,
-                      test_solver_work_stretches.py
+                      test_solver_work_stretches.py, test_time_blocks.py
 requirements.txt      ortools>=9.15, openpyxl>=3.1, pytest>=8.0
 ```
 
@@ -175,14 +175,47 @@ Agreed order towards a **minimal viable scheduler** (usable on real data; qualit
 come after, the user can fix details by hand meanwhile):
 - [x] Refactor: `runs_of_consecutive_blocks` in model.py, used by
       `Schedule.work_stretches_of` and `_short_pieces` in rules.py
-- [ ] Several days: a design choice first, discuss options with the user (e.g. one block
-      numbering across the weekend, or (day, block) pairs). Affects everything after.
+- [ ] Several days. **Decided: option A**, one block numbering across the weekend:
+      block = day number * 96 + (minutes since 06:00) / 15, Friday = day 0. Times before
+      06:00 belong to the previous convention day (Saturday 01:00 = block 172). Note
+      the naming: "Saturday 01:00" means Saturday's night, which on the calendar is
+      Sunday 01:00 (early Sunday morning). The workbook uses the same convention. Rejected
+      option B ((day, block) pairs: every rule needs a day loop, misses stretches/breaks
+      across 06:00). To do, in this order:
+  - [x] model.py: constants `MINUTES_PER_BLOCK = 15`, `BLOCKS_PER_DAY = 96`;
+        `Settings.days: tuple[str, ...] = ("Friday", "Saturday", "Sunday")`
+  - [ ] model.py: helpers `block_of(day, time, settings)`, `time_of(block, settings)`,
+        `day_of(block, settings)`. Stubs are in model.py; 10 tests written in
+        tests/test_time_blocks.py (8 red, 2 green by coincidence because the block_of
+        stub returns 0). Next: the user implements the three helpers (hint given:
+        `"13:30".split(":")`, minutes since 06:00, add 24 h for times before 06:00;
+        unknown day or a time not on a 15 min step -> ValueError with a clear message).
+  - [ ] rules.py: rename `_blocks_of_day` to e.g. `_blocks_of_event`; replace `// 15`
+        with `MINUTES_PER_BLOCK` (refactor, tests stay green)
+  - [ ] one or two solver tests across a day boundary as guards (e.g. only Mock Mane,
+        Tickets Saturday night 03:00 to Sunday 06:45 = 16 blocks -> NoScheduleFound)
 - [ ] Availability per day (e.g. a volunteer only there Friday and Sunday)
-- [ ] Read input workbook and form CSV. **To do:** validate names. `Problem.posts` is
-      not used by the solver yet, so a typo in a post name (in demand or skills) silently
-      means "nobody qualified" and gives a generic NoScheduleFound. Check every post name
-      against `posts` and raise a clear error naming the typo.
-- [ ] Write output Excel (overview, per post, per volunteer; show changes vs previous run)
+- [ ] Read input workbook and form CSV. To do:
+  - [ ] validate names. `Problem.posts` is not used by the solver yet, so a typo in a
+        post name (in demand or skills) silently means "nobody qualified" and gives a
+        generic NoScheduleFound. Check every post name against `posts` and raise a
+        clear error naming the typo.
+  - [ ] the draft workbook already fits option A: Demand/Events/Fixed use Day + Time
+        columns, Saturday night rows (00:00-02:45) are listed under "Saturday", and
+        Volunteers has Friday/Saturday/Sunday availability columns. Convert with
+        `block_of` while reading.
+  - [ ] align Settings names with the code: the workbook has "Minimum/Maximum shift
+        length" and "Maximum continuous work" (one concept in the code: work stretch);
+        rename to e.g. "Minimum/Maximum work stretch". "Shift start step" is now a soft
+        rule.
+  - [ ] list of days: add a "Days" row to the Settings tab (most explicit).
+  - [ ] the code assumes time step 15 min and day boundary 06:00: check that the
+        workbook's Settings say the same, clear error if not.
+  - [ ] meal windows differ: workbook Settings say lunch 11:30-14:00 and dinner
+        17:30-19:30, this file says 12:00-14:00 and 18:00-19:00. Check with the user
+        at the meal breaks step.
+- [ ] Write output Excel (overview, per post, per volunteer; show changes vs previous
+      run). Use `time_of`; show night rows under the previous day (as the workbook does).
 - [ ] First end-to-end run on real data; compare with the hand-made 2026 schedule
 - [ ] Faster model building (group variables per volunteer/block once instead of
       `_variables_of` scanning all of `works` on every call), if real data is slow
@@ -196,14 +229,16 @@ After the minimal viable scheduler:
 - [ ] Maybe: switch rules on/off from the workbook (may need a Rule class then)
 - [ ] Maybe: Streamlit UI
 
-Current position: Steps 1 and 2 are done, all 23 tests green. Hard rules in rules.py:
-demand, no double booking, maximum stretch (sliding window), minimum break (forbid
-"work, short gap, work"), minimum stretch (forbid "free, short run, free", with an
-escape variable per matching short piece of demand). Helpers: `_blocks_of_day`,
-`_variables_of`, `_runs_of_consecutive_blocks`, `_short_pieces`. Open to-dos: share
-`_runs_of_consecutive_blocks` with `Schedule.work_stretches_of`; model building will be
-slow on real data (`_variables_of` scans all of `works` each call), group variables
-once later. Next step still to choose with the user (focus: minimal viable scheduler).
+Current position: Steps 1 and 2 are done. Hard rules in rules.py: demand, no double
+booking, maximum stretch (sliding window), minimum break (forbid "work, short gap,
+work"), minimum stretch (forbid "free, short run, free", with an escape variable per
+matching short piece of demand). Helpers: `_blocks_of_day`, `_variables_of`,
+`_short_pieces` in rules.py; `runs_of_consecutive_blocks` in model.py (shared, tested).
+Now working on **several days (option A)**: constants and `Settings.days` done, model.py
+has a module docstring and class docstrings. The time helpers are stubs with 10 tests in
+test_time_blocks.py: test run is 28 passed, 8 failed (the 8 red time tests, as
+intended). Next session: the user implements `block_of`, `time_of`, `day_of`; Claude
+reviews. Then the rename of `_blocks_of_day` and a cross-day solver test (see roadmap).
 Claude reviews and explains; only changes code when asked.
 
 ## Step 2 plan: work stretches and breaks

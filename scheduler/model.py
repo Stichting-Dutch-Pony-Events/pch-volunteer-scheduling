@@ -1,4 +1,12 @@
+"""The data the scheduler works with: volunteers, posts, settings, the problem to solve
+and the schedule that comes out, plus small helpers for blocks of time.
+"""
 from dataclasses import dataclass
+
+# Time is measured in blocks of 15 minutes. Block 0 is 06:00 on the first day; a day
+# runs from 06:00 to 06:00 the next morning, so it has 24 * 4 = 96 blocks.
+MINUTES_PER_BLOCK = 15
+BLOCKS_PER_DAY = 96
 
 
 def runs_of_consecutive_blocks(blocks) -> list[tuple[int, int]]:
@@ -25,13 +33,15 @@ def runs_of_consecutive_blocks(blocks) -> list[tuple[int, int]]:
 
 @dataclass
 class Volunteer:
-    name: str
+    """A volunteer and the posts they may work."""
+    name: str  # the nickname used in the schedule
     # post -> skill level: 1 can, 2 good at it / likes it, 3 main role (missing = never)
     skills: dict[str, int]
 
 
 @dataclass
 class Post:
+    """A place or task that needs volunteers, e.g. Tickets or Infobooth."""
     name: str
 
 
@@ -39,15 +49,19 @@ class Post:
 # accept Settings() as the default value in Problem below.
 @dataclass(frozen=True)
 class Settings:
+    """Limits and options for one scheduling run (later read from the Settings tab)."""
     # A work stretch is continuous work, also across posts.
     min_stretch_minutes: int = 60
     max_stretch_minutes: int = 180
     # Minimum break between two work stretches.
     min_break_minutes: int = 30
+    # The convention days in order. The first one starts at block 0.
+    days: tuple[str, ...] = ("Friday", "Saturday", "Sunday")
 
 
 @dataclass
 class Problem:
+    """Everything the solver needs: who can work, where, and how many people when."""
     volunteers: list[Volunteer]
     posts: list[Post]
     # (post, block) -> number of volunteers needed (missing = closed)
@@ -57,6 +71,7 @@ class Problem:
 
 @dataclass
 class Schedule:
+    """The solver's answer: who works where in which block."""
     # (volunteer_name, post, block)
     assignments: set[tuple[str, str, int]]
 
@@ -81,3 +96,22 @@ class Schedule:
                 blocks.add(assigned_block)
 
         return runs_of_consecutive_blocks(blocks)
+
+
+def block_of(day: str, time: str, settings: Settings) -> int:
+    """The block that starts at this time on this convention day, e.g. ("Saturday", "13:30").
+
+    Times before 06:00 belong to the night after that day: ("Saturday", "01:00") is
+    the Saturday night, in the early hours of Sunday.
+    """
+    return 0  # not implemented yet
+
+
+def time_of(block: int, settings: Settings) -> tuple[str, str]:
+    """The convention day and start time of a block, e.g. 172 -> ("Saturday", "01:00")."""
+    return ("", "")  # not implemented yet
+
+
+def day_of(block: int, settings: Settings) -> str:
+    """The convention day a block belongs to, e.g. 172 -> "Saturday"."""
+    return ""  # not implemented yet
