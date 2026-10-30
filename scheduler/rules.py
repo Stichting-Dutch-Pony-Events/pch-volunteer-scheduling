@@ -40,16 +40,10 @@ def add_no_double_booking_rule(model: cp_model.CpModel, problem: Problem, works:
 
 def add_maximum_stretch_rule(model: cp_model.CpModel, problem: Problem, works: dict):
     """Hard rule: no volunteer works longer than the maximum number of blocks in a row."""
-    blocks_in_day = _blocks_in_demand(problem)
-    if len(blocks_in_day) == 0:
-        return
-
-    start_of_day = min(blocks_in_day)
-    end_of_day = max(blocks_in_day)
     max_number_of_blocks = problem.settings.max_stretch_minutes // 15
 
     for volunteer in problem.volunteers:
-        for window_start in range(start_of_day, end_of_day):
+        for window_start in _blocks_of_day(problem):
             # Collect the variables of every post inside a moving window
             posts_in_window = []
 
@@ -64,19 +58,12 @@ def add_maximum_stretch_rule(model: cp_model.CpModel, problem: Problem, works: d
 
 def add_minimum_break_rule(model: cp_model.CpModel, problem: Problem, works: dict):
     """Hard rule: no volunteer has a break shorter than the minimum break."""
-    blocks_in_day = _blocks_in_demand(problem)
-    if len(blocks_in_day) == 0:
-        return
-
-    start_of_day = min(blocks_in_day)
-    end_of_day = max(blocks_in_day)
     min_break_blocks = problem.settings.min_break_minutes // 15
-
     if min_break_blocks <= 1:
         return
 
     for volunteer in problem.volunteers:
-        for block in range(start_of_day, end_of_day):
+        for block in _blocks_of_day(problem):
             for gap_length in range(1, min_break_blocks):
                 # Sort this volunteer's variables into three groups by block number:
                 # the block before the gap, the gap itself, and the block after it.
@@ -107,3 +94,14 @@ def _blocks_in_demand(problem: Problem):
     for (post, block) in problem.demand:
         blocks.add(block)
     return blocks
+
+
+def _blocks_of_day(problem: Problem) -> range:
+    """All blocks from the first to the last block in the demand, in order.
+
+    Returns an empty range when there is no demand, so loops over it simply don't run.
+    """
+    blocks = _blocks_in_demand(problem)
+    if len(blocks) == 0:
+        return range(0)
+    return range(min(blocks), max(blocks) + 1)
