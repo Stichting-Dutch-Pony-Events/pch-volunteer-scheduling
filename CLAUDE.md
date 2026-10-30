@@ -66,11 +66,13 @@ Fictional nicknames for tests and examples (never use real nicknames):
 
 - **OR-Tools CP-SAT** as solver: hard rules are constraints, soft rules are weighted
   penalties in the objective.
-- **Solver layout:** `solve()` stays a short table of contents. Each hard rule is its
-  own helper `_add_<name>_rule(model, problem, works)` with a docstring stating the rule
-  in plain words; adding a rule = one new function + one line in `solve()`. Prefer plain
-  loops over comprehensions (the user finds loops easier to read). Move rules to
-  `scheduler/rules.py` once there are many.
+- **Solver layout:** `solve()` in solver.py stays a short table of contents (create
+  variables, call the rules, run CP-SAT, read the schedule). Each hard rule is a function
+  `add_<name>_rule(model, problem, works)` in `scheduler/rules.py` with a docstring
+  stating the rule in plain words; adding a rule = one new function in rules.py + one
+  line in `solve()`. Helpers used only inside rules.py start with `_`. Prefer plain
+  loops over comprehensions (the user finds loops easier to read). Maybe split into
+  hard/soft rule files later, once there are soft rules.
 - **openpyxl** for reading/writing `.xlsx`. No pandas for now.
 - **pytest** for tests. Later possibly **Streamlit** as a simple UI.
 
@@ -78,7 +80,8 @@ Fictional nicknames for tests and examples (never use real nicknames):
 
 ```
 ReferenceDocuments/   (not in git) real data, DATA_NOTES.md, draft input workbook
-scheduler/            model.py (data classes), solver.py, hello.py (setup check)
+scheduler/            model.py (data classes), solver.py, rules.py (hard rules),
+                      hello.py (setup check)
 tests/                test_hello.py, test_model.py, test_solver_basics.py,
                       test_solver_work_stretches.py
 requirements.txt      ortools>=9.15, openpyxl>=3.1, pytest>=8.0
