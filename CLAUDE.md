@@ -76,11 +76,10 @@ Fictional nicknames for tests and examples (never use real nicknames):
 - **Decided: no Rule base class for now** (plain functions with the same arguments are
   enough). Revisit later: the user may want to switch rules on/off from the workbook,
   and soft rules need weights. Focus first on a minimal viable scheduler, then expand.
-  Next refactor candidate: a helper in rules.py that collects a volunteer's variables
-  in a block range (the collect-loop is repeated in every rule).
-- **To do (remember):** `_runs_of_consecutive_blocks` in rules.py duplicates the logic
-  of `Schedule.work_stretches_of` in model.py. Share one function between them (e.g.
-  move it to model.py and use it in both) once the minimum stretch rule works.
+- **Shared helpers:** `_variables_of` in rules.py collects a volunteer's variables in a
+  block range (used by every per-volunteer rule). `runs_of_consecutive_blocks` in
+  model.py (public, tested in test_model.py) is used by `Schedule.work_stretches_of`
+  and `_short_pieces`.
 - **openpyxl** for reading/writing `.xlsx`. No pandas for now.
 - **pytest** for tests. Later possibly **Streamlit** as a simple UI.
 
@@ -171,8 +170,8 @@ Cleanup, Post-con cleanup and a few Friday-only posts.
 
 Agreed order towards a **minimal viable scheduler** (usable on real data; quality rules
 come after, the user can fix details by hand meanwhile):
-- [ ] Refactor: share `_runs_of_consecutive_blocks` (rules.py) with
-      `Schedule.work_stretches_of` (model.py)
+- [x] Refactor: `runs_of_consecutive_blocks` in model.py, used by
+      `Schedule.work_stretches_of` and `_short_pieces` in rules.py
 - [ ] Several days: a design choice first, discuss options with the user (e.g. one block
       numbering across the weekend, or (day, block) pairs). Affects everything after.
 - [ ] Availability per day (e.g. a volunteer only there Friday and Sunday)

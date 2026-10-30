@@ -1,4 +1,4 @@
-from scheduler.model import Schedule
+from scheduler.model import Schedule, runs_of_consecutive_blocks
 
 
 def test_consecutive_blocks_form_one_work_stretch():
@@ -62,3 +62,40 @@ def test_volunteer_without_assignments_has_no_stretches():
 
     # Assert
     assert stretches == []
+
+
+def test_unsorted_blocks_are_split_into_runs_in_time_order():
+    """Blocks given in any order still come out as runs sorted by time."""
+    # Arrange
+    blocks = [6, 0, 5, 1]         # blocks 0-1 and 5-6, shuffled
+
+    # Act
+    runs = runs_of_consecutive_blocks(blocks)
+
+    # Assert
+    assert runs == [(0, 2), (5, 7)]
+
+
+def test_duplicate_blocks_count_once():
+    """A block given twice does not split a run or make it longer."""
+    # Arrange
+    blocks = [0, 1, 1, 2]         # block 1 appears twice
+
+    # Act
+    runs = runs_of_consecutive_blocks(blocks)
+
+    # Assert
+    assert runs == [(0, 3)]
+
+
+def test_single_block_is_a_run_of_one():
+    """A single block forms a run that ends one block later."""
+    # Arrange
+    blocks = [3]
+
+    # Act
+    runs = runs_of_consecutive_blocks(blocks)
+
+    # Assert
+    assert runs == [(3, 4)]
+
