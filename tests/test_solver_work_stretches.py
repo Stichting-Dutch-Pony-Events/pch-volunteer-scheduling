@@ -8,7 +8,7 @@ def test_work_stretch_longer_than_180_minutes_raises_no_schedule_found():
     """A work stretch longer than 180 minutes is not allowed, so no schedule can be found."""
     # Arrange
     demand = {}
-    for block in range(16):  # blocks 0-15, so 4 hours
+    for block in range(16):       # blocks 0-15, so 4 hours
         demand[("Tickets", block)] = 1
 
     problem = Problem(
@@ -160,7 +160,7 @@ def test_work_stretch_shorter_than_minimum_raises_no_schedule_found():
     """A short stretch in the middle of a longer piece of demand is not allowed."""
     # Arrange
     demand = {}
-    for block in range(16):        # blocks 0-15: 4 hours at Tickets
+    for block in range(16):       # blocks 0-15: 4 hours at Tickets
         demand[("Tickets", block)] = 1
 
     problem = Problem(
@@ -186,11 +186,11 @@ def test_minimum_stretch_can_be_changed_in_the_settings():
         demand[("Tickets", block)] = 1
 
     problem = Problem(
-            volunteers=[Volunteer(name="Mock Mane", skills={"Tickets": 1}),
-                        Volunteer(name="Testy Hooves", skills={"Tickets": 1})],
-            posts=[Post(name="Tickets")],
-            demand=demand,
-            settings=Settings(min_stretch_minutes=30, max_stretch_minutes=60))
+        volunteers=[Volunteer(name="Mock Mane", skills={"Tickets": 1}),
+                    Volunteer(name="Testy Hooves", skills={"Tickets": 1})],
+        posts=[Post(name="Tickets")],
+        demand=demand,
+        settings=Settings(min_stretch_minutes=30, max_stretch_minutes=60))
 
 
     # Act
@@ -204,11 +204,25 @@ def test_minimum_stretch_can_be_changed_in_the_settings():
 def test_long_opening_is_split_into_stretches_of_allowed_length():
     """A 4-hour opening is split so that every work stretch is 60 to 180 minutes."""
     # Arrange
-    # (to do: Mock Mane + Testy Hooves; Tickets open blocks 0-15)
+    min_minutes = 60
+    max_minutes = 180
+
+    demand = {}
+    for block in range(16):       # blocks 0-15: 4 hours at Tickets
+        demand[("Tickets", block)] = 1
+
+    problem = Problem(
+        volunteers=[Volunteer(name="Mock Mane", skills={"Tickets": 1}),
+                    Volunteer(name="Testy Hooves", skills={"Tickets": 1})],
+        posts=[Post(name="Tickets")],
+        demand=demand,
+        settings=Settings(min_stretch_minutes=min_minutes, max_stretch_minutes=max_minutes))
 
     # Act
-    # (to do: solve, then work_stretches_of for each volunteer)
+    schedule = solve(problem)
 
     # Assert
-    pytest.skip("not written yet")
-
+    for volunteer in ("Mock Mane", "Testy Hooves"):
+        for first_block, block_after_last in schedule.work_stretches_of(volunteer):
+            length = block_after_last - first_block
+            assert min_minutes <= (length * 15) <= max_minutes
