@@ -16,6 +16,7 @@ def solve(problem: Problem) -> Schedule:
     # Hard rules (see rules.py)
     rules.add_demand_rule(model, problem, works)
     rules.add_no_double_booking_rule(model, problem, works)
+    rules.add_minimum_stretch_rule(model, problem, works)
     rules.add_maximum_stretch_rule(model, problem, works)
     rules.add_minimum_break_rule(model, problem, works)
 

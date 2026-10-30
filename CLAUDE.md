@@ -78,6 +78,9 @@ Fictional nicknames for tests and examples (never use real nicknames):
   and soft rules need weights. Focus first on a minimal viable scheduler, then expand.
   Next refactor candidate: a helper in rules.py that collects a volunteer's variables
   in a block range (the collect-loop is repeated in every rule).
+- **To do (remember):** `_runs_of_consecutive_blocks` in rules.py duplicates the logic
+  of `Schedule.work_stretches_of` in model.py. Share one function between them (e.g.
+  move it to model.py and use it in both) once the minimum stretch rule works.
 - **openpyxl** for reading/writing `.xlsx`. No pandas for now.
 - **pytest** for tests. Later possibly **Streamlit** as a simple UI.
 
@@ -164,26 +167,42 @@ Cleanup, Post-con cleanup and a few Friday-only posts.
 - [x] Project structure, .gitignore, README, venv, hello-world test
 - [x] Step 1: minimal solver with in-code test data. Hard rules: demand met exactly,
       only qualified volunteers, no double booking; NoScheduleFound when infeasible
-- [ ] Step 2: work stretches (60-180 min, short-post exception) and 30 min breaks
-- [ ] Soft rules: start/end on :00/:30, stay at one post (first objective)
-- [ ] Meal breaks
-- [ ] Event wishes
-- [ ] Maximum hours and fair spread
+- [x] Step 2: work stretches (60-180 min, short-post exception) and 30 min breaks
+
+Agreed order towards a **minimal viable scheduler** (usable on real data; quality rules
+come after, the user can fix details by hand meanwhile):
+- [ ] Refactor: share `_runs_of_consecutive_blocks` (rules.py) with
+      `Schedule.work_stretches_of` (model.py)
+- [ ] Several days: a design choice first, discuss options with the user (e.g. one block
+      numbering across the weekend, or (day, block) pairs). Affects everything after.
+- [ ] Availability per day (e.g. a volunteer only there Friday and Sunday)
 - [ ] Read input workbook and form CSV. **To do:** validate names. `Problem.posts` is
       not used by the solver yet, so a typo in a post name (in demand or skills) silently
       means "nobody qualified" and gives a generic NoScheduleFound. Check every post name
       against `posts` and raise a clear error naming the typo.
 - [ ] Write output Excel (overview, per post, per volunteer; show changes vs previous run)
+- [ ] First end-to-end run on real data; compare with the hand-made 2026 schedule
+- [ ] Faster model building (group variables per volunteer/block once instead of
+      `_variables_of` scanning all of `works` on every call), if real data is slow
+
+After the minimal viable scheduler:
+- [ ] Soft rules: start/end on :00/:30, stay at one post, avoid short stretches
+      (first objective)
+- [ ] Meal breaks
+- [ ] Event wishes
+- [ ] Maximum hours and fair spread
+- [ ] Maybe: switch rules on/off from the workbook (may need a Rule class then)
 - [ ] Maybe: Streamlit UI
 
-Current position: Step 1 is done (7 solver tests green, solver refactored into one
-helper per rule). Step 2: `Settings` dataclass added to model.py (Problem.settings,
-defaults 60/180/30). Solver tests 1-9 written by the user (1-3 and 8 red as intended,
-4-7 and 9 guards, green). `Schedule.work_stretches_of` done: tests a-d in test_model.py
-build a Schedule directly (no solver) and pass. Next: the user writes test 10 (property
-test using the helper), then implement the rules in the solver: explain the CP-SAT
-approach first, before suggesting code. Claude reviews tests and only changes code
-when asked.
+Current position: Steps 1 and 2 are done, all 23 tests green. Hard rules in rules.py:
+demand, no double booking, maximum stretch (sliding window), minimum break (forbid
+"work, short gap, work"), minimum stretch (forbid "free, short run, free", with an
+escape variable per matching short piece of demand). Helpers: `_blocks_of_day`,
+`_variables_of`, `_runs_of_consecutive_blocks`, `_short_pieces`. Open to-dos: share
+`_runs_of_consecutive_blocks` with `Schedule.work_stretches_of`; model building will be
+slow on real data (`_variables_of` scans all of `works` each call), group variables
+once later. Next step still to choose with the user (focus: minimal viable scheduler).
+Claude reviews and explains; only changes code when asked.
 
 ## Step 2 plan: work stretches and breaks
 
