@@ -170,12 +170,12 @@ Cleanup, Post-con cleanup and a few Friday-only posts.
 
 Current position: Step 1 is done (7 solver tests green, solver refactored into one
 helper per rule). Step 2: `Settings` dataclass added to model.py (Problem.settings,
-defaults 60/180/30). The user is writing the solver tests in
-test_solver_work_stretches.py themselves (1-4 written; 5 renamed for the revised rule,
-its body still expects the old behaviour); placeholders use pytest.skip. Order agreed:
-finish solver tests 5-9, then helper `work_stretches_of` (tests a-d, red/green), then
-test 10, then implement the rules in the solver. Claude reviews tests
-and only changes code when asked.
+defaults 60/180/30). Solver tests 1-9 written by the user (1-3 and 8 red as intended,
+4-7 and 9 guards, green). `Schedule.work_stretches_of` done: tests a-d in test_model.py
+build a Schedule directly (no solver) and pass. Next: the user writes test 10 (property
+test using the helper), then implement the rules in the solver: explain the CP-SAT
+approach first, before suggesting code. Claude reviews tests and only changes code
+when asked.
 
 ## Step 2 plan: work stretches and breaks
 
