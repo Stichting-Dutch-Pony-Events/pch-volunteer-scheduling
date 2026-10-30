@@ -22,6 +22,8 @@ the code**. Explain, keep code plain and well commented, no clever tricks.
    *Exception:* `CLAUDE.md` and `ReferenceDocuments/DATA_NOTES.md` may be updated
    without asking. Keep them current when agreements, decisions or status change.
    Anything privacy-sensitive (about specific people) goes in DATA_NOTES.md, never here.
+   **Code in `scheduler/` and `tests/`: only suggest it, the user types it in.** Then
+   review their file when asked.
 2. **Test-driven development.** For every step:
    tests first and let the user read them, run them and see them fail (red),
    then just enough code to pass (green), tidy up, the user commits.
@@ -136,10 +138,12 @@ Cleanup, Post-con cleanup and a few Friday-only posts.
 - [ ] Write output Excel (overview, per post, per volunteer; show changes vs previous run)
 - [ ] Maybe: Streamlit UI
 
-Current position: hello world passes and is committed. Step 1 has been proposed (below)
-and the user is now trying to write a Step 1 test themselves. Review their test kindly,
-then continue with the proposal. Two choices were still awaiting confirmation: skills
-stored inside each Volunteer, and English names in the code.
+Current position: Step 1 in progress. Committed (e2c540a): dataclasses in model.py,
+a `solve` stub, and the user's first test `test_single_volunteer_fills_single_post`
+(red). Skills inside each Volunteer and English names in the code are confirmed (in
+use). `people_at` and a minimal CP-SAT `solve` (demand met exactly, only qualified)
+are written and test 1 passes (not yet committed at time of writing). Next: tests 2-7
+below; the user types code themselves, Claude only suggests code (agreed).
 
 ## Step 1 proposal (agreed in outline, not yet written)
 

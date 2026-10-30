@@ -20,4 +20,11 @@ class Schedule:
     assignments: set[tuple[str, str, int]] # (volunteer_name, post, block)
 
     def people_at(self, post: str, block: int) -> set[str]:
-        return set()  # not implemented yet
+        """Names of the volunteers working at this post during this block."""
+
+        assigned_people = set()
+        for assignment in self.assignments:
+            if assignment[1] == post and assignment[2] == block:
+                assigned_people.add(assignment[0])
+                
+        return assigned_people
