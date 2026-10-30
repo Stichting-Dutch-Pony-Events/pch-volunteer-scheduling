@@ -61,6 +61,11 @@ Fictional nicknames for tests and examples (never use real nicknames):
 
 - **OR-Tools CP-SAT** as solver: hard rules are constraints, soft rules are weighted
   penalties in the objective.
+- **Solver layout:** `solve()` stays a short table of contents. Each hard rule is its
+  own helper `_add_<name>_rule(model, problem, works)` with a docstring stating the rule
+  in plain words; adding a rule = one new function + one line in `solve()`. Prefer plain
+  loops over comprehensions (the user finds loops easier to read). Move rules to
+  `scheduler/rules.py` once there are many.
 - **openpyxl** for reading/writing `.xlsx`. No pandas for now.
 - **pytest** for tests. Later possibly **Streamlit** as a simple UI.
 
@@ -134,7 +139,10 @@ Cleanup, Post-con cleanup and a few Friday-only posts.
 - [ ] Meal breaks
 - [ ] Event wishes
 - [ ] Maximum hours and fair spread
-- [ ] Read input workbook and form CSV
+- [ ] Read input workbook and form CSV. **To do:** validate names. `Problem.posts` is
+      not used by the solver yet, so a typo in a post name (in demand or skills) silently
+      means "nobody qualified" and gives a generic NoScheduleFound. Check every post name
+      against `posts` and raise a clear error naming the typo.
 - [ ] Write output Excel (overview, per post, per volunteer; show changes vs previous run)
 - [ ] Maybe: Streamlit UI
 
