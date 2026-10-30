@@ -73,6 +73,11 @@ Fictional nicknames for tests and examples (never use real nicknames):
   line in `solve()`. Helpers used only inside rules.py start with `_`. Prefer plain
   loops over comprehensions (the user finds loops easier to read). Maybe split into
   hard/soft rule files later, once there are soft rules.
+- **Decided: no Rule base class for now** (plain functions with the same arguments are
+  enough). Revisit later: the user may want to switch rules on/off from the workbook,
+  and soft rules need weights. Focus first on a minimal viable scheduler, then expand.
+  Next refactor candidate: a helper in rules.py that collects a volunteer's variables
+  in a block range (the collect-loop is repeated in every rule).
 - **openpyxl** for reading/writing `.xlsx`. No pandas for now.
 - **pytest** for tests. Later possibly **Streamlit** as a simple UI.
 
