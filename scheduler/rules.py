@@ -24,7 +24,7 @@ def add_demand_rule(model: cp_model.CpModel, problem: Problem, works: dict):
 
 def add_no_double_booking_rule(model: cp_model.CpModel, problem: Problem, works: dict):
     """Hard rule: no volunteer works more than one post in the same block."""
-    for block in _blocks_in_demand(problem):
+    for block in _blocks_of_day(problem):
         for volunteer in problem.volunteers:
             # Collect the variables of every post this volunteer could work in this block.
             posts_here = []
