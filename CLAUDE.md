@@ -33,6 +33,11 @@ likes to write tests (and often code) themselves; Claude reviews and explains.
    is empty (write a short comment saying why). Keep Act and Assert on separate lines
    (`result = f()` then `assert result == ...`). One behaviour per test, a name that
    reads like a sentence, a one-line docstring.
+   **Tests that depend on settings pass them explicitly** (never rely on the defaults in
+   model.py): e.g. `RULES = Settings(60, 180, 30)` at the top of
+   test_solver_work_stretches.py, names say "the minimum/maximum" rather than a number.
+   The defaults themselves are pinned by `test_default_settings_match_the_agreed_rules`
+   in test_model.py. Use concrete numbers in test data; don't compute it from settings.
 4. **The user handles version control** in VS Code / Sourcetree, on the `develop` branch.
    Do not commit, push, branch or run other git commands that change state. Suggest a
    commit message when a step is done. Read-only git commands (status, log, branch) are fine.
@@ -175,7 +180,7 @@ Agreed order towards a **minimal viable scheduler** (usable on real data; qualit
 come after, the user can fix details by hand meanwhile):
 - [x] Refactor: `runs_of_consecutive_blocks` in model.py, used by
       `Schedule.work_stretches_of` and `_short_pieces` in rules.py
-- [ ] Several days. **Decided: option A**, one block numbering across the weekend:
+- [x] Several days. **Decided: option A**, one block numbering across the weekend:
       block = day number * 96 + (minutes since 06:00) / 15, Friday = day 0. Times before
       06:00 belong to the previous convention day (Saturday 01:00 = block 172). Note
       the naming: "Saturday 01:00" means Saturday's night, which on the calendar is
@@ -193,8 +198,10 @@ come after, the user can fix details by hand meanwhile):
         reported as its own test; a for-loop inside one test is not).
   - [x] rules.py: renamed `_blocks_of_day` to `_blocks_of_event`; `// 15` replaced
         with `MINUTES_PER_BLOCK` (refactor, tests stayed green)
-  - [ ] one or two solver tests across a day boundary as guards (e.g. only Mock Mane,
-        Tickets Saturday night 03:00 to Sunday 06:45 = 16 blocks -> NoScheduleFound)
+  - [x] solver test across a day boundary as a guard:
+        `test_work_stretch_across_the_day_boundary_is_at_most_180_minutes` (only Mock
+        Mane, Tickets Saturday night 03:00 to Sunday 07:00 = 16 blocks -> NoScheduleFound).
+        Possible later: a break across 06:00 (one free block around 06:00 -> raises).
 - [ ] Availability per day (e.g. a volunteer only there Friday and Sunday)
 - [ ] Read input workbook and form CSV. To do:
   - [ ] validate names. `Problem.posts` is not used by the solver yet, so a typo in a
@@ -238,14 +245,27 @@ booking, maximum stretch (sliding window), minimum break (forbid "work, short ga
 work"), minimum stretch (forbid "free, short run, free", with an escape variable per
 matching short piece of demand). Helpers: `_blocks_of_event`, `_variables_of`,
 `_short_pieces` in rules.py; `runs_of_consecutive_blocks` in model.py (shared, tested).
-Now working on **several days (option A)**: constants, `Settings.days`, the time
-helpers `block_of`, `time_of`, `day_of`, and the rules.py rename are done; all 49 tests
-green. Next: a cross-day solver test as a guard (see roadmap).
+**Several days (option A) is done**: constants, `Settings.days`, the time helpers
+`block_of`, `time_of`, `day_of` (in model.py, tested in test_time_blocks.py), the
+rules.py rename to `_blocks_of_event`, and a cross-day guard test.
+Last done (end of session, 2026-10-30 evening): solver tests pass settings explicitly
+(`RULES` in test_solver_work_stretches.py, renamed to "the minimum/maximum"), plus
+`test_default_settings_match_the_agreed_rules` in test_model.py. All 51 tests green.
+Suggested commit (may still be pending): "Tests pass settings explicitly (RULES) instead
+of relying on defaults; rename to minimum/maximum".
+**Next session: availability per day** (e.g. a volunteer only there Friday and Sunday).
+Start by discussing how to represent it in the model (the workbook's Volunteers tab has
+Friday/Saturday/Sunday columns; `day_of(block, settings)` can map blocks to days), then
+tests first, as usual.
 Claude reviews and explains; only changes code when asked.
 
-## Step 2 plan: work stretches and breaks
+## Step 2 plan: work stretches and breaks (done; kept for reference)
 
-Blocks: 1 block = 15 min, 4 = 60 min, 12 = 180 min. One day only for now.
+Note: the solver tests below were later renamed to say "the minimum/maximum" instead of
+a number (e.g. `test_work_stretch_longer_than_the_maximum_raises_no_schedule_found`) and
+now pass `settings=RULES` explicitly.
+
+Blocks: 1 block = 15 min, 4 = 60 min, 12 = 180 min.
 
 Helper `Schedule.work_stretches_of(volunteer) -> list[(first_block, block_after_last)]`,
 regardless of post. Pure Python tests (red first):

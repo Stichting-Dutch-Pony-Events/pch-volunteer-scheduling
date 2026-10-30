@@ -1,4 +1,20 @@
-from scheduler.model import Schedule, runs_of_consecutive_blocks
+from scheduler.model import Schedule, Settings, runs_of_consecutive_blocks
+
+
+def test_default_settings_match_the_agreed_rules():
+    """The defaults are a 60-180 minute work stretch and a 30-minute break.
+
+    If this fails, a default was changed: check that this was intended.
+    """
+    # Arrange
+    # (nothing to arrange: we look at a fresh Settings with all defaults)
+
+    # Act
+    settings = Settings()
+
+    # Assert
+    assert (settings.min_stretch_minutes, settings.max_stretch_minutes,
+            settings.min_break_minutes) == (60, 180, 30)
 
 
 def test_consecutive_blocks_form_one_work_stretch():
