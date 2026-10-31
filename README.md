@@ -16,17 +16,41 @@ The puzzle itself is solved by [Google OR-Tools](https://developers.google.com/o
 
 ## Status
 
-Early development. Nothing runs yet.
+In development. The solver works on small made-up examples (in the tests); it cannot
+read real input yet.
+
+### Done
 
 - [x] Project structure
 - [x] Draft input workbook (made from the 2026 schedule, kept local)
-- [ ] Step 1: minimal solver with the basic hard rules (demand met, only qualified volunteers, no double booking)
-- [ ] Shift lengths (minimum 1 hour, preferably at most 2, never more than 3)
-- [ ] Meal breaks
-- [ ] Event wishes (REALLY want / would like to attend)
-- [ ] Maximum hours and a fair spread of work
-- [ ] Reading the input workbook and the form CSV
+- [x] Basic hard rules: every post gets exactly the people it needs, only qualified
+      volunteers, nobody in two places at once
+- [x] Work stretches (continuous work) between 1 and 3 hours, breaks of at least
+      30 minutes; the limits are settings
+- [x] Time across the whole weekend, including night shifts after midnight
+
+### Roadmap to version 1.0
+
+Version 1.0 makes a schedule from the real input workbook that follows all hard rules
+except meal breaks, run from the command line. Details can then be fixed by hand.
+
+- [ ] Availability per day (e.g. someone only there Friday and Sunday)
+- [ ] Shifts placed by hand are kept
+- [ ] Reading the input workbook, with clear errors for typos
+- [ ] A clear message when no schedule is possible, saying where it gets stuck
 - [ ] Writing the schedule to Excel (overview, per post, per volunteer)
+- [ ] Running it from the command line
+- [ ] First run on real data, compared with the hand-made 2026 schedule
+- [ ] Faster, with a time limit, if real data needs it
+
+### After version 1.0
+
+- [ ] Nicer schedules: shifts start and end on the hour or half hour, staying at one
+      post, preferring what people are good at, shifts of preferably at most 2 hours
+- [ ] Meal breaks
+- [ ] Event wishes (REALLY want / would like to attend), read from the form answers
+- [ ] Maximum hours and a fair spread of work
+- [ ] A small program with a window: pick the input workbook, start a run, see errors
 
 ## How it works (planned)
 
@@ -37,7 +61,8 @@ Input workbook (.xlsx)  +  form answers (.csv)
         scheduler/model.py     plain data: volunteers, posts, demand, events, wishes
                   │
                   ▼
-        scheduler/solver.py    turns the rules into a CP-SAT model and solves it
+        scheduler/solver.py    builds a CP-SAT model and solves it
+        scheduler/rules.py     the rules, one function each
                   │
                   ▼
         Output workbook (.xlsx)  printable schedules
@@ -55,11 +80,15 @@ pch-volunteer-scheduling/
 ├── ReferenceDocuments/      real data, NOT in git (see Privacy)
 ├── scheduler/
 │   ├── hello.py             setup check (Python, pytest and OR-Tools work)
-│   ├── model.py             data classes
+│   ├── model.py             data classes and time helpers
+│   ├── rules.py             the hard rules, one function each
 │   └── solver.py            builds and solves the schedule
 ├── tests/
 │   ├── test_hello.py
-│   └── test_solver_basics.py
+│   ├── test_model.py
+│   ├── test_solver_basics.py
+│   ├── test_solver_work_stretches.py
+│   └── test_time_blocks.py
 ├── requirements.txt
 └── README.md
 ```

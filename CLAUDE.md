@@ -24,6 +24,8 @@ likes to write tests (and often code) themselves; Claude reviews and explains.
    *Exception:* `CLAUDE.md` and `ReferenceDocuments/DATA_NOTES.md` may be updated
    without asking. Keep them current when agreements, decisions or status change.
    Anything privacy-sensitive (about specific people) goes in DATA_NOTES.md, never here.
+   **Keep the README Status in sync** with the roadmap below (a short version, without
+   implementation details) whenever a roadmap item is done or the roadmap changes.
    **Code in `scheduler/` and `tests/`: only suggest it, the user types it in.** Then
    review their file when asked.
 2. **Test-driven development.** For every step:
@@ -86,7 +88,8 @@ Fictional nicknames for tests and examples (never use real nicknames):
   model.py (public, tested in test_model.py) is used by `Schedule.work_stretches_of`
   and `_short_pieces`.
 - **openpyxl** for reading/writing `.xlsx`. No pandas for now.
-- **pytest** for tests. Later possibly **Streamlit** as a simple UI.
+- **pytest** for tests. Version 1.0 runs from the command line; later a small program
+  with a window (see the roadmap).
 
 ## Repository layout
 
@@ -203,7 +206,10 @@ come after, the user can fix details by hand meanwhile):
         Mane, Tickets Saturday night 03:00 to Sunday 07:00 = 16 blocks -> NoScheduleFound).
         Possible later: a break across 06:00 (one free block around 06:00 -> raises).
 - [ ] Availability per day (e.g. a volunteer only there Friday and Sunday)
-- [ ] Read input workbook and form CSV. To do:
+- [ ] Fixed shifts placed by hand are kept (Fixed tab; like availability, this pins
+      variables to 1 instead of 0)
+- [ ] Read the input workbook (the form CSV is only needed for wishes, so it moves to
+      the Event wishes step). To do:
   - [ ] validate names. `Problem.posts` is not used by the solver yet, so a typo in a
         post name (in demand or skills) silently means "nobody qualified" and gives a
         generic NoScheduleFound. Check every post name against `posts` and raise a
@@ -225,20 +231,35 @@ come after, the user can fix details by hand meanwhile):
   - [ ] meal windows differ: workbook Settings say lunch 11:30-14:00 and dinner
         17:30-19:30, this file says 12:00-14:00 and 18:00-19:00. Check with the user
         at the meal breaks step.
+- [ ] Clear message when no schedule is possible: simple checks before solving, e.g.
+      "Tickets, Saturday 14:00: needs 3, only 2 qualified volunteers available"
+      (a bare NoScheduleFound on real data gives no clue where to look)
 - [ ] Write output Excel (overview, per post, per volunteer; show changes vs previous
       run). Use `time_of`; show night rows under the previous day (as the workbook does).
+- [ ] Command line: run it end to end, e.g. `python -m scheduler input.xlsx output.xlsx`
+      (until now the solver is only reached from tests)
 - [ ] First end-to-end run on real data; compare with the hand-made 2026 schedule
 - [ ] Faster model building (group variables per volunteer/block once instead of
-      `_variables_of` scanning all of `works` on every call), if real data is slow
+      `_variables_of` scanning all of `works` on every call), if real data is slow.
+      Plus a solver time limit (a setting), so a big run can't hang forever.
+- [ ] Small: optional guard test for a break across 06:00; remove hello.py and
+      test_hello.py once they're no longer useful
+
+**Version 1.0 = all of the above**: a schedule for real data that follows the hard rules
+(except meal breaks), run from the command line. The user fixes details by hand.
 
 After the minimal viable scheduler:
-- [ ] Soft rules: start/end on :00/:30, stay at one post, avoid short stretches
-      (first objective)
+- [ ] Soft rules (first objective): start/end on :00/:30, stay at one post, avoid short
+      stretches, prefer higher skill scores, prefer work stretches of at most 120 min
 - [ ] Meal breaks
-- [ ] Event wishes
+- [ ] Event wishes (includes reading the form CSV)
 - [ ] Maximum hours and fair spread
+- [ ] Maybe: Question vetting, Manestage clean and Sardine duty by the same person
 - [ ] Maybe: switch rules on/off from the workbook (may need a Rule class then)
-- [ ] Maybe: Streamlit UI
+- [ ] Future wish: a small program with a window, e.g. to pick the input workbook, start
+      a run and show errors clearly, so it can be used without the command line.
+      Technology still to choose (e.g. tkinter for a real window, Streamlit for a page in
+      the browser).
 
 Current position: Steps 1 and 2 are done. Hard rules in rules.py: demand, no double
 booking, maximum stretch (sliding window), minimum break (forbid "work, short gap,
