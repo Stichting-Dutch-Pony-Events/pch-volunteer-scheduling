@@ -45,6 +45,10 @@ likes to write tests (and often code) themselves; Claude reviews and explains.
    commit message when a step is done. Read-only git commands (status, log, branch) are fine.
 5. **Python only.** Python **3.14** in `.venv` (OR-Tools has no 3.15 wheels yet).
    Use the newer lowercase OR-Tools API (`new_int_var`, `add`, `solve`, `value`).
+   **Type hints on every function we write from now on** (agreed 2026-11-01): all
+   parameters and the return type, e.g. `def solve(problem: Problem) -> Schedule:`.
+   Tests are the exception (no hints needed on `test_...` functions). Older functions
+   without hints get them when we touch them anyway.
    **Line length: soft limit of 100 characters** (not PEP 8's 79). The user has a
    ruler at 100 in their local `.vscode/settings.json` (not in git), which also sets
    `files.eol` to CRLF and trims trailing whitespace on save.
@@ -83,6 +87,10 @@ Fictional nicknames for tests and examples (never use real nicknames):
 - **Decided: no Rule base class for now** (plain functions with the same arguments are
   enough). Revisit later: the user may want to switch rules on/off from the workbook,
   and soft rules need weights. Focus first on a minimal viable scheduler, then expand.
+- **Type alias `Works`** in rules.py: `dict[tuple[str, str, int], cp_model.IntVar]`, the
+  solver's yes/no variables keyed by (volunteer_name, post, block). Lives in rules.py
+  (solver.py imports rules, so the other way round would be circular); solver.py uses
+  `rules.Works`. Rules return `-> None`.
 - **Shared helpers:** `_variables_of` in rules.py collects a volunteer's variables in a
   block range (used by every per-volunteer rule). `runs_of_consecutive_blocks` in
   model.py (public, tested in test_model.py) is used by `Schedule.work_stretches_of`

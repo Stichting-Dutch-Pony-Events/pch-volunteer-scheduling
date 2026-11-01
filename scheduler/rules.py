@@ -1,15 +1,20 @@
 """Hard rules for the schedule, one function per rule.
 
 Each add_..._rule function adds its constraints to the CP-SAT model. They all take the
-same arguments: the model, the problem, and the works variables from solver.py
-(a dict: (volunteer_name, post, block) -> variable).
+same arguments: the model, the problem, and the works variables made in solver.py
+(see Works below).
 """
 from ortools.sat.python import cp_model
 
 from scheduler.model import MINUTES_PER_BLOCK, Problem, runs_of_consecutive_blocks
 
+# The solver's yes/no variables: (volunteer_name, post, block) -> variable.
+# Defined here rather than in solver.py, because solver.py imports this file (the other
+# way round would be a circular import).
+Works = dict[tuple[str, str, int], cp_model.IntVar]
 
-def add_demand_rule(model: cp_model.CpModel, problem: Problem, works: dict):
+
+def add_demand_rule(model: cp_model.CpModel, problem: Problem, works: Works) -> None:
     """Hard rule: every open block of a post gets exactly the number of people needed."""
     for (post, block), needed in problem.demand.items():
         # Collect the variables of everyone who could work this post in this block.
@@ -22,7 +27,7 @@ def add_demand_rule(model: cp_model.CpModel, problem: Problem, works: dict):
         model.add(sum(people_here) == needed)
 
 
-def add_no_double_booking_rule(model: cp_model.CpModel, problem: Problem, works: dict):
+def add_no_double_booking_rule(model: cp_model.CpModel, problem: Problem, works: Works) -> None:
     """Hard rule: no volunteer works more than one post in the same block."""
     for block in _blocks_of_event(problem):
         for volunteer in problem.volunteers:
@@ -34,7 +39,7 @@ def add_no_double_booking_rule(model: cp_model.CpModel, problem: Problem, works:
                 model.add(sum(posts_here) <= 1)
 
 
-def add_maximum_stretch_rule(model: cp_model.CpModel, problem: Problem, works: dict):
+def add_maximum_stretch_rule(model: cp_model.CpModel, problem: Problem, works: Works) -> None:
     """Hard rule: no volunteer works longer than the maximum number of blocks in a row."""
     max_number_of_blocks = problem.settings.max_stretch_minutes // MINUTES_PER_BLOCK
 
@@ -47,7 +52,7 @@ def add_maximum_stretch_rule(model: cp_model.CpModel, problem: Problem, works: d
             model.add(sum(posts_in_window) <= max_number_of_blocks)
 
 
-def add_minimum_break_rule(model: cp_model.CpModel, problem: Problem, works: dict):
+def add_minimum_break_rule(model: cp_model.CpModel, problem: Problem, works: Works) -> None:
     """Hard rule: no volunteer has a break shorter than the minimum break."""
     min_break_blocks = problem.settings.min_break_minutes // MINUTES_PER_BLOCK
     if min_break_blocks <= 1:
@@ -72,7 +77,7 @@ def add_minimum_break_rule(model: cp_model.CpModel, problem: Problem, works: dic
                     model.add(sum(first) - sum(middle) + sum(last) <= 1)
 
 
-def add_minimum_stretch_rule(model: cp_model.CpModel, problem: Problem, works: dict):
+def add_minimum_stretch_rule(model: cp_model.CpModel, problem: Problem, works: Works) -> None:
     """Hard rule: no volunteer works a stretch shorter than the minimum.
 
     Exception: a shorter stretch is allowed if it is exactly one short piece of demand
@@ -124,7 +129,7 @@ def add_minimum_stretch_rule(model: cp_model.CpModel, problem: Problem, works: d
                 model.add(-sum(before) + sum(run) - sum(after) <= run_length - 1 + sum(escapes))
 
 
-def _blocks_in_demand(problem: Problem):
+def _blocks_in_demand(problem: Problem) -> set[int]:
     """Every block that appears in the demand, each only once."""
     blocks = set()
     for (post, block) in problem.demand:
@@ -145,8 +150,8 @@ def _blocks_of_event(problem: Problem) -> range:
     return range(min(blocks), max(blocks) + 1)
 
 
-def _variables_of(works: dict, volunteer_name: str, first_block: int,
-                  block_after_last: int) -> list:
+def _variables_of(works: Works, volunteer_name: str, first_block: int,
+                  block_after_last: int) -> list[cp_model.IntVar]:
     """This volunteer's variables (at any post) in blocks first_block up to block_after_last.
 
     Uses the same convention as range(): block_after_last itself is not included.
