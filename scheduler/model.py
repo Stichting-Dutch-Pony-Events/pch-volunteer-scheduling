@@ -158,3 +158,9 @@ def day_of(block: int, settings: Settings) -> str:
         raise ValueError(f"Block {block} is out of convention days {settings.days}.")
 
     return settings.days[block // BLOCKS_PER_DAY]
+
+
+def all_blocks(settings: Settings) -> set[int]:
+    """Every block of the convention days, e.g. to make someone available all weekend."""
+    # Same range as day_of accepts: block 0 up to (not including) the block after the last day.
+    return set(range(len(settings.days) * BLOCKS_PER_DAY))

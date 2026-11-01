@@ -1,6 +1,6 @@
 import pytest
 
-from scheduler.model import Settings, block_of, time_of, day_of
+from scheduler.model import Settings, block_of, time_of, day_of, all_blocks
 
 
 def test_first_day_at_six_is_block_0():
@@ -160,3 +160,27 @@ def test_time_of_a_block_outside_the_convention_days_raises_value_error(block):
     # Assert
     with pytest.raises(ValueError):
         time_of(block, settings)
+
+
+def test_all_blocks_covers_every_block_of_every_convention_day():
+    """Three convention days of 96 blocks each give blocks 0 up to 287."""
+    # Arrange
+    settings = Settings(days=("Friday", "Saturday", "Sunday"))
+
+    # Act
+    blocks = all_blocks(settings)
+
+    # Assert
+    assert blocks == set(range(288))
+
+
+def test_all_blocks_follows_the_days_in_the_settings():
+    """With only Saturday and Sunday, there are 2 * 96 blocks: 0 up to 191."""
+    # Arrange
+    settings = Settings(days=("Saturday", "Sunday"))
+
+    # Act
+    blocks = all_blocks(settings)
+
+    # Assert
+    assert blocks == set(range(192))
