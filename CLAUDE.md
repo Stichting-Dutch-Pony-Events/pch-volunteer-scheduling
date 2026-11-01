@@ -164,7 +164,8 @@ Meals: Saturday lunch 12:00-14:00, Saturday dinner 18:00-19:00, Sunday lunch 12:
 
 ## Input workbook format
 
-Tabs: ReadMe, Settings, Meals, Volunteers, Posts, Skills, Events, Demand, Wishes, Fixed.
+Tabs: ReadMe, Settings, Volunteers, Posts, Skills, Events, Demand, Wishes, Fixed (there
+is no separate Meals tab; the meal windows are rows in Settings).
 The workbook has its own ReadMe tab explaining each tab. Yellow cells = a guess or
 question to check. Posts include e.g. Tickets, Infobooth, Vendorguarding,
 AD Vendorhall guarding, Question vetting, Manestage clean, Sardine duty, Event setup
@@ -206,6 +207,25 @@ come after, the user can fix details by hand meanwhile):
         Mane, Tickets Saturday night 03:00 to Sunday 07:00 = 16 blocks -> NoScheduleFound).
         Possible later: a break across 06:00 (one free block around 06:00 -> raises).
 - [ ] Availability per day (e.g. a volunteer only there Friday and Sunday)
+  - **Decided (2026-10-31): positive logic in the workbook.** Volunteers tab, one cell
+    per day: `yes` = the whole convention day (06:00-06:00), one time range like
+    `08:00-18:00` = only then, `no` or empty = not that day. Case and spaces ignored.
+    Anything else is an error naming volunteer, day and value (a typo must never
+    silently mean "unavailable"). A volunteer available on no day at all is an error
+    ("remove the row if they are not coming"). Range end is exclusive (18:00 = last
+    block 17:45); ranges past midnight follow the day convention (Saturday 20:00-02:00);
+    end `06:00` means until the end of the convention day (needs a special case:
+    `block_of(day, "06:00")` is the *start* of the day). The yes/no/range checks and
+    the "never available" error belong in the workbook reader.
+  - [x] Model (agreed, field added): `Volunteer.available_blocks: set[int] | None = None`
+    (None = no restriction, so existing tests don't change). Not used by the solver yet.
+  - [ ] Solver: `_create_variables` only makes a variable for available blocks, like
+    skills. Tests first (new file test_solver_availability.py).
+  - Test workbook: `tests/data/test_input.xlsx`, same tabs and columns as the draft,
+    fictional names only, small demand, availability examples (yes, no, a range, a
+    range past midnight, a range ending 06:00).
+  - Maybe later: several ranges in one cell (e.g. `08:00-12:00, 14:00-18:00`). Only
+    happened once in years; fix by hand for now.
 - [ ] Fixed shifts placed by hand are kept (Fixed tab; like availability, this pins
       variables to 1 instead of 0)
 - [ ] Read the input workbook (the form CSV is only needed for wishes, so it moves to
