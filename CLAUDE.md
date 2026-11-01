@@ -219,6 +219,15 @@ come after, the user can fix details by hand meanwhile):
     the "never available" error belong in the workbook reader.
   - [x] Model (agreed, field added): `Volunteer.available_blocks: set[int] | None = None`
     (None = no restriction, so existing tests don't change). Not used by the solver yet.
+  - **Revised (2026-11-01): no None, the field becomes required** (`set[int]`, no
+    default; a default can't know `Settings.days`, and a mutable set isn't allowed as a
+    dataclass default anyway). Empty set = never available. "All weekend" is said
+    explicitly with `all_blocks(settings)` in model.py.
+    - [x] `all_blocks(settings)` with 2 tests in test_time_blocks.py (green)
+    - [x] field required, all 37 `Volunteer(...)` calls pass `available_blocks`
+      (test_solver_basics.py got a `RULES` with `settings=RULES`; every RULES now also
+      passes `days=` explicitly). 55 green, the 5 availability tests still red.
+  - [ ] Next: solver change in `_create_variables` (user types it).
   - [ ] Solver: `_create_variables` only makes a variable for available blocks, like
     skills. Tests first (new file test_solver_availability.py).
   - Test workbook: `tests/data/test_input.xlsx`, same tabs and columns as the draft,
@@ -253,7 +262,14 @@ come after, the user can fix details by hand meanwhile):
         at the meal breaks step.
 - [ ] Clear message when no schedule is possible: simple checks before solving, e.g.
       "Tickets, Saturday 14:00: needs 3, only 2 qualified volunteers available"
-      (a bare NoScheduleFound on real data gives no clue where to look)
+      (a bare NoScheduleFound on real data gives no clue where to look).
+      **Agreed: expand the error types.** NoScheduleFound becomes the parent class with
+      more specific child errors, e.g. `NotEnoughPeople(NoScheduleFound)` (a post/block
+      needs more people than are qualified and available), maybe one per kind of
+      problem the pre-checks find. Names still to decide. Existing tests keep working:
+      `pytest.raises(NoScheduleFound)` also catches the children. New tests can then
+      check the specific child (and its message). Plain NoScheduleFound stays for
+      "the solver found no schedule" when no pre-check spots a cause.
 - [ ] Write output Excel (overview, per post, per volunteer; show changes vs previous
       run). Use `time_of`; show night rows under the previous day (as the workbook does).
 - [ ] Command line: run it end to end, e.g. `python -m scheduler input.xlsx output.xlsx`
@@ -289,15 +305,14 @@ matching short piece of demand). Helpers: `_blocks_of_event`, `_variables_of`,
 **Several days (option A) is done**: constants, `Settings.days`, the time helpers
 `block_of`, `time_of`, `day_of` (in model.py, tested in test_time_blocks.py), the
 rules.py rename to `_blocks_of_event`, and a cross-day guard test.
-Last done (end of session, 2026-10-30 evening): solver tests pass settings explicitly
-(`RULES` in test_solver_work_stretches.py, renamed to "the minimum/maximum"), plus
-`test_default_settings_match_the_agreed_rules` in test_model.py. All 51 tests green.
-Suggested commit (may still be pending): "Tests pass settings explicitly (RULES) instead
-of relying on defaults; rename to minimum/maximum".
-**Next session: availability per day** (e.g. a volunteer only there Friday and Sunday).
-Start by discussing how to represent it in the model (the workbook's Volunteers tab has
-Friday/Saturday/Sunday columns; `day_of(block, settings)` can map blocks to days), then
-tests first, as usual.
+2026-10-31/11-01: roadmap revised (version 1.0 defined, README Status synced),
+availability decided (positive logic, see the roadmap item), test workbook
+`tests/data/test_input.xlsx` made, the 2026 draft converted to yes/no (backup kept in
+ReferenceDocuments), `Volunteer.available_blocks` added (51 tests green).
+**Now: availability in the solver.** tests/test_solver_availability.py has 7 stubs
+(`pytest.skip`) with scenario sketches; the user writes the bodies, then red, then the
+change in `_create_variables`. Note: stub 2 may pass by chance (solver may pick Testy
+Hooves anyway); discuss making it reliably red.
 Claude reviews and explains; only changes code when asked.
 
 ## Step 2 plan: work stretches and breaks (done; kept for reference)

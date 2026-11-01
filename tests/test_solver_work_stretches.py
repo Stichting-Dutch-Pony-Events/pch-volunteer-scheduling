@@ -1,13 +1,16 @@
 import pytest
 
-from scheduler.model import Volunteer, Post, Problem, Settings, block_of, MINUTES_PER_BLOCK
+from scheduler.model import (Volunteer, Post, Problem, Settings, block_of, all_blocks,
+                             MINUTES_PER_BLOCK)
 from scheduler.solver import solve, NoScheduleFound
 
 
 # Most tests below are built around these exact limits (in blocks: 4, 12 and 2), so they
-# pass them explicitly instead of relying on the defaults in model.py. Tests that need
-# different limits make their own Settings.
-RULES = Settings(min_stretch_minutes=60, max_stretch_minutes=180, min_break_minutes=30)
+# pass them (and the days, which block_of and all_blocks need) explicitly instead of
+# relying on the defaults in model.py. Tests that need different limits make their own
+# Settings.
+RULES = Settings(min_stretch_minutes=60, max_stretch_minutes=180, min_break_minutes=30,
+                 days=("Friday", "Saturday", "Sunday"))
 
 
 def test_work_stretch_longer_than_the_maximum_raises_no_schedule_found():
@@ -18,7 +21,8 @@ def test_work_stretch_longer_than_the_maximum_raises_no_schedule_found():
         demand[("Tickets", block)] = 1
 
     problem = Problem(
-        volunteers=[Volunteer(name="Mock Mane", skills={"Tickets": 1})],
+        volunteers=[Volunteer(name="Mock Mane", skills={"Tickets": 1},
+                              available_blocks=all_blocks(RULES))],
         posts=[Post(name="Tickets")],
         demand=demand,
         settings=RULES)
@@ -43,7 +47,8 @@ def test_work_stretch_across_the_day_boundary_is_at_most_the_maximum():
         demand[("Tickets", block)] = 1
 
     problem = Problem(
-        volunteers=[Volunteer(name="Mock Mane", skills={"Tickets": 1})],
+        volunteers=[Volunteer(name="Mock Mane", skills={"Tickets": 1},
+                              available_blocks=all_blocks(RULES))],
         posts=[Post(name="Tickets")],
         demand=demand,
         settings=RULES)
@@ -66,7 +71,8 @@ def test_continuous_work_across_two_posts_is_at_most_the_maximum():
         demand[("Infobooth", block)] = 1
 
     problem = Problem(
-        volunteers=[Volunteer(name="Mock Mane", skills={"Tickets": 1, "Infobooth": 1})],
+        volunteers=[Volunteer(name="Mock Mane", skills={"Tickets": 1, "Infobooth": 1},
+                              available_blocks=all_blocks(RULES))],
         posts=[Post(name="Tickets"), Post(name="Infobooth")],
         demand=demand,
         settings=RULES)
@@ -89,7 +95,8 @@ def test_break_shorter_than_the_minimum_raises_no_schedule_found():
         demand[("Tickets", block)] = 1
 
     problem = Problem(
-        volunteers=[Volunteer(name="Mock Mane", skills={"Tickets": 1})],
+        volunteers=[Volunteer(name="Mock Mane", skills={"Tickets": 1},
+                              available_blocks=all_blocks(RULES))],
         posts=[Post(name="Tickets")],
         demand=demand,
         settings=RULES)
@@ -112,7 +119,8 @@ def test_break_of_exactly_the_minimum_is_allowed():
         demand[("Tickets", block)] = 1
 
     problem = Problem(
-        volunteers=[Volunteer(name="Mock Mane", skills={"Tickets": 1})],
+        volunteers=[Volunteer(name="Mock Mane", skills={"Tickets": 1},
+                              available_blocks=all_blocks(RULES))],
         posts=[Post(name="Tickets")],
         demand=demand,
         settings=RULES)
@@ -136,8 +144,10 @@ def test_extra_person_needed_for_less_than_the_minimum_may_work_just_that_time()
         demand[("Tickets", block)] = 1
 
     problem = Problem(
-        volunteers=[Volunteer(name="Mock Mane", skills={"Tickets": 1}),
-                    Volunteer(name="Testy Hooves", skills={"Tickets": 1})],
+        volunteers=[Volunteer(name="Mock Mane", skills={"Tickets": 1},
+                              available_blocks=all_blocks(RULES)),
+                    Volunteer(name="Testy Hooves", skills={"Tickets": 1},
+                              available_blocks=all_blocks(RULES))],
         posts=[Post(name="Tickets")],
         demand=demand,
         settings=RULES)
@@ -161,8 +171,10 @@ def test_two_posts_together_can_make_up_the_minimum():
         demand[("Infobooth", block)] = 1
 
     problem = Problem(
-        volunteers=[Volunteer(name="Mock Mane", skills={"Tickets": 1}),
-                    Volunteer(name="Testy Hooves", skills={"Tickets": 1, "Infobooth": 1})],
+        volunteers=[Volunteer(name="Mock Mane", skills={"Tickets": 1},
+                              available_blocks=all_blocks(RULES)),
+                    Volunteer(name="Testy Hooves", skills={"Tickets": 1, "Infobooth": 1},
+                              available_blocks=all_blocks(RULES))],
         posts=[Post(name="Tickets"), Post(name="Infobooth")],
         demand=demand,
         settings=RULES)
@@ -184,7 +196,8 @@ def test_post_open_less_than_the_minimum_can_be_worked():
         demand[("Tickets", block)] = 1
 
     problem = Problem(
-        volunteers=[Volunteer(name="Mock Mane", skills={"Tickets": 1})],
+        volunteers=[Volunteer(name="Mock Mane", skills={"Tickets": 1},
+                              available_blocks=all_blocks(RULES))],
         posts=[Post(name="Tickets")],
         demand=demand,
         settings=RULES)
@@ -205,12 +218,17 @@ def test_work_stretch_shorter_than_minimum_raises_no_schedule_found():
     for block in range(16):       # blocks 0-15: 4 hours at Tickets
         demand[("Tickets", block)] = 1
 
+    settings = Settings(min_stretch_minutes=150, max_stretch_minutes=180,
+                        days=("Friday", "Saturday", "Sunday"))
+
     problem = Problem(
-        volunteers=[Volunteer(name="Mock Mane", skills={"Tickets": 1}),
-                    Volunteer(name="Testy Hooves", skills={"Tickets": 1})],
+        volunteers=[Volunteer(name="Mock Mane", skills={"Tickets": 1},
+                              available_blocks=all_blocks(settings)),
+                    Volunteer(name="Testy Hooves", skills={"Tickets": 1},
+                              available_blocks=all_blocks(settings))],
         posts=[Post(name="Tickets")],
         demand=demand,
-        settings=Settings(min_stretch_minutes=150, max_stretch_minutes=180))
+        settings=settings)
 
     # Act
     # (Act and Assert are combined, pytest.raises checks the exception while the solve runs.)
@@ -229,12 +247,17 @@ def test_minimum_stretch_can_be_changed_in_the_settings():
     for block in range(6):        # blocks 0-5: 1.5 hours at Tickets
         demand[("Tickets", block)] = 1
 
+    settings = Settings(min_stretch_minutes=30, max_stretch_minutes=60,
+                        days=("Friday", "Saturday", "Sunday"))
+
     problem = Problem(
-        volunteers=[Volunteer(name="Mock Mane", skills={"Tickets": 1}),
-                    Volunteer(name="Testy Hooves", skills={"Tickets": 1})],
+        volunteers=[Volunteer(name="Mock Mane", skills={"Tickets": 1},
+                              available_blocks=all_blocks(settings)),
+                    Volunteer(name="Testy Hooves", skills={"Tickets": 1},
+                              available_blocks=all_blocks(settings))],
         posts=[Post(name="Tickets")],
         demand=demand,
-        settings=Settings(min_stretch_minutes=30, max_stretch_minutes=60))
+        settings=settings)
 
     # Act
     schedule = solve(problem)
@@ -251,8 +274,10 @@ def test_long_opening_is_split_into_stretches_of_allowed_length():
         demand[("Tickets", block)] = 1
 
     problem = Problem(
-        volunteers=[Volunteer(name="Mock Mane", skills={"Tickets": 1}),
-                    Volunteer(name="Testy Hooves", skills={"Tickets": 1})],
+        volunteers=[Volunteer(name="Mock Mane", skills={"Tickets": 1},
+                              available_blocks=all_blocks(RULES)),
+                    Volunteer(name="Testy Hooves", skills={"Tickets": 1},
+                              available_blocks=all_blocks(RULES))],
         posts=[Post(name="Tickets")],
         demand=demand,
         settings=RULES)

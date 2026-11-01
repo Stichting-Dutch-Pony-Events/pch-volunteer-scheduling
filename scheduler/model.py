@@ -38,8 +38,9 @@ class Volunteer:
     name: str  # the nickname used in the schedule
     # post -> skill level: 1 can, 2 good at it / likes it, 3 main role (missing = never)
     skills: dict[str, int]
-    # The blocks this volunteer can work. None = no restriction (available all the time).
-    available_blocks: set[int] | None = None
+    # The blocks this volunteer can work (empty = never). For the whole weekend use
+    # all_blocks(settings).
+    available_blocks: set[int]
 
 
 @dataclass
