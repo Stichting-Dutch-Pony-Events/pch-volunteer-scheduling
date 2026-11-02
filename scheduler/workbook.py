@@ -11,4 +11,11 @@ def cell_text(value: str | int | float | time | None) -> str:
 
     A time value (when someone types 14:00 into a cell) becomes "14:00".
     """
-    raise NotImplementedError  # stub, so the tests can run and fail
+    if value is None:
+        result = ""
+    elif isinstance(value, time):
+        result = value.strftime("%H:%M")
+    else:  # str, int or float
+        result = str(value).strip()
+
+    return result

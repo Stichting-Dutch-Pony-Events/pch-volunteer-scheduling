@@ -40,6 +40,12 @@ likes to write tests (and often code) themselves; Claude reviews and explains.
    test_solver_work_stretches.py, names say "the minimum/maximum" rather than a number.
    The defaults themselves are pinned by `test_default_settings_match_the_agreed_rules`
    in test_model.py. Use concrete numbers in test data; don't compute it from settings.
+   **Workflow for new tests (agreed 2026-11-02):** Claude suggests tests, the user
+   approves them, then Claude writes the test stubs in the test file: name, one-line
+   docstring, empty `# Arrange` / `# Act` / `# Assert` sections, and
+   `pytest.skip("not written yet")` as the last line, under `# Assert`. The user fills
+   in each test and removes its skip line (then sees it go red). Code stubs in
+   `scheduler/` raise `NotImplementedError`.
 4. **The user handles version control** in VS Code / Sourcetree.
    Do not commit, push, branch or run other git commands that change state. Suggest a
    commit message when a step is done. Read-only git commands (status, log, branch) are fine.
