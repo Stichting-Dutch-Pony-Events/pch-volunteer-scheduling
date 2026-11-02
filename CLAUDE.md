@@ -121,8 +121,8 @@ tests/                test_hello.py, test_model.py, test_time_blocks.py;
                       data/test_input.xlsx (made-up workbook)
 tests/solver/         test_solver_availability.py, test_solver_basics.py,
                       test_solver_work_stretches.py
-tests/workbook/       test_celltext.py, test_availability.py, test_find_columns.py (one test
-                      file per reader part)
+tests/workbook/       test_celltext.py, test_availability.py, test_find_columns.py,
+                      test_read_settings.py (one test file per reader part)
                       Every test folder has an empty __init__.py (like tests/ itself).
 requirements.txt      ortools>=9.15, openpyxl>=3.1, pytest>=8.0
 ```

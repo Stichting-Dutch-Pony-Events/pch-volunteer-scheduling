@@ -8,7 +8,26 @@ from datetime import time
 
 from openpyxl.worksheet.worksheet import Worksheet
 
-from scheduler.model import Settings, BLOCKS_PER_DAY, block_of
+from scheduler.model import Settings, block_of
+from scheduler.model import MINUTES_PER_BLOCK, DAY_STARTS_AT_HOUR, BLOCKS_PER_DAY
+
+# The layout of the input workbook this scheduler reads (the "Workbook format version"
+# setting). Raise it only when the workbook layout changes, e.g. a renamed setting or a
+# new required column, not for every new version of the scheduler.
+WORKBOOK_FORMAT_VERSION = 1
+
+KNOWN_SETTINGS = {"Workbook format version", "Time step", "Day boundary", "Days",
+                  "Shift start step", "Minimum work stretch", "Preferred maximum shift length",
+                  "Maximum work stretch", "Minimum break", "Lunch window start",
+                  "Lunch window end", "Lunch break length", "Dinner window start",
+                  "Dinner window end", "Dinner break length", "Default maximum hours per day",
+                  "Default maximum hours total", "Weight: miss a REALLY-want event",
+                  "Weight: miss a like-to-attend event", "Weight: skill score 3",
+                  "Weight: skill score 2", "Weight: skill score 1",
+                  "Weight: shift longer than preferred", "Weight: unfair spread of hours"}
+
+REQUIRED_SETTINGS = {"Workbook format version", "Time step", "Day boundary", "Days",
+                    "Minimum work stretch", "Maximum work stretch", "Minimum break"}
 
 
 class WorkbookError(Exception):
@@ -97,3 +116,82 @@ def find_columns(sheet: Worksheet, names: list[str]) -> dict[str, int]:
         columns[name] = matching[0]
 
     return columns
+
+
+def read_settings(sheet: Worksheet) -> Settings:
+    """The Settings tab as Settings: one setting per row, in the columns Setting and Value.
+
+    The order of the rows is free. Required: Workbook format version (must be
+    WORKBOOK_FORMAT_VERSION), Time step (must be 15), Day boundary (must be 06:00), Days
+    (comma separated, no duplicates), Minimum work stretch, Maximum work stretch and
+    Minimum break (whole numbers, in minutes). Settings the scheduler does not use yet
+    (meals, maximum hours, weights) are accepted and ignored. Raises WorkbookError for a
+    missing, empty, duplicate or unknown setting, or a value that is not allowed.
+    """
+    # 1. Isolate the headers and their respective column numbers
+    columns = find_columns(sheet, ["Setting", "Value"])
+
+    # 2. Fetch all (unparsed) settings from Setttings sheet
+    unparsed_settings = dict()
+    for rownumber in range(2,sheet.max_row + 1):
+        setting_name = cell_text(sheet.cell(row=rownumber, column=columns["Setting"]).value)
+        if setting_name == "":
+            continue
+
+        if setting_name in unparsed_settings:
+            raise WorkbookError(f"Settings: two settings with name {setting_name!r}.")
+        else:
+            unparsed_value = cell_text(sheet.cell(row=rownumber, column=columns["Value"]).value)
+            unparsed_settings[setting_name] = unparsed_value
+
+    # 3. Check for unknown settings
+    for key, value in unparsed_settings.items():
+        if key not in KNOWN_SETTINGS:
+            raise WorkbookError(f"Settings: unknown setting {key!r}")
+
+    # 4. Check for presence of all required settings
+    for required_setting in REQUIRED_SETTINGS:
+        if required_setting not in unparsed_settings:
+            raise WorkbookError(f"Settings: Missing required setting {required_setting!r}")
+
+    # 5. Check the required settings one by one and turn them into Settings
+    version = _whole_number(unparsed_settings, "Workbook format version")
+    if version != WORKBOOK_FORMAT_VERSION:
+        raise WorkbookError(f"Settings, 'Workbook format version': this workbook is version "
+                            f"{version}, this scheduler reads version {WORKBOOK_FORMAT_VERSION}.")
+
+    time_step = _whole_number(unparsed_settings, "Time step")
+    if time_step != MINUTES_PER_BLOCK:
+        raise WorkbookError(f"Settings, 'Time step': the scheduler only supports "
+                            f"{MINUTES_PER_BLOCK} minutes for now, not {time_step}.")
+
+    # cell_text already turned a time typed into Excel into text, so compare as text.
+    day_boundary = unparsed_settings["Day boundary"]
+    expected_day_boundary = f"{DAY_STARTS_AT_HOUR:02d}:00"
+    if day_boundary != expected_day_boundary:
+        raise WorkbookError(f"Settings, 'Day boundary': the scheduler only supports "
+                            f"{expected_day_boundary} for now, not {day_boundary}.")
+
+    # Days: "Friday, Saturday, Sunday" -> ["Friday", "Saturday", "Sunday"]
+    days = []
+    for day in unparsed_settings["Days"].split(","):
+        day = day.strip()
+        if day in days:
+            raise WorkbookError(f"Settings, 'Days': {day!r} appears more than once.")
+        days.append(day)
+
+    return Settings(
+        min_stretch_minutes=_whole_number(unparsed_settings, "Minimum work stretch"),
+        max_stretch_minutes=_whole_number(unparsed_settings, "Maximum work stretch"),
+        min_break_minutes=_whole_number(unparsed_settings, "Minimum break"),
+        days=tuple(days))  # a tuple, like the default in Settings
+
+
+def _whole_number(settings: dict[str, str], name: str) -> int:
+    """The setting with this name as a whole number; WorkbookError if it isn't one."""
+    try:
+        return int(settings[name])
+    except ValueError:
+        # from None: show only our clear message, not the ValueError behind it
+        raise WorkbookError(f"Settings, {name!r}: {settings[name]!r} is not a whole "
+                            f"number.") from None
