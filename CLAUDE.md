@@ -121,7 +121,8 @@ tests/                test_hello.py, test_model.py, test_time_blocks.py;
                       data/test_input.xlsx (made-up workbook)
 tests/solver/         test_solver_availability.py, test_solver_basics.py,
                       test_solver_work_stretches.py
-tests/workbook/       test_celltext.py, test_availability.py (one test file per reader part)
+tests/workbook/       test_celltext.py, test_availability.py, test_find_columns.py (one test
+                      file per reader part)
                       Every test folder has an empty __init__.py (like tests/ itself).
 requirements.txt      ortools>=9.15, openpyxl>=3.1, pytest>=8.0
 ```
@@ -280,12 +281,32 @@ come after, the user can fix details by hand meanwhile):
     the first error for now** (collecting all errors: see after version 1.0).
     Volunteer errors (message names the volunteer): no row on Skills / no skill at all,
     and not available on any day. Duplicate nicknames are an error too.
-  - Suggested order (TDD): `cell_text`, `parse_availability`, `_read_settings`, posts
-    and skills (with the post-name check), volunteers, demand, `read_problem` end to end.
+  - Suggested order (TDD): `cell_text` (done), `parse_availability` (done),
+    `find_columns`, `read_settings`, posts and skills (with the post-name check),
+    volunteers, demand, `read_problem` end to end.
+  - **Agreed 2026-11-02:** tab readers are public (`read_settings(sheet) -> Settings`,
+    no underscore) because they are tested directly; tests build small sheets in memory
+    with `openpyxl.Workbook()`, only the end-to-end test opens the test workbook.
+    Shared helper `find_columns(sheet, names) -> dict[str, int]` (header name -> column
+    number, WorkbookError for a missing one), tested separately before `read_settings`.
+  - [ ] `read_settings`: Setting/Value columns by name, six required settings (Minimum/
+        Maximum work stretch, Minimum break as whole numbers; Days comma separated, no
+        duplicates; Time step must be 15; Day boundary must be 06:00), missing or empty
+        = error, the same setting twice = error. Plus a **Workbook format version**
+        row (whole number, constant `WORKBOOK_FORMAT_VERSION = 1` in workbook.py; raised
+        only when the workbook layout changes, not for every scheduler release);
+        another version = error. **Decided:** an unknown setting name is an error
+        (catches typos; the reader keeps a list of known-but-unused settings: meals,
+        maximum hours, weights, shift start step, preferred maximum); the order of the
+        rows is free.
   - [ ] validate names. `Problem.posts` is not used by the solver yet, so a typo in a
         post name (in demand or skills) silently means "nobody qualified" and gives a
         generic NoScheduleFound. Check every post name against `posts` and raise a
         clear error naming the typo.
+  - [ ] `read_problem` checks the extension first: anything but `.xlsx` gives a
+        WorkbookError saying to save as .xlsx (openpyxl can't read `.ods`, its own error
+        is cryptic). **Decided 2026-11-02: input stays .xlsx** (the user's Nextcloud uses
+        .ods, but .xlsx keeps the tool usable for other volunteer managers).
   - [ ] Demand: number of people must be a whole number >= 0; empty or 0 = closed (left
         out of the dict); the same Day + Time twice is an error.
   - [ ] the draft workbook already fits option A: Demand/Events/Fixed use Day + Time
@@ -307,7 +328,8 @@ come after, the user can fix details by hand meanwhile):
         accepts " 12:30" (int() ignores spaces) but rejects "Friday " as an unknown
         day; stripping while reading makes both behave the same.
   - [ ] the code assumes time step 15 min and day boundary 06:00: check that the
-        workbook's Settings say the same, clear error if not.
+        workbook's Settings say the same, clear error if not. **Agreed:** forced for
+        version 1.0, configurable later (see after version 1.0).
   - [ ] meal windows differ: workbook Settings say lunch 11:30-14:00 and dinner
         17:30-19:30, this file says 12:00-14:00 and 18:00-19:00. Check with the user
         at the meal breaks step.
@@ -345,6 +367,14 @@ After the minimal viable scheduler:
       so no test churn). The reader skips the Fixed tab until then.
 - [ ] Collect and show all input errors at once instead of stopping at the first one
       (e.g. a list of every typo in the workbook; fits the window program later).
+- [ ] Time step and day boundary configurable (e.g. 30 min blocks, another boundary).
+      Not only the reader: `MINUTES_PER_BLOCK`, `BLOCKS_PER_DAY` and `DAY_STARTS_AT_HOUR`
+      move from model.py constants into `Settings`, used by `block_of`/`time_of`/rules.
+      Raise the workbook format version if the Settings rows change.
+- [ ] Maybe: also read `.ods` (Nextcloud / LibreOffice). openpyxl can't; options: a
+      second front-end with e.g. `odfpy` giving the same cell values (the tab readers
+      stay the same), or converting with LibreOffice (`soffice --headless --convert-to
+      xlsx`, needs LibreOffice installed).
 - [ ] Soft rules (first objective): start/end on :00/:30, stay at one post, avoid short
       stretches, prefer higher skill scores, prefer work stretches of at most 120 min
 - [ ] Meal breaks

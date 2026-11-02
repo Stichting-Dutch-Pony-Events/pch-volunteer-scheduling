@@ -54,6 +54,7 @@ hand.
 - [ ] Event wishes (REALLY want / would like to attend), read from the form answers
 - [ ] Maximum hours and a fair spread of work
 - [ ] All input errors shown at once, instead of stopping at the first one
+- [ ] Maybe: also read `.ods` files (LibreOffice / Nextcloud); for now save as `.xlsx`
 - [ ] A small program with a window: pick the input workbook, start a run, see errors
 
 ## How it works (planned)
