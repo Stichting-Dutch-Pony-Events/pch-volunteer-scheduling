@@ -272,3 +272,16 @@ def read_posts(sheet: Worksheet) -> list[Post]:
         raise WorkbookError("Posts: there are no posts. Add one row per post.")
 
     return posts
+
+
+def read_skills(sheet: Worksheet) -> dict[str, dict[str, int]]:
+    """The Skills tab as {nickname: {post: score}}, in the order of the sheet.
+
+    Every column except Nickname, Team and Notes is a post column (empty headers are
+    skipped). A score is 1 (can), 2 (good at it / likes it) or 3 (main role); an empty
+    cell means never and is left out. An empty row is skipped. Raises WorkbookError for a
+    missing Nickname column, a post column or nickname that appears twice, a row with
+    scores but no nickname, a score that is not empty, 1, 2 or 3, or a volunteer without
+    any score.
+    """
+    raise NotImplementedError  # stub, so the tests can run and fail

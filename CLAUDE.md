@@ -123,7 +123,8 @@ tests/solver/         test_solver_availability.py, test_solver_basics.py,
                       test_solver_work_stretches.py
 tests/workbook/       test_celltext.py, test_availability.py, test_find_columns.py,
                       test_read_settings.py, test_read_volunteers.py,
-                      test_read_posts.py (one test file per reader part)
+                      test_read_posts.py, test_read_skills.py (one test file per reader
+                      part)
                       Every test folder has an empty __init__.py (like tests/ itself).
 requirements.txt      ortools>=9.15, openpyxl>=3.1, pytest>=8.0
 ```
@@ -285,8 +286,12 @@ come after, the user can fix details by hand meanwhile):
   - **One reader per tab, combined in `read_problem` (agreed 2026-11-02).** Each tab
     reader reads only its own tab and returns plain data; `read_problem` builds the
     `Volunteer` objects and does every check that spans tabs (every volunteer has a
-    Skills row with at least one skill, every name on Skills is on Volunteers, every
-    post in Skills and Demand is on Posts). So the readers can be written in any order
+    Skills row, every name on Skills is on Volunteers, every post column on Skills and
+    every post in Demand is on Posts, every post has a Skills column). A Skills row
+    without any score is checked in `read_skills` itself (user's choice: useless, point
+    it out). `read_skills`: every column except Nickname, Team and Notes is a post
+    column (empty headers skipped); scores 1/2/3 (number or text), empty = never and
+    left out, anything else (also 0) is an error. So the readers can be written in any order
     and their tests need only one in-memory sheet each:
     `read_settings(sheet) -> Settings`, `read_volunteers(sheet, settings) ->
     dict[str, set[int]]` (nickname -> available blocks), `read_posts(sheet) ->
