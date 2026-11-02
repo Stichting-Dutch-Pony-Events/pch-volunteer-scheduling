@@ -86,14 +86,14 @@ pch-volunteer-scheduling/
 │   ├── hello.py             setup check (Python, pytest and OR-Tools work)
 │   ├── model.py             data classes and time helpers
 │   ├── rules.py             the hard rules, one function each
-│   └── solver.py            builds and solves the schedule
+│   ├── solver.py            builds and solves the schedule
+│   └── workbook.py          reads the input workbook
 ├── tests/
-│   ├── test_hello.py
 │   ├── data/                small made-up input workbook for the tests
+│   ├── solver/              tests of the solver and its rules
+│   ├── workbook/            tests of reading the input workbook
+│   ├── test_hello.py
 │   ├── test_model.py
-│   ├── test_solver_availability.py
-│   ├── test_solver_basics.py
-│   ├── test_solver_work_stretches.py
 │   └── test_time_blocks.py
 ├── requirements.txt
 └── README.md

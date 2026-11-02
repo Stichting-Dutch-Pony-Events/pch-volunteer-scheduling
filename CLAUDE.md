@@ -110,10 +110,13 @@ Fictional nicknames for tests and examples (never use real nicknames):
 ```
 ReferenceDocuments/   (not in git) real data, DATA_NOTES.md, draft input workbook
 scheduler/            model.py (data classes), solver.py, rules.py (hard rules),
-                      hello.py (setup check)
-tests/                test_hello.py, test_model.py, test_solver_availability.py,
-                      test_solver_basics.py, test_solver_work_stretches.py,
-                      test_time_blocks.py; data/test_input.xlsx (made-up workbook)
+                      workbook.py (reads the input workbook), hello.py (setup check)
+tests/                test_hello.py, test_model.py, test_time_blocks.py;
+                      data/test_input.xlsx (made-up workbook)
+tests/solver/         test_solver_availability.py, test_solver_basics.py,
+                      test_solver_work_stretches.py
+tests/workbook/       test_celltext.py (one test file per reader part)
+                      Every test folder has an empty __init__.py (like tests/ itself).
 requirements.txt      ortools>=9.15, openpyxl>=3.1, pytest>=8.0
 ```
 
@@ -366,7 +369,9 @@ agreed for all new functions. 60 tests green.
 Fixed shifts postponed to after version 1.0.
 **Now: reading the input workbook**, on branch `feature/workbook-reader`. Design agreed
 2026-11-02 (see the reader item in the roadmap); Settings tab renamed and Days row added
-in both workbooks. Next: tests first for `cell_text`.
+in both workbooks. Solver tests moved to `tests/solver/`, reader tests go in
+`tests/workbook/`. `cell_text` stub in workbook.py and 7 empty test stubs in
+`tests/workbook/test_celltext.py`; the user fills in the tests (red), then the code.
 Claude reviews and explains; only changes code when asked.
 
 ## Step 2 plan: work stretches and breaks (done; kept for reference)
