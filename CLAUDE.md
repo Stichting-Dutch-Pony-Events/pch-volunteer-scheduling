@@ -293,7 +293,7 @@ come after, the user can fix details by hand meanwhile):
     list[Post]`, `read_skills(sheet) -> dict[str, dict[str, int]]`,
     `read_demand(sheet, settings) -> dict[tuple[str, int], int]`.
   - Order (TDD): `cell_text` (done), `parse_availability` (done), `find_columns` (done),
-    `read_settings` (done), `read_volunteers`, `read_posts`, `read_skills`,
+    `read_settings` (done), `read_volunteers` (done), `read_posts`, `read_skills`,
     `read_demand`, `read_problem` end to end (with the cross-tab checks).
   - **Agreed 2026-11-02:** tab readers are public (`read_settings(sheet) -> Settings`,
     no underscore) because they are tested directly; tests build small sheets in memory
@@ -419,11 +419,12 @@ ReferenceDocuments). **Availability per day is done** in model and solver:
 weekend", every test RULES passes `days=` explicitly, `Works` type alias, type hints
 agreed for all new functions. 60 tests green.
 Fixed shifts postponed to after version 1.0.
-**Now: reading the input workbook**, on branch `feature/workbook-reader`. Design agreed
-2026-11-02 (see the reader item in the roadmap); Settings tab renamed and Days row added
-in both workbooks. Solver tests moved to `tests/solver/`, reader tests go in
-`tests/workbook/`. `cell_text` stub in workbook.py and 7 empty test stubs in
-`tests/workbook/test_celltext.py`; the user fills in the tests (red), then the code.
+**Now: reading the input workbook**, on branch `feature/workbook-reader`. Done in
+workbook.py (133 tests green): `cell_text`, `parse_availability`, `find_columns`,
+`WorkbookError`, `read_settings` (with `WORKBOOK_FORMAT_VERSION`, known/required
+settings, `_whole_number`), `read_volunteers`. Both workbooks have the renamed
+Settings rows, a Days row and a Workbook format version row. Next: `read_posts`,
+`read_skills`, `read_demand`, then `read_problem` with the cross-tab checks.
 Claude reviews and explains; only changes code when asked.
 
 ## Step 2 plan: work stretches and breaks (done; kept for reference)

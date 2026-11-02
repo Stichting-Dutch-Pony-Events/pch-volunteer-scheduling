@@ -207,4 +207,42 @@ def read_volunteers(sheet: Worksheet, settings: Settings) -> dict[str, set[int]]
     missing column, a nickname used twice, a row with availability but no nickname, an
     invalid availability, or a volunteer who is not available on any day.
     """
-    raise NotImplementedError  # stub, so the tests can run and fail
+    # 1. The Nickname column and one column per convention day.
+    columns = find_columns(sheet, ["Nickname"] + list(settings.days))
+
+    volunteers = {}
+    for row in range(2, sheet.max_row + 1):
+        nickname = cell_text(sheet.cell(row=row, column=columns["Nickname"]).value)
+
+        # 2. The availability cells of this row, per day: {"Friday": "yes", ...}
+        availability = {}
+        for day in settings.days:
+            availability[day] = cell_text(sheet.cell(row=row, column=columns[day]).value)
+
+        # 3. A row without nickname is only fine when it is completely empty.
+        if nickname == "":
+            for day in settings.days:
+                if availability[day] != "":
+                    raise WorkbookError(f"Volunteers, row {row}: availability but no nickname.")
+            continue  # an empty row: skip it
+
+        if nickname in volunteers:
+            raise WorkbookError(f"Volunteers, row {row}: the nickname {nickname!r} is used "
+                                f"more than once.")
+
+        # 4. All days together; | combines two sets.
+        blocks = set()
+        for day in settings.days:
+            try:
+                blocks = blocks | parse_availability(availability[day], day, settings)
+            except ValueError as error:
+                # Put row, volunteer and day in front of the message from parse_availability.
+                raise WorkbookError(f"Volunteers, row {row} ({nickname}), {day}: {error}") from None
+
+        if len(blocks) == 0:
+            raise WorkbookError(f"Volunteers, row {row}: {nickname} is not available on any day. "
+                                f"Remove the row if they are not coming.")
+
+        volunteers[nickname] = blocks
+
+    return volunteers
