@@ -16,6 +16,9 @@ from scheduler.model import MINUTES_PER_BLOCK, DAY_STARTS_AT_HOUR, BLOCKS_PER_DA
 # new required column, not for every new version of the scheduler.
 WORKBOOK_FORMAT_VERSION = 1
 
+# Columns on the Skills tab that are not posts; every other column there is a post.
+NOT_POST_COLUMNS = ["Nickname", "Team", "Notes"]
+
 KNOWN_SETTINGS = {"Workbook format version", "Time step", "Day boundary", "Days",
                   "Shift start step", "Minimum work stretch", "Preferred maximum shift length",
                   "Maximum work stretch", "Minimum break", "Lunch window start",
@@ -284,4 +287,47 @@ def read_skills(sheet: Worksheet) -> dict[str, dict[str, int]]:
     scores but no nickname, a score that is not empty, 1, 2 or 3, or a volunteer without
     any score.
     """
-    raise NotImplementedError  # stub, so the tests can run and fail
+    nickname_column = find_columns(sheet, ["Nickname"])["Nickname"]
+
+    # 1. The post columns: every header except NOT_POST_COLUMNS, and except empty ones.
+    post_columns = {}   # post name -> column number
+    for column, cell in enumerate(sheet[1], start=1):
+        header = cell_text(cell.value)
+        if header == "" or header in NOT_POST_COLUMNS:
+            continue
+        if header in post_columns:
+            raise WorkbookError(f"Skills: the post {header!r} has more than one column.")
+        post_columns[header] = column
+
+    # 2. One row per volunteer.
+    skills = {}
+    for row in range(2, sheet.max_row + 1):
+        nickname = cell_text(sheet.cell(row=row, column=nickname_column).value)
+
+        # The scores of this row: {"Tickets": 3, ...}, empty cells left out.
+        scores = {}
+        for post, column in post_columns.items():
+            text = cell_text(sheet.cell(row=row, column=column).value)
+            if text == "":
+                continue  # empty = never
+            if text not in ("1", "2", "3"):
+                raise WorkbookError(f"Skills, row {row} ({nickname}), {post}: {text!r} is not a "
+                                    f"score. Use 1, 2, 3 or leave it empty.")
+            scores[post] = int(text)
+
+        # A row without nickname is only fine when it is completely empty.
+        if nickname == "":
+            if len(scores) > 0:
+                raise WorkbookError(f"Skills, row {row}: scores but no nickname.")
+            continue  # an empty row: skip it
+
+        if nickname in skills:
+            raise WorkbookError(f"Skills, row {row}: the nickname {nickname!r} is used "
+                                f"more than once.")
+        if len(scores) == 0:
+            raise WorkbookError(f"Skills, row {row}: {nickname} has no score for any post. "
+                                f"Give them at least one, or remove the row.")
+
+        skills[nickname] = scores
+
+    return skills

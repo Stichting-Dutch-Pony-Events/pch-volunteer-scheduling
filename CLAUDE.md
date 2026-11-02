@@ -298,7 +298,7 @@ come after, the user can fix details by hand meanwhile):
     list[Post]`, `read_skills(sheet) -> dict[str, dict[str, int]]`,
     `read_demand(sheet, settings) -> dict[tuple[str, int], int]`.
   - Order (TDD): `cell_text` (done), `parse_availability` (done), `find_columns` (done),
-    `read_settings` (done), `read_volunteers` (done), `read_posts` (done), `read_skills`,
+    `read_settings` (done), `read_volunteers` (done), `read_posts` (done), `read_skills` (done),
     `read_demand`, `read_problem` end to end (with the cross-tab checks).
   - **Agreed 2026-11-02:** tab readers are public (`read_settings(sheet) -> Settings`,
     no underscore) because they are tested directly; tests build small sheets in memory
@@ -425,11 +425,12 @@ weekend", every test RULES passes `days=` explicitly, `Works` type alias, type h
 agreed for all new functions. 60 tests green.
 Fixed shifts postponed to after version 1.0.
 **Now: reading the input workbook**, on branch `feature/workbook-reader`. Done in
-workbook.py (139 tests green): `cell_text`, `parse_availability`, `find_columns`,
+workbook.py (154 tests green): `cell_text`, `parse_availability`, `find_columns`,
 `WorkbookError`, `read_settings` (with `WORKBOOK_FORMAT_VERSION`, known/required
-settings, `_whole_number`), `read_volunteers`, `read_posts`. Both workbooks have the renamed
+settings, `_whole_number`), `read_volunteers`, `read_posts`,
+`read_skills`. Both workbooks have the renamed
 Settings rows, a Days row and a Workbook format version row. Next:
-`read_skills`, `read_demand`, then `read_problem` with the cross-tab checks.
+`read_demand`, then `read_problem` with the cross-tab checks.
 Claude reviews and explains; only changes code when asked.
 
 ## Step 2 plan: work stretches and breaks (done; kept for reference)
