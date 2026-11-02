@@ -123,8 +123,8 @@ tests/solver/         test_solver_availability.py, test_solver_basics.py,
                       test_solver_work_stretches.py
 tests/workbook/       test_celltext.py, test_availability.py, test_find_columns.py,
                       test_read_settings.py, test_read_volunteers.py,
-                      test_read_posts.py, test_read_skills.py (one test file per reader
-                      part)
+                      test_read_posts.py, test_read_skills.py, test_read_demand.py (one
+                      test file per reader part)
                       Every test folder has an empty __init__.py (like tests/ itself).
 requirements.txt      ortools>=9.15, openpyxl>=3.1, pytest>=8.0
 ```
@@ -265,95 +265,96 @@ come after, the user can fix details by hand meanwhile):
   - Maybe later: several ranges in one cell (e.g. `08:00-12:00, 14:00-18:00`). Only
     happened once in years; fix by hand for now.
 - [ ] Read the input workbook (the form CSV is only needed for wishes, so it moves to
-      the Event wishes step). Branch `feature/workbook-reader`.
-  - **Design (agreed 2026-11-02):** new file `scheduler/workbook.py`, public function
-    `read_problem(path: str) -> Problem`, a short table of contents calling one function
-    per tab in this order: `_read_settings` (first: `block_of` needs the days),
-    `_read_posts`, `_read_skills`, `_read_volunteers`, `_read_demand`. Version 1.0 reads
-    only Settings, Volunteers, Posts, Skills, Demand (Events/Wishes/Fixed come later).
-    Parsing helpers are plain functions without openpyxl so most tests need no file:
-    `cell_text(value) -> str` (strip, empty -> "", Excel time values -> "HH:MM"; the draft
-    has text times now, but a typed 14:00 becomes a time value) and
-    `parse_availability(...) -> set[int]`. A few end-to-end tests read
-    `tests/data/test_input.xlsx`, one also runs `solve()`.
-    Columns are found by header name, settings by name in the Setting column (order free;
-    unused settings such as weights and meals ignored for now).
+      the Event wishes step). Branch `feature/workbook-reader`. All in
+      `scheduler/workbook.py`, tests in `tests/workbook/`.
+  - **Design (agreed 2026-11-02):** one public reader per tab, each reading only its own
+    tab and returning plain data; `read_problem(path: str) -> Problem` opens the file,
+    calls them (Settings first: the other readers need the days), builds the `Volunteer`
+    objects and does every check that spans tabs. So each reader's tests need only one
+    small sheet built in memory with `openpyxl.Workbook()` (helper like
+    `_settings_sheet(rows, header)` per test file); only the end-to-end tests open
+    `tests/data/test_input.xlsx`. Readers are public (no underscore) because they are
+    tested directly; helpers only tested through a reader start with `_`.
+    Version 1.0 reads Settings, Volunteers, Posts, Skills, Demand (Events, Wishes and
+    Fixed come later). Columns are found by header name, so column order is free and
+    extra columns (Team, Notes, ...) are ignored.
   - **Errors:** `WorkbookError(Exception)`, separate from NoScheduleFound (typo in the
-    input vs. no schedule possible). Messages name tab, row/column and value. **Stop at
-    the first error for now** (collecting all errors: see after version 1.0).
-    Volunteer errors (message names the volunteer): no row on Skills / no skill at all,
-    and not available on any day. Duplicate nicknames are an error too.
-  - **One reader per tab, combined in `read_problem` (agreed 2026-11-02).** Each tab
-    reader reads only its own tab and returns plain data; `read_problem` builds the
-    `Volunteer` objects and does every check that spans tabs (every volunteer has a
-    Skills row, every name on Skills is on Volunteers, every post column on Skills and
-    every post in Demand is on Posts, every post has a Skills column). A Skills row
-    without any score is checked in `read_skills` itself (user's choice: useless, point
-    it out). `read_skills`: every column except Nickname, Team and Notes is a post
-    column (empty headers skipped); scores 1/2/3 (number or text), empty = never and
-    left out, anything else (also 0) is an error. So the readers can be written in any order
-    and their tests need only one in-memory sheet each:
-    `read_settings(sheet) -> Settings`, `read_volunteers(sheet, settings) ->
-    dict[str, set[int]]` (nickname -> available blocks), `read_posts(sheet) ->
-    list[Post]`, `read_skills(sheet) -> dict[str, dict[str, int]]`,
-    `read_demand(sheet, settings) -> dict[tuple[str, int], int]`.
-  - Order (TDD): `cell_text` (done), `parse_availability` (done), `find_columns` (done),
-    `read_settings` (done), `read_volunteers` (done), `read_posts` (done), `read_skills` (done),
-    `read_demand`, `read_problem` end to end (with the cross-tab checks).
-  - **Agreed 2026-11-02:** tab readers are public (`read_settings(sheet) -> Settings`,
-    no underscore) because they are tested directly; tests build small sheets in memory
-    with `openpyxl.Workbook()`, only the end-to-end test opens the test workbook.
-    Shared helper `find_columns(sheet, names) -> dict[str, int]` (header name -> column
-    number, WorkbookError for a missing one), tested separately before `read_settings`.
-  - [x] `read_settings`: Setting/Value columns by name, six required settings (Minimum/
-        Maximum work stretch, Minimum break as whole numbers; Days comma separated, no
-        duplicates; Time step must be 15; Day boundary must be 06:00), missing or empty
-        = error, the same setting twice = error. Plus a **Workbook format version**
-        row (whole number, constant `WORKBOOK_FORMAT_VERSION = 1` in workbook.py; raised
-        only when the workbook layout changes, not for every scheduler release);
-        another version = error. **Decided:** an unknown setting name is an error
-        (catches typos; the reader keeps a list of known-but-unused settings: meals,
-        maximum hours, weights, shift start step, preferred maximum); the order of the
-        rows is free.
-  - [ ] validate names. `Problem.posts` is not used by the solver yet, so a typo in a
-        post name (in demand or skills) silently means "nobody qualified" and gives a
-        generic NoScheduleFound. Check every post name against `posts` and raise a
-        clear error naming the typo.
-  - [ ] `read_problem`: a missing or misspelled tab gives a WorkbookError naming the tab
-        and listing the required ones (instead of openpyxl's KeyError). Tested once in
-        the read_problem tests (parametrized per tab, workbook built in memory and saved
-        to pytest's `tmp_path`), not in every tab reader: a reader gets a sheet handed to
-        it and only uses `sheet.title` in messages.
-  - [ ] `read_problem` checks the extension first: anything but `.xlsx` gives a
-        WorkbookError saying to save as .xlsx (openpyxl can't read `.ods`, its own error
-        is cryptic). **Decided 2026-11-02: input stays .xlsx** (the user's Nextcloud uses
-        .ods, but .xlsx keeps the tool usable for other volunteer managers).
-  - [ ] Demand: number of people must be a whole number >= 0; empty or 0 = closed (left
-        out of the dict); the same Day + Time twice is an error.
-  - [ ] the draft workbook already fits option A: Demand/Events/Fixed use Day + Time
-        columns, Saturday night rows (00:00-02:45) are listed under "Saturday", and
-        Volunteers has Friday/Saturday/Sunday availability columns. Convert with
-        `block_of` while reading.
-  - [x] align Settings names with the code (done 2026-11-02 in the test workbook and the
-        draft; draft backup `..._before_settings_rename.xlsx`): the reader uses
-        "Minimum work stretch", "Maximum work stretch" (merged with the old "Maximum
-        continuous work"), "Minimum break", "Days", "Time step", "Day boundary".
-        "Shift start step" and "Preferred maximum shift length" keep their names until
-        the soft rules step.
-  - [x] list of days: "Days" row added to the Settings tab (test workbook and draft),
-        value `Friday, Saturday, Sunday` (comma separated, spaces stripped). **Decided
-        2026-11-02:** it is the single source of the days (any names, any number; the
-        first is block 0). The reader checks that Volunteers has one availability column
-        per day (missing = error); Demand's Day values are checked by `block_of`.
-  - [ ] strip spaces from cell values in the reader (one place). Today `block_of`
-        accepts " 12:30" (int() ignores spaces) but rejects "Friday " as an unknown
-        day; stripping while reading makes both behave the same.
-  - [ ] the code assumes time step 15 min and day boundary 06:00: check that the
-        workbook's Settings say the same, clear error if not. **Agreed:** forced for
-        version 1.0, configurable later (see after version 1.0).
-  - [ ] meal windows differ: workbook Settings say lunch 11:30-14:00 and dinner
-        17:30-19:30, this file says 12:00-14:00 and 18:00-19:00. Check with the user
-        at the meal breaks step.
+    input vs. no schedule possible). Messages start with the tab and name row, volunteer,
+    post or value where possible; tests check the important parts with `match=`
+    (e.g. `match="Mock Mane.*Saturday.*yse"`). **Stop at the first error for now**
+    (collecting all errors: see after version 1.0). Errors from `block_of` and
+    `parse_availability` are ValueErrors; the reader catches them and adds the row.
+  - Done (177 tests green on 2026-11-02):
+    - [x] `cell_text(value) -> str`: strip spaces, empty cell -> "", Excel time value ->
+          "HH:MM", numbers -> text. Every cell value goes through it (one place for
+          stripping), readers convert to int afterwards.
+    - [x] `parse_availability(text, day, settings) -> set[int]`: yes / no / empty / one
+          range (end exclusive, past midnight follows the day convention, end 06:00 =
+          end of the day, detected by comparing blocks so "6:00" works too); anything
+          else, a reversed or empty range, or several ranges is a ValueError.
+    - [x] `find_columns(sheet, names) -> dict[str, int]`: header name -> column number
+          from row 1; missing or duplicate asked-for header = error naming the tab;
+          duplicates of headers not asked for are fine.
+    - [x] `read_settings(sheet) -> Settings`: settings by name in the Setting column,
+          row order free. Required: Workbook format version (must equal
+          `WORKBOOK_FORMAT_VERSION = 1`; raise it only when the workbook layout changes,
+          not for every scheduler release), Time step (must be 15), Day boundary (must be
+          06:00), Days (comma separated, no duplicates; the single source of the days:
+          any names, any number, the first is block 0), Minimum work stretch, Maximum
+          work stretch, Minimum break (whole numbers via `_whole_number`). Missing or
+          empty, duplicate, or unknown setting = error (catches typos; known-but-unused
+          settings such as meals, maximum hours, weights, shift start step and preferred
+          maximum are accepted and ignored: `KNOWN_SETTINGS`, `REQUIRED_SETTINGS`).
+    - [x] `read_volunteers(sheet, settings) -> dict[str, set[int]]`: Nickname plus one
+          availability column per day in `settings.days` (missing = error); days
+          combined with `|`. Errors: duplicate nickname, a row with availability but no
+          nickname, invalid availability (row, volunteer, day), not available on any day
+          ("remove the row if they are not coming"). Completely empty rows skipped.
+    - [x] `read_posts(sheet) -> list[Post]`: only the Post column for now (Group and
+          Colour are for the output later). Errors: duplicate post, no posts at all. A
+          row with only Group/Colour is skipped (a forgotten post name shows up in the
+          cross-tab checks).
+    - [x] `read_skills(sheet) -> dict[str, dict[str, int]]`: every column except
+          Nickname, Team and Notes is a post (via `_post_columns`); score 1/2/3 (number
+          or text), empty = never and left out, anything else (also 0) = error naming
+          volunteer and post. Errors also: duplicate nickname, scores but no nickname,
+          **a volunteer without any score** (user's choice: useless, point it out).
+    - [x] `_post_columns(sheet, not_posts) -> dict[str, int]`: shared by Skills and
+          Demand (refactored out of `read_skills`); empty headers skipped, duplicate post
+          column = error. Its tests live in test_read_skills.py.
+    - [x] `read_demand(sheet, settings) -> dict[tuple[str, int], int]`: Day + Time via
+          `block_of` (night rows under the previous day), every column except Day, Time
+          and Notes is a post. Empty or 0 = closed (left out); a whole number >= 0, else
+          error naming row and post. **User's choice:** a row with a Day and Time but no
+          number is fine (everything closed; sanity rows before opening / after closing)
+          but its Day and Time must still be valid and not a duplicate; only a
+          completely empty row is skipped (a day alone as a label is an error). A tab
+          without any demand is no error.
+    - [x] Workbooks (test workbook and 2026 draft): Settings rows renamed (Minimum/
+          Maximum work stretch, Minimum break; "Maximum continuous work" merged into
+          Maximum work stretch), Days row and Workbook format version row added. Draft
+          backups in ReferenceDocuments (`..._before_settings_rename.xlsx`,
+          `..._before_format_version.xlsx`). "Shift start step" and "Preferred maximum
+          shift length" keep their names until the soft rules step.
+  - Next: `read_problem(path) -> Problem` (tests first, in tests/workbook/):
+    - [ ] the extension first: anything but `.xlsx` = WorkbookError saying to save as
+          .xlsx (openpyxl can't read `.ods`, its own error is cryptic). **Decided
+          2026-11-02: input stays .xlsx** (the user's Nextcloud uses .ods, but .xlsx keeps
+          the tool usable for other volunteer managers).
+    - [ ] a missing or misspelled tab = WorkbookError naming the tab and listing the
+          required ones (instead of openpyxl's KeyError). Tested once here, parametrized
+          per tab, with a workbook built in memory and saved to pytest's `tmp_path`; not
+          in every tab reader (a reader gets a sheet handed to it and only uses
+          `sheet.title` in messages).
+    - [ ] cross-tab checks: every volunteer has a Skills row; every name on Skills is on
+          Volunteers; every post column on Skills and every post in Demand is on Posts
+          (`Problem.posts` is not used by the solver, so without this a typo in a post
+          name silently means "nobody qualified" and a generic NoScheduleFound); every
+          post has a Skills column.
+    - [ ] build `Volunteer(name, skills, available_blocks)` per volunteer and the
+          `Problem(volunteers, posts, demand, settings)`.
+    - [ ] end-to-end tests on `tests/data/test_input.xlsx`: reads without errors, a few
+          spot checks, and `solve()` finds a schedule.
 - [ ] Clear message when no schedule is possible: simple checks before solving, e.g.
       "Tickets, Saturday 14:00: needs 3, only 2 qualified volunteers available"
       (a bare NoScheduleFound on real data gives no clue where to look).
@@ -398,7 +399,9 @@ After the minimal viable scheduler:
       xlsx`, needs LibreOffice installed).
 - [ ] Soft rules (first objective): start/end on :00/:30, stay at one post, avoid short
       stretches, prefer higher skill scores, prefer work stretches of at most 120 min
-- [ ] Meal breaks
+- [ ] Meal breaks. Check the windows with the user first: the workbook Settings say
+      lunch 11:30-14:00 and dinner 17:30-19:30, this file says 12:00-14:00 and
+      18:00-19:00.
 - [ ] Event wishes (includes reading the form CSV)
 - [ ] Maximum hours and fair spread
 - [ ] Maybe: Question vetting, Manestage clean and Sardine duty by the same person
@@ -424,13 +427,19 @@ ReferenceDocuments). **Availability per day is done** in model and solver:
 weekend", every test RULES passes `days=` explicitly, `Works` type alias, type hints
 agreed for all new functions. 60 tests green.
 Fixed shifts postponed to after version 1.0.
-**Now: reading the input workbook**, on branch `feature/workbook-reader`. Done in
-workbook.py (154 tests green): `cell_text`, `parse_availability`, `find_columns`,
-`WorkbookError`, `read_settings` (with `WORKBOOK_FORMAT_VERSION`, known/required
-settings, `_whole_number`), `read_volunteers`, `read_posts`,
-`read_skills`. Both workbooks have the renamed
-Settings rows, a Days row and a Workbook format version row. Next:
-`read_demand`, then `read_problem` with the cross-tab checks.
+**Now: reading the input workbook**, on branch `feature/workbook-reader`. 2026-11-02:
+design agreed and all five tab readers done in workbook.py (`read_settings`,
+`read_volunteers`, `read_posts`, `read_skills`, `read_demand`, plus `cell_text`,
+`parse_availability`, `find_columns`, `_post_columns`, `_whole_number`), 177 tests
+green; both workbooks updated (see the reader item in the roadmap). Solver tests
+moved to `tests/solver/`. **Next (planned for the evening of 2026-11-02):**
+`read_problem` with the extension and missing-tab checks, the cross-tab checks and
+end-to-end tests (see "Next" under the reader item). Then the README Status item
+"Reading the input workbook" can be ticked and the feature branch merged into
+`develop`.
+In this session the user often asked Claude to write the tests and/or the code once
+they had approved the test list; Claude then also checked the tests against a trial
+implementation in a scratch copy (and against both workbooks) before handing over.
 Claude reviews and explains; only changes code when asked.
 
 ## Step 2 plan: work stretches and breaks (done; kept for reference)
