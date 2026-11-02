@@ -16,8 +16,8 @@ The puzzle itself is solved by [Google OR-Tools](https://developers.google.com/o
 
 ## Status
 
-In development. The solver works on small made-up examples (in the tests); it cannot
-read real input yet.
+In development. The solver works on small made-up examples (in the tests), and the
+input workbook can be read; running it end to end on real data is the next part.
 
 ### Done
 
@@ -30,6 +30,7 @@ read real input yet.
 - [x] Time across the whole weekend, including night shifts after midnight
 - [x] Availability: volunteers are only scheduled when they are there (whole days or
       a time range)
+- [x] Reading the input workbook, with clear errors for typos
 
 ### Roadmap to version 1.0
 
@@ -37,7 +38,6 @@ Version 1.0 makes a schedule from the real input workbook that follows the main 
 rules (meal breaks come later), run from the command line. Details can then be fixed by
 hand.
 
-- [ ] Reading the input workbook, with clear errors for typos
 - [ ] A clear message when no schedule is possible, saying where it gets stuck
 - [ ] Writing the schedule to Excel (overview, per post, per volunteer)
 - [ ] Running it from the command line

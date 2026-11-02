@@ -1,20 +1,29 @@
 """Reads the input workbook (.xlsx) into a Problem the solver can work with.
 
-Helpers like cell_text are plain functions without openpyxl, so they can be tested with
-simple values instead of a workbook file. Functions that read a tab take an openpyxl
-sheet; the tests build small sheets in memory.
+Layout of this file: read_problem first (the table of contents), then one reader per
+tab in the order read_problem calls them, then the helpers they share.
+
+Functions that read a tab take an openpyxl sheet; the tests build small sheets in
+memory. Helpers like cell_text are plain functions without openpyxl, so they can be
+tested with simple values instead of a workbook file.
 """
 from datetime import time
+from pathlib import Path
 
+import openpyxl
 from openpyxl.worksheet.worksheet import Worksheet
 
-from scheduler.model import Post, Settings, block_of
+from scheduler.model import Post, Problem, Settings, Volunteer, block_of
 from scheduler.model import MINUTES_PER_BLOCK, DAY_STARTS_AT_HOUR, BLOCKS_PER_DAY
 
 # The layout of the input workbook this scheduler reads (the "Workbook format version"
 # setting). Raise it only when the workbook layout changes, e.g. a renamed setting or a
 # new required column, not for every new version of the scheduler.
 WORKBOOK_FORMAT_VERSION = 1
+
+# The tabs read_problem needs, and the ones it knows but does not read yet.
+REQUIRED_TABS = ["Settings", "Volunteers", "Posts", "Skills", "Demand"]
+TABS_NOT_USED_YET = ["ReadMe", "Events", "Wishes", "Fixed"]
 
 KNOWN_SETTINGS = {"Workbook format version", "Time step", "Day boundary", "Days",
                   "Shift start step", "Minimum work stretch", "Preferred maximum shift length",
@@ -37,85 +46,63 @@ class WorkbookError(Exception):
     """
 
 
-def cell_text(value: str | int | float | time | None) -> str:
-    """The value of a cell as tidy text: spaces around it removed, empty cell = "".
+def read_problem(path: str | Path) -> Problem:
+    """Read the input workbook at path into a Problem the solver can work with.
 
-    A time value (when someone types 14:00 into a cell) becomes "14:00".
+    Checks the file (.xlsx, exists) and the tabs (Settings, Volunteers, Posts, Skills and
+    Demand are required; ReadMe, Events, Wishes and Fixed are known and ignored for now;
+    any other tab is an error), calls the tab readers, checks across tabs (every
+    volunteer has a Skills row and every Skills row is a volunteer; Posts, the Skills
+    columns and the Demand columns name the same posts) and combines it all.
+    Raises WorkbookError for the first problem it finds.
     """
-    if value is None:
-        result = ""
-    elif isinstance(value, time):
-        result = value.strftime("%H:%M")
-    else:  # str, int or float
-        result = str(value).strip()
+    # 1. The file: an .xlsx that exists.
+    path = Path(path)
+    if path.suffix.lower() != ".xlsx":
+        raise WorkbookError(f"{path.name}: the scheduler reads .xlsx files only. Save the "
+                            f"workbook as Excel (.xlsx), e.g. File > Save As in LibreOffice.")
+    if not path.exists():
+        raise WorkbookError(f"{path.name}: file not found ({path}).")
+    workbook = openpyxl.load_workbook(path)
 
-    return result
+    # 2. The tabs: every required one, and nothing unknown.
+    for tab in REQUIRED_TABS:
+        if tab not in workbook.sheetnames:
+            raise WorkbookError(f"{path.name}: no tab {tab!r}. The workbook needs the tabs "
+                                f"{', '.join(REQUIRED_TABS)}.")
+    for tab in workbook.sheetnames:
+        if tab not in REQUIRED_TABS and tab not in TABS_NOT_USED_YET:
+            raise WorkbookError(f"{path.name}: unknown tab {tab!r}.")
 
+    # 3. Each tab on its own. Settings first: the other readers need the days.
+    settings = read_settings(workbook["Settings"])
+    availability = read_volunteers(workbook["Volunteers"], settings)
+    posts = read_posts(workbook["Posts"])
+    skills = read_skills(workbook["Skills"])
+    demand = read_demand(workbook["Demand"], settings)
 
-def parse_availability(text: str, day: str, settings: Settings) -> set[int]:
-    """The blocks a volunteer is available on this convention day, from one Volunteers cell.
+    # 4. Across tabs: the same volunteers on Volunteers and Skills...
+    for nickname in availability:
+        if nickname not in skills:
+            raise WorkbookError(f"Skills: no row for {nickname} (from the Volunteers tab).")
+    for nickname in skills:
+        if nickname not in availability:
+            raise WorkbookError(f"Skills: {nickname} is not on the Volunteers tab.")
 
-    text is the cell after cell_text, upper or lower case doesn't matter:
-    "yes" = the whole convention day (06:00 to 06:00), "no" or "" = not that day,
-    "08:00-18:00" = from 08:00 up to (not including) 18:00. A range may pass midnight
-    (Saturday "20:00-02:00"); an end of "06:00" means until the end of the convention day.
-    Anything else raises ValueError naming the value (the reader adds volunteer and row).
-    """
-    # The convention day starts at block_of(day, "06:00"); this also checks the day name.
-    day_start = block_of(day, "06:00", settings)
-    lowered = text.lower()
+    # ...and the same posts on Posts, Skills and Demand.
+    post_names = []
+    for post in posts:
+        post_names.append(post.name)
+    _check_same_posts(workbook["Skills"], ["Nickname", "Team", "Notes"], post_names)
+    _check_same_posts(workbook["Demand"], ["Day", "Time", "Notes"], post_names)
 
-    # 1. The whole day, or not at all.
-    if lowered == "yes":
-        return set(range(day_start, day_start + BLOCKS_PER_DAY))
-    if lowered == "no" or lowered == "":
-        return set()
+    # 5. Combine: each volunteer with their skills and availability.
+    volunteers = []
+    for nickname, available_blocks in availability.items():
+        volunteers.append(Volunteer(name=nickname, skills=skills[nickname],
+                                    available_blocks=available_blocks))
 
-    # 2. Anything else must be one range "start-end".
-    parts = lowered.split("-")
-    if len(parts) != 2:
-        raise ValueError(f"Availability {text!r} is not 'yes', 'no' or a time range "
-                         f"like 08:00-18:00.")
-    first_block = block_of(day, parts[0].strip(), settings)
-    block_after_last = block_of(day, parts[1].strip(), settings)
-
-    # An end of 06:00 gives the start of the day; as an end it means the end of the day.
-    if block_after_last == day_start:
-        block_after_last = day_start + BLOCKS_PER_DAY
-
-    if block_after_last <= first_block:
-        raise ValueError(f"Availability {text!r}: the end must be after the start.")
-
-    return set(range(first_block, block_after_last))
-
-
-def find_columns(sheet: Worksheet, names: list[str]) -> dict[str, int]:
-    """The column number of each header in names, read from row 1 of the sheet.
-
-    Example: header Setting, Value, Unit and names ["Setting", "Value"] gives
-    {"Setting": 1, "Value": 2}. Spaces around a header are ignored. Raises WorkbookError
-    (naming the tab) when a column is missing or a header appears twice.
-    """
-    # Row 1 as tidy text, e.g. ["Setting", "Value", "Unit"].
-    headers = []
-    for cell in sheet[1]:
-        headers.append(cell_text(cell.value))
-
-    columns = {}
-    for name in names:
-        # Every column with this header; enumerate counts from 1, like column A = 1.
-        matching = []
-        for column_number, header in enumerate(headers, start=1):
-            if header == name:
-                matching.append(column_number)
-
-        if len(matching) == 0:
-            raise WorkbookError(f"{sheet.title}: no column {name!r} in the header row (row 1).")
-        if len(matching) > 1:
-            raise WorkbookError(f"{sheet.title}: the header {name!r} is in more than one column.")
-        columns[name] = matching[0]
-
-    return columns
+    return Problem(volunteers=volunteers, posts=posts, demand=demand, settings=settings)
 
 
 def read_settings(sheet: Worksheet) -> Settings:
@@ -185,16 +172,6 @@ def read_settings(sheet: Worksheet) -> Settings:
         max_stretch_minutes=_whole_number(unparsed_settings, "Maximum work stretch"),
         min_break_minutes=_whole_number(unparsed_settings, "Minimum break"),
         days=tuple(days))  # a tuple, like the default in Settings
-
-
-def _whole_number(settings: dict[str, str], name: str) -> int:
-    """The setting with this name as a whole number; WorkbookError if it isn't one."""
-    try:
-        return int(settings[name])
-    except ValueError:
-        # from None: show only our clear message, not the ValueError behind it
-        raise WorkbookError(f"Settings, {name!r}: {settings[name]!r} is not a whole "
-                            f"number.") from None
 
 
 def read_volunteers(sheet: Worksheet, settings: Settings) -> dict[str, set[int]]:
@@ -323,24 +300,6 @@ def read_skills(sheet: Worksheet) -> dict[str, dict[str, int]]:
     return skills
 
 
-def _post_columns(sheet: Worksheet, not_posts: list[str]) -> dict[str, int]:
-    """Every column in row 1 that is a post, as {post: column number}.
-
-    A post column is any column whose header is not empty and not in not_posts (used by
-    the Skills and Demand tabs, where the posts are the columns). Raises WorkbookError
-    (naming the tab) when a post has more than one column.
-    """
-    post_columns = {}
-    for column, cell in enumerate(sheet[1], start=1):
-        header = cell_text(cell.value)
-        if header == "" or header in not_posts:
-            continue
-        if header in post_columns:
-            raise WorkbookError(f"{sheet.title}: the post {header!r} has more than one column.")
-        post_columns[header] = column
-    return post_columns
-
-
 def read_demand(sheet: Worksheet, settings: Settings) -> dict[tuple[str, int], int]:
     """The Demand tab as {(post, block): number of people needed}, like Problem.demand.
 
@@ -396,3 +355,125 @@ def read_demand(sheet: Worksheet, settings: Settings) -> dict[tuple[str, int], i
             demand[(post, block)] = needed
 
     return demand
+
+
+def find_columns(sheet: Worksheet, names: list[str]) -> dict[str, int]:
+    """The column number of each header in names, read from row 1 of the sheet.
+
+    Example: header Setting, Value, Unit and names ["Setting", "Value"] gives
+    {"Setting": 1, "Value": 2}. Spaces around a header are ignored. Raises WorkbookError
+    (naming the tab) when a column is missing or a header appears twice.
+    """
+    # Row 1 as tidy text, e.g. ["Setting", "Value", "Unit"].
+    headers = []
+    for cell in sheet[1]:
+        headers.append(cell_text(cell.value))
+
+    columns = {}
+    for name in names:
+        # Every column with this header; enumerate counts from 1, like column A = 1.
+        matching = []
+        for column_number, header in enumerate(headers, start=1):
+            if header == name:
+                matching.append(column_number)
+
+        if len(matching) == 0:
+            raise WorkbookError(f"{sheet.title}: no column {name!r} in the header row (row 1).")
+        if len(matching) > 1:
+            raise WorkbookError(f"{sheet.title}: the header {name!r} is in more than one column.")
+        columns[name] = matching[0]
+
+    return columns
+
+
+def _post_columns(sheet: Worksheet, not_posts: list[str]) -> dict[str, int]:
+    """Every column in row 1 that is a post, as {post: column number}.
+
+    A post column is any column whose header is not empty and not in not_posts (used by
+    the Skills and Demand tabs, where the posts are the columns). Raises WorkbookError
+    (naming the tab) when a post has more than one column.
+    """
+    post_columns = {}
+    for column, cell in enumerate(sheet[1], start=1):
+        header = cell_text(cell.value)
+        if header == "" or header in not_posts:
+            continue
+        if header in post_columns:
+            raise WorkbookError(f"{sheet.title}: the post {header!r} has more than one column.")
+        post_columns[header] = column
+    return post_columns
+
+
+def _check_same_posts(sheet: Worksheet, not_posts: list[str], post_names: list[str]) -> None:
+    """Check that the post columns of this tab are exactly the posts on the Posts tab."""
+    columns = _post_columns(sheet, not_posts)
+    for header in columns:
+        if header not in post_names:
+            raise WorkbookError(f"{sheet.title}: column {header!r} is not a post on the "
+                                f"Posts tab.")
+    for name in post_names:
+        if name not in columns:
+            raise WorkbookError(f"{sheet.title}: no column for the post {name!r} (from the "
+                                f"Posts tab).")
+
+
+def _whole_number(settings: dict[str, str], name: str) -> int:
+    """The setting with this name as a whole number; WorkbookError if it isn't one."""
+    try:
+        return int(settings[name])
+    except ValueError:
+        # from None: show only our clear message, not the ValueError behind it
+        raise WorkbookError(f"Settings, {name!r}: {settings[name]!r} is not a whole "
+                            f"number.") from None
+
+
+def cell_text(value: str | int | float | time | None) -> str:
+    """The value of a cell as tidy text: spaces around it removed, empty cell = "".
+
+    A time value (when someone types 14:00 into a cell) becomes "14:00".
+    """
+    if value is None:
+        result = ""
+    elif isinstance(value, time):
+        result = value.strftime("%H:%M")
+    else:  # str, int or float
+        result = str(value).strip()
+
+    return result
+
+
+def parse_availability(text: str, day: str, settings: Settings) -> set[int]:
+    """The blocks a volunteer is available on this convention day, from one Volunteers cell.
+
+    text is the cell after cell_text, upper or lower case doesn't matter:
+    "yes" = the whole convention day (06:00 to 06:00), "no" or "" = not that day,
+    "08:00-18:00" = from 08:00 up to (not including) 18:00. A range may pass midnight
+    (Saturday "20:00-02:00"); an end of "06:00" means until the end of the convention day.
+    Anything else raises ValueError naming the value (the reader adds volunteer and row).
+    """
+    # The convention day starts at block_of(day, "06:00"); this also checks the day name.
+    day_start = block_of(day, "06:00", settings)
+    lowered = text.lower()
+
+    # 1. The whole day, or not at all.
+    if lowered == "yes":
+        return set(range(day_start, day_start + BLOCKS_PER_DAY))
+    if lowered == "no" or lowered == "":
+        return set()
+
+    # 2. Anything else must be one range "start-end".
+    parts = lowered.split("-")
+    if len(parts) != 2:
+        raise ValueError(f"Availability {text!r} is not 'yes', 'no' or a time range "
+                         f"like 08:00-18:00.")
+    first_block = block_of(day, parts[0].strip(), settings)
+    block_after_last = block_of(day, parts[1].strip(), settings)
+
+    # An end of 06:00 gives the start of the day; as an end it means the end of the day.
+    if block_after_last == day_start:
+        block_after_last = day_start + BLOCKS_PER_DAY
+
+    if block_after_last <= first_block:
+        raise ValueError(f"Availability {text!r}: the end must be after the start.")
+
+    return set(range(first_block, block_after_last))

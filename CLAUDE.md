@@ -108,6 +108,10 @@ Fictional nicknames for tests and examples (never use real nicknames):
   model.py (public, tested in test_model.py) is used by `Schedule.work_stretches_of`
   and `_short_pieces`.
 - **openpyxl** for reading/writing `.xlsx`. No pandas for now.
+- **workbook.py layout** (agreed 2026-11-02): imports, constants and `WorkbookError` at
+  the top, then `read_problem` (the table of contents), then the tab readers in the
+  order it calls them, then the shared helpers. (Function order doesn't matter to
+  Python: a function only has to exist when it is called.)
 - **pytest** for tests. Version 1.0 runs from the command line; later a small program
   with a window (see the roadmap).
 
@@ -123,8 +127,8 @@ tests/solver/         test_solver_availability.py, test_solver_basics.py,
                       test_solver_work_stretches.py
 tests/workbook/       test_celltext.py, test_availability.py, test_find_columns.py,
                       test_read_settings.py, test_read_volunteers.py,
-                      test_read_posts.py, test_read_skills.py, test_read_demand.py (one
-                      test file per reader part)
+                      test_read_posts.py, test_read_skills.py, test_read_demand.py,
+                      test_read_problem.py (one test file per reader part)
                       Every test folder has an empty __init__.py (like tests/ itself).
 requirements.txt      ortools>=9.15, openpyxl>=3.1, pytest>=8.0
 ```
@@ -264,7 +268,7 @@ come after, the user can fix details by hand meanwhile):
     range past midnight, a range ending 06:00).
   - Maybe later: several ranges in one cell (e.g. `08:00-12:00, 14:00-18:00`). Only
     happened once in years; fix by hand for now.
-- [ ] Read the input workbook (the form CSV is only needed for wishes, so it moves to
+- [x] Read the input workbook (the form CSV is only needed for wishes, so it moves to
       the Event wishes step). Branch `feature/workbook-reader`. All in
       `scheduler/workbook.py`, tests in `tests/workbook/`.
   - **Design (agreed 2026-11-02):** one public reader per tab, each reading only its own
@@ -336,24 +340,30 @@ come after, the user can fix details by hand meanwhile):
           backups in ReferenceDocuments (`..._before_settings_rename.xlsx`,
           `..._before_format_version.xlsx`). "Shift start step" and "Preferred maximum
           shift length" keep their names until the soft rules step.
-  - Next: `read_problem(path) -> Problem` (tests first, in tests/workbook/):
-    - [ ] the extension first: anything but `.xlsx` = WorkbookError saying to save as
+  - [x] `read_problem(path) -> Problem` (done 2026-11-02, test_read_problem.py):
+    - [x] the extension first: anything but `.xlsx` = WorkbookError saying to save as
           .xlsx (openpyxl can't read `.ods`, its own error is cryptic). **Decided
           2026-11-02: input stays .xlsx** (the user's Nextcloud uses .ods, but .xlsx keeps
           the tool usable for other volunteer managers).
-    - [ ] a missing or misspelled tab = WorkbookError naming the tab and listing the
-          required ones (instead of openpyxl's KeyError). Tested once here, parametrized
+    - [x] a missing or misspelled tab = WorkbookError naming the tab and listing the
+          required ones (instead of openpyxl's KeyError). **User's choice:** only known
+          tabs are allowed, like the settings: ReadMe, Events, Wishes and Fixed are known
+          but not read yet, any other tab is an error naming it. A file that does not
+          exist is a WorkbookError too. Every post on Posts needs a column on Skills
+          *and* on Demand (strict, agreed); `read_problem` compares columns with
+          `_post_columns`, since the skills/demand dicts leave out empty columns.
+          `path` may be `str | Path`. Tested once here, parametrized
           per tab, with a workbook built in memory and saved to pytest's `tmp_path`; not
           in every tab reader (a reader gets a sheet handed to it and only uses
           `sheet.title` in messages).
-    - [ ] cross-tab checks: every volunteer has a Skills row; every name on Skills is on
+    - [x] cross-tab checks: every volunteer has a Skills row; every name on Skills is on
           Volunteers; every post column on Skills and every post in Demand is on Posts
           (`Problem.posts` is not used by the solver, so without this a typo in a post
           name silently means "nobody qualified" and a generic NoScheduleFound); every
           post has a Skills column.
-    - [ ] build `Volunteer(name, skills, available_blocks)` per volunteer and the
+    - [x] build `Volunteer(name, skills, available_blocks)` per volunteer and the
           `Problem(volunteers, posts, demand, settings)`.
-    - [ ] end-to-end tests on `tests/data/test_input.xlsx`: reads without errors, a few
+    - [x] end-to-end tests on `tests/data/test_input.xlsx`: reads without errors, a few
           spot checks, and `solve()` finds a schedule.
 - [ ] Clear message when no schedule is possible: simple checks before solving, e.g.
       "Tickets, Saturday 14:00: needs 3, only 2 qualified volunteers available"
@@ -427,16 +437,16 @@ ReferenceDocuments). **Availability per day is done** in model and solver:
 weekend", every test RULES passes `days=` explicitly, `Works` type alias, type hints
 agreed for all new functions. 60 tests green.
 Fixed shifts postponed to after version 1.0.
-**Now: reading the input workbook**, on branch `feature/workbook-reader`. 2026-11-02:
-design agreed and all five tab readers done in workbook.py (`read_settings`,
-`read_volunteers`, `read_posts`, `read_skills`, `read_demand`, plus `cell_text`,
-`parse_availability`, `find_columns`, `_post_columns`, `_whole_number`), 177 tests
-green; both workbooks updated (see the reader item in the roadmap). Solver tests
-moved to `tests/solver/`. **Next (planned for the evening of 2026-11-02):**
-`read_problem` with the extension and missing-tab checks, the cross-tab checks and
-end-to-end tests (see "Next" under the reader item). Then the README Status item
-"Reading the input workbook" can be ticked and the feature branch merged into
-`develop`.
+**Reading the input workbook is done** (2026-11-02, branch `feature/workbook-reader`):
+`read_problem(path)` checks the file and tabs, calls the five tab readers, checks
+across tabs and builds the Problem. 195 tests green; the test workbook goes all the
+way to a schedule, and the real 2026 draft reads without errors (not solved yet).
+**Next:** the user merges `feature/workbook-reader` into `develop` (and deletes the
+branch). Then the next roadmap item: a clear message when no schedule is possible
+(pre-checks, NoScheduleFound child errors), or first the command line and the
+output Excel; to discuss with the user.
+Possible small follow-up: a file with an .xlsx name that is not a real workbook
+(e.g. damaged) gives openpyxl's own error (zipfile.BadZipFile), not a WorkbookError.
 In this session the user often asked Claude to write the tests and/or the code once
 they had approved the test list; Claude then also checked the tests against a trial
 implementation in a scratch copy (and against both workbooks) before handing over.
