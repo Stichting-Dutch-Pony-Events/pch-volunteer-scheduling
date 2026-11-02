@@ -28,14 +28,15 @@ read real input yet.
 - [x] Work stretches (continuous work) between 1 and 3 hours, breaks of at least
       30 minutes; the limits are settings
 - [x] Time across the whole weekend, including night shifts after midnight
+- [x] Availability: volunteers are only scheduled when they are there (whole days or
+      a time range)
 
 ### Roadmap to version 1.0
 
-Version 1.0 makes a schedule from the real input workbook that follows all hard rules
-except meal breaks, run from the command line. Details can then be fixed by hand.
+Version 1.0 makes a schedule from the real input workbook that follows the main hard
+rules (meal breaks come later), run from the command line. Details can then be fixed by
+hand.
 
-- [ ] Availability per day (e.g. someone only there Friday and Sunday)
-- [ ] Shifts placed by hand are kept
 - [ ] Reading the input workbook, with clear errors for typos
 - [ ] A clear message when no schedule is possible, saying where it gets stuck
 - [ ] Writing the schedule to Excel (overview, per post, per volunteer)
@@ -45,6 +46,8 @@ except meal breaks, run from the command line. Details can then be fixed by hand
 
 ### After version 1.0
 
+- [ ] Maybe: shifts placed by hand are kept, e.g. to re-run after a change without
+      reshuffling everyone (to decide after the first real run)
 - [ ] Nicer schedules: shifts start and end on the hour or half hour, staying at one
       post, preferring what people are good at, shifts of preferably at most 2 hours
 - [ ] Meal breaks
@@ -85,7 +88,9 @@ pch-volunteer-scheduling/
 │   └── solver.py            builds and solves the schedule
 ├── tests/
 │   ├── test_hello.py
+│   ├── data/                small made-up input workbook for the tests
 │   ├── test_model.py
+│   ├── test_solver_availability.py
 │   ├── test_solver_basics.py
 │   ├── test_solver_work_stretches.py
 │   └── test_time_blocks.py

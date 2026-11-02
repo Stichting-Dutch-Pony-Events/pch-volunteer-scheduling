@@ -40,9 +40,15 @@ likes to write tests (and often code) themselves; Claude reviews and explains.
    test_solver_work_stretches.py, names say "the minimum/maximum" rather than a number.
    The defaults themselves are pinned by `test_default_settings_match_the_agreed_rules`
    in test_model.py. Use concrete numbers in test data; don't compute it from settings.
-4. **The user handles version control** in VS Code / Sourcetree, on the `develop` branch.
+4. **The user handles version control** in VS Code / Sourcetree.
    Do not commit, push, branch or run other git commands that change state. Suggest a
    commit message when a step is done. Read-only git commands (status, log, branch) are fine.
+   **Branches (agreed 2026-11-01):** `main` = working versions (merge at milestones such
+   as version 1.0, maybe tag `v1.0`). `develop` = everyday work; small one-session steps
+   go straight on it. Bigger steps that take several sessions get a short-lived feature
+   branch from `develop` (e.g. `feature/workbook-reader`, `feature/output-excel`,
+   `feature/window-app`), merged back once done and green, then deleted. The first one
+   is the workbook reader. When starting a bigger step, remind the user to make the branch.
 5. **Python only.** Python **3.14** in `.venv` (OR-Tools has no 3.15 wheels yet).
    Use the newer lowercase OR-Tools API (`new_int_var`, `add`, `solve`, `value`).
    **Type hints on every function we write from now on** (agreed 2026-11-01): all
@@ -105,8 +111,9 @@ Fictional nicknames for tests and examples (never use real nicknames):
 ReferenceDocuments/   (not in git) real data, DATA_NOTES.md, draft input workbook
 scheduler/            model.py (data classes), solver.py, rules.py (hard rules),
                       hello.py (setup check)
-tests/                test_hello.py, test_model.py, test_solver_basics.py,
-                      test_solver_work_stretches.py, test_time_blocks.py
+tests/                test_hello.py, test_model.py, test_solver_availability.py,
+                      test_solver_basics.py, test_solver_work_stretches.py,
+                      test_time_blocks.py; data/test_input.xlsx (made-up workbook)
 requirements.txt      ortools>=9.15, openpyxl>=3.1, pytest>=8.0
 ```
 
@@ -214,7 +221,9 @@ come after, the user can fix details by hand meanwhile):
         `test_work_stretch_across_the_day_boundary_is_at_most_180_minutes` (only Mock
         Mane, Tickets Saturday night 03:00 to Sunday 07:00 = 16 blocks -> NoScheduleFound).
         Possible later: a break across 06:00 (one free block around 06:00 -> raises).
-- [ ] Availability per day (e.g. a volunteer only there Friday and Sunday)
+- [x] Availability per day (e.g. a volunteer only there Friday and Sunday). Done in the
+      model and solver; turning the workbook's yes/no/range cells into blocks is part of
+      reading the workbook (see the decision below and the reader to-dos).
   - **Decided (2026-10-31): positive logic in the workbook.** Volunteers tab, one cell
     per day: `yes` = the whole convention day (06:00-06:00), one time range like
     `08:00-18:00` = only then, `no` or empty = not that day. Case and spaces ignored.
@@ -235,16 +244,14 @@ come after, the user can fix details by hand meanwhile):
     - [x] field required, all 37 `Volunteer(...)` calls pass `available_blocks`
       (test_solver_basics.py got a `RULES` with `settings=RULES`; every RULES now also
       passes `days=` explicitly). 55 green, the 5 availability tests still red.
-  - [ ] Next: solver change in `_create_variables` (user types it).
-  - [ ] Solver: `_create_variables` only makes a variable for available blocks, like
-    skills. Tests first (new file test_solver_availability.py).
+  - [x] Solver: `_create_variables` only makes a variable if `block in
+    volunteer.available_blocks` (next to the skill check). 7 tests in
+    test_solver_availability.py, all 60 tests green.
   - Test workbook: `tests/data/test_input.xlsx`, same tabs and columns as the draft,
     fictional names only, small demand, availability examples (yes, no, a range, a
     range past midnight, a range ending 06:00).
   - Maybe later: several ranges in one cell (e.g. `08:00-12:00, 14:00-18:00`). Only
     happened once in years; fix by hand for now.
-- [ ] Fixed shifts placed by hand are kept (Fixed tab; like availability, this pins
-      variables to 1 instead of 0)
 - [ ] Read the input workbook (the form CSV is only needed for wishes, so it moves to
       the Event wishes step). To do:
   - [ ] validate names. `Problem.posts` is not used by the solver yet, so a typo in a
@@ -290,9 +297,16 @@ come after, the user can fix details by hand meanwhile):
       test_hello.py once they're no longer useful
 
 **Version 1.0 = all of the above**: a schedule for real data that follows the hard rules
-(except meal breaks), run from the command line. The user fixes details by hand.
+(except meal breaks and fixed shifts), run from the command line. The user fixes details by hand.
 
 After the minimal viable scheduler:
+- [ ] Fixed shifts placed by hand are kept (Fixed tab). **Postponed (2026-11-01):**
+      decide after the first real run. Mainly useful for re-runs after changes (pin what
+      is already agreed, refill only the gap) and for shifts arranged in advance. The user
+      has so far only changed shifts by hand. Small to add later: one rule pinning
+      variables to 1, a clear error if a fixed shift is impossible (not qualified / not
+      available), and `Problem.fixed` with an empty default (doesn't depend on settings,
+      so no test churn). The reader skips the Fixed tab until then.
 - [ ] Soft rules (first objective): start/end on :00/:30, stay at one post, avoid short
       stretches, prefer higher skill scores, prefer work stretches of at most 120 min
 - [ ] Meal breaks
@@ -316,11 +330,15 @@ rules.py rename to `_blocks_of_event`, and a cross-day guard test.
 2026-10-31/11-01: roadmap revised (version 1.0 defined, README Status synced),
 availability decided (positive logic, see the roadmap item), test workbook
 `tests/data/test_input.xlsx` made, the 2026 draft converted to yes/no (backup kept in
-ReferenceDocuments), `Volunteer.available_blocks` added (51 tests green).
-**Now: availability in the solver.** tests/test_solver_availability.py has 7 stubs
-(`pytest.skip`) with scenario sketches; the user writes the bodies, then red, then the
-change in `_create_variables`. Note: stub 2 may pass by chance (solver may pick Testy
-Hooves anyway); discuss making it reliably red.
+ReferenceDocuments). **Availability per day is done** in model and solver:
+`Volunteer.available_blocks` is required (no None), `all_blocks(settings)` for "all
+weekend", every test RULES passes `days=` explicitly, `Works` type alias, type hints
+agreed for all new functions. 60 tests green.
+Fixed shifts postponed to after version 1.0.
+**Next: read the input workbook**, on a new branch `feature/workbook-reader` (the user
+makes it). Start by discussing the reader's design (which tabs for version 1.0, how it
+builds a Problem, where validation lives), using `tests/data/test_input.xlsx`; see the
+reader to-dos above. Then tests first.
 Claude reviews and explains; only changes code when asked.
 
 ## Step 2 plan: work stretches and breaks (done; kept for reference)
