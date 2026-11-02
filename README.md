@@ -53,6 +53,7 @@ hand.
 - [ ] Meal breaks
 - [ ] Event wishes (REALLY want / would like to attend), read from the form answers
 - [ ] Maximum hours and a fair spread of work
+- [ ] All input errors shown at once, instead of stopping at the first one
 - [ ] A small program with a window: pick the input workbook, start a run, see errors
 
 ## How it works (planned)
@@ -71,8 +72,8 @@ Input workbook (.xlsx)  +  form answers (.csv)
         Output workbook (.xlsx)  printable schedules
 ```
 
-The input workbook has these tabs: ReadMe, Settings, Meals, Volunteers, Posts, Skills,
-Events, Demand, Wishes and Fixed. The ReadMe tab inside the workbook explains each one.
+The input workbook has these tabs: ReadMe, Settings, Volunteers, Posts, Skills, Events,
+Demand, Wishes and Fixed. The ReadMe tab inside the workbook explains each one.
 Time is planned in 15-minute blocks; times after midnight belong to the convention day
 before (Saturday 01:00 is the Saturday night).
 

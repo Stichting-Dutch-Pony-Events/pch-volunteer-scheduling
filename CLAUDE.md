@@ -253,20 +253,47 @@ come after, the user can fix details by hand meanwhile):
   - Maybe later: several ranges in one cell (e.g. `08:00-12:00, 14:00-18:00`). Only
     happened once in years; fix by hand for now.
 - [ ] Read the input workbook (the form CSV is only needed for wishes, so it moves to
-      the Event wishes step). To do:
+      the Event wishes step). Branch `feature/workbook-reader`.
+  - **Design (agreed 2026-11-02):** new file `scheduler/workbook.py`, public function
+    `read_problem(path: str) -> Problem`, a short table of contents calling one function
+    per tab in this order: `_read_settings` (first: `block_of` needs the days),
+    `_read_posts`, `_read_skills`, `_read_volunteers`, `_read_demand`. Version 1.0 reads
+    only Settings, Volunteers, Posts, Skills, Demand (Events/Wishes/Fixed come later).
+    Parsing helpers are plain functions without openpyxl so most tests need no file:
+    `cell_text(value) -> str` (strip, empty -> "", Excel time values -> "HH:MM"; the draft
+    has text times now, but a typed 14:00 becomes a time value) and
+    `parse_availability(...) -> set[int]`. A few end-to-end tests read
+    `tests/data/test_input.xlsx`, one also runs `solve()`.
+    Columns are found by header name, settings by name in the Setting column (order free;
+    unused settings such as weights and meals ignored for now).
+  - **Errors:** `WorkbookError(Exception)`, separate from NoScheduleFound (typo in the
+    input vs. no schedule possible). Messages name tab, row/column and value. **Stop at
+    the first error for now** (collecting all errors: see after version 1.0).
+    Volunteer errors (message names the volunteer): no row on Skills / no skill at all,
+    and not available on any day. Duplicate nicknames are an error too.
+  - Suggested order (TDD): `cell_text`, `parse_availability`, `_read_settings`, posts
+    and skills (with the post-name check), volunteers, demand, `read_problem` end to end.
   - [ ] validate names. `Problem.posts` is not used by the solver yet, so a typo in a
         post name (in demand or skills) silently means "nobody qualified" and gives a
         generic NoScheduleFound. Check every post name against `posts` and raise a
         clear error naming the typo.
+  - [ ] Demand: number of people must be a whole number >= 0; empty or 0 = closed (left
+        out of the dict); the same Day + Time twice is an error.
   - [ ] the draft workbook already fits option A: Demand/Events/Fixed use Day + Time
         columns, Saturday night rows (00:00-02:45) are listed under "Saturday", and
         Volunteers has Friday/Saturday/Sunday availability columns. Convert with
         `block_of` while reading.
-  - [ ] align Settings names with the code: the workbook has "Minimum/Maximum shift
-        length" and "Maximum continuous work" (one concept in the code: work stretch);
-        rename to e.g. "Minimum/Maximum work stretch". "Shift start step" is now a soft
-        rule.
-  - [ ] list of days: add a "Days" row to the Settings tab (most explicit).
+  - [x] align Settings names with the code (done 2026-11-02 in the test workbook and the
+        draft; draft backup `..._before_settings_rename.xlsx`): the reader uses
+        "Minimum work stretch", "Maximum work stretch" (merged with the old "Maximum
+        continuous work"), "Minimum break", "Days", "Time step", "Day boundary".
+        "Shift start step" and "Preferred maximum shift length" keep their names until
+        the soft rules step.
+  - [x] list of days: "Days" row added to the Settings tab (test workbook and draft),
+        value `Friday, Saturday, Sunday` (comma separated, spaces stripped). **Decided
+        2026-11-02:** it is the single source of the days (any names, any number; the
+        first is block 0). The reader checks that Volunteers has one availability column
+        per day (missing = error); Demand's Day values are checked by `block_of`.
   - [ ] strip spaces from cell values in the reader (one place). Today `block_of`
         accepts " 12:30" (int() ignores spaces) but rejects "Friday " as an unknown
         day; stripping while reading makes both behave the same.
@@ -307,6 +334,8 @@ After the minimal viable scheduler:
       variables to 1, a clear error if a fixed shift is impossible (not qualified / not
       available), and `Problem.fixed` with an empty default (doesn't depend on settings,
       so no test churn). The reader skips the Fixed tab until then.
+- [ ] Collect and show all input errors at once instead of stopping at the first one
+      (e.g. a list of every typo in the workbook; fits the window program later).
 - [ ] Soft rules (first objective): start/end on :00/:30, stay at one post, avoid short
       stretches, prefer higher skill scores, prefer work stretches of at most 120 min
 - [ ] Meal breaks
@@ -335,10 +364,9 @@ ReferenceDocuments). **Availability per day is done** in model and solver:
 weekend", every test RULES passes `days=` explicitly, `Works` type alias, type hints
 agreed for all new functions. 60 tests green.
 Fixed shifts postponed to after version 1.0.
-**Next: read the input workbook**, on a new branch `feature/workbook-reader` (the user
-makes it). Start by discussing the reader's design (which tabs for version 1.0, how it
-builds a Problem, where validation lives), using `tests/data/test_input.xlsx`; see the
-reader to-dos above. Then tests first.
+**Now: reading the input workbook**, on branch `feature/workbook-reader`. Design agreed
+2026-11-02 (see the reader item in the roadmap); Settings tab renamed and Days row added
+in both workbooks. Next: tests first for `cell_text`.
 Claude reviews and explains; only changes code when asked.
 
 ## Step 2 plan: work stretches and breaks (done; kept for reference)
