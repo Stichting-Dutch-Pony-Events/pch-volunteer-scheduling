@@ -122,8 +122,8 @@ tests/                test_hello.py, test_model.py, test_time_blocks.py;
 tests/solver/         test_solver_availability.py, test_solver_basics.py,
                       test_solver_work_stretches.py
 tests/workbook/       test_celltext.py, test_availability.py, test_find_columns.py,
-                      test_read_settings.py, test_read_volunteers.py (one test file
-                      per reader part)
+                      test_read_settings.py, test_read_volunteers.py,
+                      test_read_posts.py (one test file per reader part)
                       Every test folder has an empty __init__.py (like tests/ itself).
 requirements.txt      ortools>=9.15, openpyxl>=3.1, pytest>=8.0
 ```
@@ -293,7 +293,7 @@ come after, the user can fix details by hand meanwhile):
     list[Post]`, `read_skills(sheet) -> dict[str, dict[str, int]]`,
     `read_demand(sheet, settings) -> dict[tuple[str, int], int]`.
   - Order (TDD): `cell_text` (done), `parse_availability` (done), `find_columns` (done),
-    `read_settings` (done), `read_volunteers` (done), `read_posts`, `read_skills`,
+    `read_settings` (done), `read_volunteers` (done), `read_posts` (done), `read_skills`,
     `read_demand`, `read_problem` end to end (with the cross-tab checks).
   - **Agreed 2026-11-02:** tab readers are public (`read_settings(sheet) -> Settings`,
     no underscore) because they are tested directly; tests build small sheets in memory
@@ -420,10 +420,10 @@ weekend", every test RULES passes `days=` explicitly, `Works` type alias, type h
 agreed for all new functions. 60 tests green.
 Fixed shifts postponed to after version 1.0.
 **Now: reading the input workbook**, on branch `feature/workbook-reader`. Done in
-workbook.py (133 tests green): `cell_text`, `parse_availability`, `find_columns`,
+workbook.py (139 tests green): `cell_text`, `parse_availability`, `find_columns`,
 `WorkbookError`, `read_settings` (with `WORKBOOK_FORMAT_VERSION`, known/required
-settings, `_whole_number`), `read_volunteers`. Both workbooks have the renamed
-Settings rows, a Days row and a Workbook format version row. Next: `read_posts`,
+settings, `_whole_number`), `read_volunteers`, `read_posts`. Both workbooks have the renamed
+Settings rows, a Days row and a Workbook format version row. Next:
 `read_skills`, `read_demand`, then `read_problem` with the cross-tab checks.
 Claude reviews and explains; only changes code when asked.
 
