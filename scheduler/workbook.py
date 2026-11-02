@@ -195,3 +195,16 @@ def _whole_number(settings: dict[str, str], name: str) -> int:
         # from None: show only our clear message, not the ValueError behind it
         raise WorkbookError(f"Settings, {name!r}: {settings[name]!r} is not a whole "
                             f"number.") from None
+
+
+def read_volunteers(sheet: Worksheet, settings: Settings) -> dict[str, set[int]]:
+    """The Volunteers tab as {nickname: available blocks}, in the order of the sheet.
+
+    Reads the Nickname column and one availability column per day in settings.days (a
+    missing day column is an error); other columns are ignored. Each day's cell goes
+    through parse_availability and the days are combined. A completely empty row is
+    skipped. Raises WorkbookError (naming row, volunteer and day where possible) for a
+    missing column, a nickname used twice, a row with availability but no nickname, an
+    invalid availability, or a volunteer who is not available on any day.
+    """
+    raise NotImplementedError  # stub, so the tests can run and fail

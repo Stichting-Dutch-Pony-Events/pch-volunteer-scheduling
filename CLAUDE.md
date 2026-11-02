@@ -122,7 +122,8 @@ tests/                test_hello.py, test_model.py, test_time_blocks.py;
 tests/solver/         test_solver_availability.py, test_solver_basics.py,
                       test_solver_work_stretches.py
 tests/workbook/       test_celltext.py, test_availability.py, test_find_columns.py,
-                      test_read_settings.py (one test file per reader part)
+                      test_read_settings.py, test_read_volunteers.py (one test file
+                      per reader part)
                       Every test folder has an empty __init__.py (like tests/ itself).
 requirements.txt      ortools>=9.15, openpyxl>=3.1, pytest>=8.0
 ```
@@ -281,15 +282,25 @@ come after, the user can fix details by hand meanwhile):
     the first error for now** (collecting all errors: see after version 1.0).
     Volunteer errors (message names the volunteer): no row on Skills / no skill at all,
     and not available on any day. Duplicate nicknames are an error too.
-  - Suggested order (TDD): `cell_text` (done), `parse_availability` (done),
-    `find_columns`, `read_settings`, posts and skills (with the post-name check),
-    volunteers, demand, `read_problem` end to end.
+  - **One reader per tab, combined in `read_problem` (agreed 2026-11-02).** Each tab
+    reader reads only its own tab and returns plain data; `read_problem` builds the
+    `Volunteer` objects and does every check that spans tabs (every volunteer has a
+    Skills row with at least one skill, every name on Skills is on Volunteers, every
+    post in Skills and Demand is on Posts). So the readers can be written in any order
+    and their tests need only one in-memory sheet each:
+    `read_settings(sheet) -> Settings`, `read_volunteers(sheet, settings) ->
+    dict[str, set[int]]` (nickname -> available blocks), `read_posts(sheet) ->
+    list[Post]`, `read_skills(sheet) -> dict[str, dict[str, int]]`,
+    `read_demand(sheet, settings) -> dict[tuple[str, int], int]`.
+  - Order (TDD): `cell_text` (done), `parse_availability` (done), `find_columns` (done),
+    `read_settings` (done), `read_volunteers`, `read_posts`, `read_skills`,
+    `read_demand`, `read_problem` end to end (with the cross-tab checks).
   - **Agreed 2026-11-02:** tab readers are public (`read_settings(sheet) -> Settings`,
     no underscore) because they are tested directly; tests build small sheets in memory
     with `openpyxl.Workbook()`, only the end-to-end test opens the test workbook.
     Shared helper `find_columns(sheet, names) -> dict[str, int]` (header name -> column
     number, WorkbookError for a missing one), tested separately before `read_settings`.
-  - [ ] `read_settings`: Setting/Value columns by name, six required settings (Minimum/
+  - [x] `read_settings`: Setting/Value columns by name, six required settings (Minimum/
         Maximum work stretch, Minimum break as whole numbers; Days comma separated, no
         duplicates; Time step must be 15; Day boundary must be 06:00), missing or empty
         = error, the same setting twice = error. Plus a **Workbook format version**
@@ -303,6 +314,11 @@ come after, the user can fix details by hand meanwhile):
         post name (in demand or skills) silently means "nobody qualified" and gives a
         generic NoScheduleFound. Check every post name against `posts` and raise a
         clear error naming the typo.
+  - [ ] `read_problem`: a missing or misspelled tab gives a WorkbookError naming the tab
+        and listing the required ones (instead of openpyxl's KeyError). Tested once in
+        the read_problem tests (parametrized per tab, workbook built in memory and saved
+        to pytest's `tmp_path`), not in every tab reader: a reader gets a sheet handed to
+        it and only uses `sheet.title` in messages.
   - [ ] `read_problem` checks the extension first: anything but `.xlsx` gives a
         WorkbookError saying to save as .xlsx (openpyxl can't read `.ods`, its own error
         is cryptic). **Decided 2026-11-02: input stays .xlsx** (the user's Nextcloud uses
