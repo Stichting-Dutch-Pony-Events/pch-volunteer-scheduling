@@ -40,6 +40,9 @@ likes to write tests (and often code) themselves; Claude reviews and explains.
    test_solver_work_stretches.py, names say "the minimum/maximum" rather than a number.
    The defaults themselves are pinned by `test_default_settings_match_the_agreed_rules`
    in test_model.py. Use concrete numbers in test data; don't compute it from settings.
+   **Expected results are built with loops over concrete ranges** (user, 2026-11-04),
+   e.g. `for block in range(0, 4): expected[("Tickets", 1, block)] = "Mock Mane"`,
+   not written out entry by entry.
    **Workflow for new tests (agreed 2026-11-02):** Claude suggests tests, the user
    approves them, then Claude writes the test stubs in the test file: name, one-line
    docstring, empty `# Arrange` / `# Act` / `# Assert` sections, and
@@ -407,8 +410,11 @@ come after, the user can fix details by hand meanwhile):
       dict[tuple[str, int, int], str]` ((post, slot, block) -> nickname; only needs
       the schedule; rule: keep your slot if you worked at this post in block - 1,
       otherwise lowest free slot, newcomers in name order; after a break you are a
-      newcomer again). 9 test stubs in tests/output/test_assign_slots.py (2026-11-03);
-      the user fills in a handful first.
+      newcomer again). The 9 tests in tests/output/test_assign_slots.py are written
+      (2026-11-04, user wrote 1-2, Claude the rest; all red, a trial implementation
+      in a scratch copy passes them). `assign_slots` implemented, 204 tests green.
+      Next: the other helpers (`slot_columns`, `column_header`, `rows_to_show`), then
+      `create_posts_sheet` and `write_output`.
       Tab names (agreed): "Schedule" (the post schedule), later e.g. "Individual
       schedules". A file still open in Excel gives a
       PermissionError: turn it into a clear message in the command line, not here.
