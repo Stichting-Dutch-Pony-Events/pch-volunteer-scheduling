@@ -38,9 +38,9 @@ Version 1.0 makes a schedule from the real input workbook that follows the main 
 rules (meal breaks come later), run from the command line. Details can then be fixed by
 hand.
 
-- [ ] A clear message when no schedule is possible, saying where it gets stuck
-- [ ] Writing the schedule to Excel (overview, per post, per volunteer)
+- [ ] Writing the schedule to Excel: a schedule per post with nicknames
 - [ ] Running it from the command line
+- [ ] A clear message when no schedule is possible, saying where it gets stuck
 - [ ] First run on real data, compared with the hand-made 2026 schedule
 - [ ] Faster, with a time limit, if real data needs it
 
@@ -53,6 +53,7 @@ hand.
 - [ ] Meal breaks
 - [ ] Event wishes (REALLY want / would like to attend), read from the form answers
 - [ ] Maximum hours and a fair spread of work
+- [ ] More output: a "no double booking" check tab, and individual schedules
 - [ ] All input errors shown at once, instead of stopping at the first one
 - [ ] Maybe: also read `.ods` files (LibreOffice / Nextcloud); for now save as `.xlsx`
 - [ ] A small program with a window: pick the input workbook, start a run, see errors

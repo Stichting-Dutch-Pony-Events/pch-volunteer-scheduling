@@ -120,11 +120,13 @@ Fictional nicknames for tests and examples (never use real nicknames):
 ```
 ReferenceDocuments/   (not in git) real data, DATA_NOTES.md, draft input workbook
 scheduler/            model.py (data classes), solver.py, rules.py (hard rules),
-                      workbook.py (reads the input workbook), hello.py (setup check)
+                      workbook.py (reads the input workbook), output.py (writes the
+                      output workbook), hello.py (setup check)
 tests/                test_hello.py, test_model.py, test_time_blocks.py;
                       data/test_input.xlsx (made-up workbook)
 tests/solver/         test_solver_availability.py, test_solver_basics.py,
                       test_solver_work_stretches.py
+tests/output/         test_assign_slots.py (tests of writing the output workbook)
 tests/workbook/       test_celltext.py, test_availability.py, test_find_columns.py,
                       test_read_settings.py, test_read_volunteers.py,
                       test_read_posts.py, test_read_skills.py, test_read_demand.py,
@@ -365,6 +367,56 @@ come after, the user can fix details by hand meanwhile):
           `Problem(volunteers, posts, demand, settings)`.
     - [x] end-to-end tests on `tests/data/test_input.xlsx`: reads without errors, a few
           spot checks, and `solve()` finds a schedule.
+- [ ] Write output Excel. Branch `feature/output-excel` (the command line goes in the
+      same branch). Output is .xlsx.
+      **Scope (user, 2026-11-03):** version 1.0 = **post schedules with nicknames**,
+      like the old TicketingInfoboothGopher / TicketCheckSecurity tabs. Later updates,
+      in this order: a "No double check" tab (for small changes by hand without the
+      tool), then an individual schedules tab (see after version 1.0).
+      **The old post tabs (2026 schedule .ods, read 2026-11-03):** two header rows
+      (row 1 = post or group name merged over its columns, row 2 = slot label "one",
+      "two", ... or a sub-post such as "Stairs"); column A = time in half-hour rows,
+      a header row per day (FRIDAY, ...), 08:00-02:00 with night rows under the day
+      before; one nickname per cell and **a volunteer stays in the same column for
+      the whole shift**; grey = closed, white = open; colours with mixed meanings and
+      loose text ("General briefing", "Doors Closed") not modelled; posts split over
+      two tabs (printable width).
+      **Decided (user, 2026-11-03), base version:** no colours at all; 15-minute
+      rows; **one tab** with all posts (no split over tabs, printable versions come
+      later); rows = day, then time; columns = posts, a post that needs more than one
+      person gets numbered columns ("Tickets 1", "Tickets 2", ...); a volunteer stays
+      in the same column for their whole shift at that post.
+      **Claude's proposal for the details (to confirm):** `scheduler/output.py`,
+      `write_schedule(problem, schedule, path) -> None`. Columns A/B = Day and Time
+      (like the Demand tab; night rows under the day before); number of columns per
+      post = its highest demand, a post that never needs more than one keeps its plain
+      name; posts in the order of the Posts tab; rows per day from the first to the
+      last block with demand that day (gaps as empty rows, days without demand left
+      out). Slots: per post, in time order, someone who worked there in the previous
+      block keeps their column, someone new gets the lowest free column (a pure,
+      separately tested function). Empty cell = closed (demand is always met
+      exactly). Freeze panes under the header and next to Day/Time (**agreed**).
+      **Function layout (agreed 2026-11-03, mirrors the input):** `write_output(problem,
+      schedule, path)` is the table of contents: new workbook, one
+      `create_<name>_sheet(workbook, problem, schedule)` per tab (now only
+      `create_posts_sheet`; later the check and individual sheets), save. Claude's
+      proposal for the pure helpers under `create_posts_sheet` (to confirm):
+      `slot_columns(problem) -> list[tuple[str, int]]` (post, slot number),
+      `column_header(post, slot, slot_count) -> str` ("Tickets 2" / "Infobooth"),
+      `rows_to_show(problem) -> list[int]`, `assign_slots(schedule) ->
+      dict[tuple[str, int, int], str]` ((post, slot, block) -> nickname; only needs
+      the schedule; rule: keep your slot if you worked at this post in block - 1,
+      otherwise lowest free slot, newcomers in name order; after a break you are a
+      newcomer again). 9 test stubs in tests/output/test_assign_slots.py (2026-11-03);
+      the user fills in a handful first.
+      Tab names (agreed): "Schedule" (the post schedule), later e.g. "Individual
+      schedules". A file still open in Excel gives a
+      PermissionError: turn it into a clear message in the command line, not here.
+      Tests mostly on the pure functions, a few write to `tmp_path` and read back.
+      Later: post colours, printable versions (split over tabs), "changes vs previous
+      run".
+- [ ] Command line: run it end to end, e.g. `python -m scheduler input.xlsx output.xlsx`
+      (until now the solver is only reached from tests)
 - [ ] Clear message when no schedule is possible: simple checks before solving, e.g.
       "Tickets, Saturday 14:00: needs 3, only 2 qualified volunteers available"
       (a bare NoScheduleFound on real data gives no clue where to look).
@@ -375,10 +427,6 @@ come after, the user can fix details by hand meanwhile):
       `pytest.raises(NoScheduleFound)` also catches the children. New tests can then
       check the specific child (and its message). Plain NoScheduleFound stays for
       "the solver found no schedule" when no pre-check spots a cause.
-- [ ] Write output Excel (overview, per post, per volunteer; show changes vs previous
-      run). Use `time_of`; show night rows under the previous day (as the workbook does).
-- [ ] Command line: run it end to end, e.g. `python -m scheduler input.xlsx output.xlsx`
-      (until now the solver is only reached from tests)
 - [ ] First end-to-end run on real data; compare with the hand-made 2026 schedule
 - [ ] Faster model building (group variables per volunteer/block once instead of
       `_variables_of` scanning all of `works` on every call), if real data is slow.
@@ -397,6 +445,10 @@ After the minimal viable scheduler:
       variables to 1, a clear error if a fixed shift is impossible (not qualified / not
       available), and `Problem.fixed` with an empty default (doesn't depend on settings,
       so no test churn). The reader skips the Fixed tab until then.
+- [ ] Output: a "No double check" tab (like the old one: events, wishes, one column
+      per volunteer grouped by team) for small changes by hand without the tool.
+- [ ] Output: an individual schedules tab (per volunteer their shifts; the old
+      "Individual Schedules" tab is from the 2025 layout and does not match 2026).
 - [ ] Collect and show all input errors at once instead of stopping at the first one
       (e.g. a list of every typo in the workbook; fits the window program later).
 - [ ] Time step and day boundary configurable (e.g. 30 min blocks, another boundary).
@@ -441,10 +493,12 @@ Fixed shifts postponed to after version 1.0.
 `read_problem(path)` checks the file and tabs, calls the five tab readers, checks
 across tabs and builds the Problem. 195 tests green; the test workbook goes all the
 way to a schedule, and the real 2026 draft reads without errors (not solved yet).
-**Next:** the user merges `feature/workbook-reader` into `develop` (and deletes the
-branch). Then the next roadmap item: a clear message when no schedule is possible
-(pre-checks, NoScheduleFound child errors), or first the command line and the
-output Excel; to discuss with the user.
+Merged into `develop` (fast-forward) and the feature branch deleted, local and remote
+(2026-11-02). **Next (user's choice, 2026-11-02): the output Excel and the command
+line first**, then the clear message when no schedule is possible (still part of
+version 1.0, roadmap order changed accordingly), then the first real run.
+2026-11-03: on branch `feature/output-excel`; old schedule read, scope agreed (post
+schedules first), design proposal and open questions under the output Excel item.
 Possible small follow-up: a file with an .xlsx name that is not a real workbook
 (e.g. damaged) gives openpyxl's own error (zipfile.BadZipFile), not a WorkbookError.
 In this session the user often asked Claude to write the tests and/or the code once
