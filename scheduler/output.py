@@ -4,7 +4,7 @@ Layout of this file (like workbook.py): write_output first (the table of content
 one create_<name>_sheet function per tab, then the helpers they use. The helpers are
 plain functions without openpyxl, so they can be tested without writing a file.
 """
-from scheduler.model import Problem, Schedule
+from scheduler.model import Problem, Schedule, BLOCKS_PER_DAY
 
 
 def slot_columns(problem: Problem) -> list[tuple[str, int]]:
@@ -15,12 +15,42 @@ def slot_columns(problem: Problem) -> list[tuple[str, int]]:
     Example: Tickets needs at most 2, Infobooth 1 -> [("Tickets", 1), ("Tickets", 2),
     ("Infobooth", 1)]
     """
-    raise NotImplementedError  # stub, so the tests can run and fail
+    # 1. Check what the maximum demand per post is.
+    max_demand_per_post = {}
+    for post in problem.posts:
+        for post_and_block, demand in problem.demand.items():
+            if post.name == post_and_block[0] and demand > 0:
+                if post.name not in max_demand_per_post:
+                    max_demand_per_post[post.name] = demand
+                elif max_demand_per_post[post.name] < demand:
+                    max_demand_per_post[post.name] = demand
+
+    # 2. Generate the required output
+    slot_columns = []
+    for post, max_demand in max_demand_per_post.items():
+        for slot in range(1, max_demand + 1):
+            slot_columns.append((post, slot))
+
+    return slot_columns
 
 
 def column_header(post: str, slot: int, slot_count: int) -> str:
     """The header text of one column: "Tickets 2", or just "Infobooth" if it has one slot."""
-    raise NotImplementedError  # stub, so the tests can run and fail
+    # 1. Various checks
+    if slot_count < 1:
+        raise ValueError(f"Slotcount {slot_count} invalid. Needs to be at least 1.")
+    if slot < 1:
+        raise ValueError(f"Slot {slot} invalid. Needs to be at least 1.")
+    if slot > slot_count:
+        raise ValueError(f"Slot {slot} greater than slot_count {slot_count}.")
+    if post == "":
+        raise ValueError("Post can't be an empty string")
+
+    # 2. return the header text
+    if slot_count == 1:
+        return post
+    else:
+        return post + " " + str(slot)
 
 
 def rows_to_show(problem: Problem) -> list[int]:
@@ -29,7 +59,31 @@ def rows_to_show(problem: Problem) -> list[int]:
     Per convention day: every block from the first to the last block with demand that day,
     gaps included. A day without any demand gets no rows.
     """
-    raise NotImplementedError  # stub, so the tests can run and fail
+
+    min_max_per_day = {} # day: str -> (min_block: int, max_block: int)
+
+    for post, block in problem.demand:
+        day_number = block // BLOCKS_PER_DAY
+        day = problem.settings.days[day_number]
+
+        if day not in min_max_per_day:
+            min_max_per_day[day] = (block, block)
+            continue
+
+        min_block, max_block = min_max_per_day[day]
+        if block < min_block:
+            min_max_per_day[day] = (block, max_block)
+        elif block > max_block:
+            min_max_per_day[day] = (min_block, block)
+
+    blocks_to_show = []
+    for day in problem.settings.days:          # Friday, Saturday, Sunday: time order
+        if day in min_max_per_day:             # a day without demand gets no rows
+            min_to_show, max_to_show = min_max_per_day[day]
+            blocks_to_show.extend(range(min_to_show, max_to_show + 1))
+
+
+    return blocks_to_show
 
 
 def assign_slots(schedule: Schedule) -> dict[tuple[str, int, int], str]:

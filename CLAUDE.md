@@ -420,7 +420,9 @@ come after, the user can fix details by hand meanwhile):
       a post without any demand gets no columns; a set time window for the rows is
       postponed until after version 1.0, see there). Stubs in output.py and the 13
       tests (15 cases) written by Claude 2026-11-05: all red, a trial implementation
-      in a scratch copy makes all 219 green. Then
+      in a scratch copy makes all 219 green. The user implemented the three helpers;
+      plus 4 tests for `column_header`'s ValueErrors (slot count < 1, slot < 1, slot >
+      slot count, empty post). 223 tests green (2026-11-05). Then
       `create_schedule_sheet` and `write_output`.
       Tab names (agreed): "Schedule" (the post schedule), later e.g. "Individual
       schedules". A file still open in Excel gives a

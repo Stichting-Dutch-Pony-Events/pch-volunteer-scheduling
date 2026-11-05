@@ -117,6 +117,58 @@ def test_post_with_several_slots_gets_numbered_headers(slot, expected_header):
     assert result == expected_header
 
 
+def test_slot_count_below_1_raises_value_error():
+    """A post with fewer than one column cannot get a header."""
+    # Arrange
+    # Nothing to set up: the function only takes plain values.
+
+    # Act
+    # (Act and Assert are combined, pytest.raises checks the exception while the call runs.)
+
+    # Assert
+    with pytest.raises(ValueError, match="Slotcount 0"):
+        column_header("Tickets", 1, 0)
+
+
+def test_slot_below_1_raises_value_error():
+    """Slots are counted from 1, so slot 0 is an error."""
+    # Arrange
+    # Nothing to set up: the function only takes plain values.
+
+    # Act
+    # (Act and Assert are combined, pytest.raises checks the exception while the call runs.)
+
+    # Assert
+    with pytest.raises(ValueError, match="Slot 0"):
+        column_header("Tickets", 0, 3)
+
+
+def test_slot_above_the_slot_count_raises_value_error():
+    """A slot number higher than the number of columns is an error naming both numbers."""
+    # Arrange
+    # Nothing to set up: the function only takes plain values.
+
+    # Act
+    # (Act and Assert are combined, pytest.raises checks the exception while the call runs.)
+
+    # Assert
+    with pytest.raises(ValueError, match="Slot 4.*3"):
+        column_header("Tickets", 4, 3)
+
+
+def test_empty_post_name_raises_value_error():
+    """A header needs a post name."""
+    # Arrange
+    # Nothing to set up: the function only takes plain values.
+
+    # Act
+    # (Act and Assert are combined, pytest.raises checks the exception while the call runs.)
+
+    # Assert
+    with pytest.raises(ValueError, match="empty"):
+        column_header("", 1, 1)
+
+
 # --- rows_to_show ---
 
 def test_rows_run_from_the_first_to_the_last_block_with_demand():
