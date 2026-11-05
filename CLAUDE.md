@@ -129,7 +129,8 @@ tests/                test_hello.py, test_model.py, test_time_blocks.py;
                       data/test_input.xlsx (made-up workbook)
 tests/solver/         test_solver_availability.py, test_solver_basics.py,
                       test_solver_work_stretches.py
-tests/output/         test_assign_slots.py (tests of writing the output workbook)
+tests/output/         test_assign_slots.py, test_write_helpers.py (tests of writing the
+                      output workbook)
 tests/workbook/       test_celltext.py, test_availability.py, test_find_columns.py,
                       test_read_settings.py, test_read_volunteers.py,
                       test_read_posts.py, test_read_skills.py, test_read_demand.py,
@@ -402,8 +403,9 @@ come after, the user can fix details by hand meanwhile):
       **Function layout (agreed 2026-11-03, mirrors the input):** `write_output(problem,
       schedule, path)` is the table of contents: new workbook, one
       `create_<name>_sheet(workbook, problem, schedule)` per tab (now only
-      `create_posts_sheet`; later the check and individual sheets), save. Claude's
-      proposal for the pure helpers under `create_posts_sheet` (to confirm):
+      `create_schedule_sheet`, name agreed 2026-11-04, matches the tab "Schedule";
+      later the check and individual sheets), save. Claude's
+      proposal for the pure helpers under `create_schedule_sheet` (to confirm):
       `slot_columns(problem) -> list[tuple[str, int]]` (post, slot number),
       `column_header(post, slot, slot_count) -> str` ("Tickets 2" / "Infobooth"),
       `rows_to_show(problem) -> list[int]`, `assign_slots(schedule) ->
@@ -413,8 +415,13 @@ come after, the user can fix details by hand meanwhile):
       newcomer again). The 9 tests in tests/output/test_assign_slots.py are written
       (2026-11-04, user wrote 1-2, Claude the rest; all red, a trial implementation
       in a scratch copy passes them). `assign_slots` implemented, 204 tests green.
-      Next: the other helpers (`slot_columns`, `column_header`, `rows_to_show`), then
-      `create_posts_sheet` and `write_output`.
+      Next: the other helpers (`slot_columns`, `column_header`, `rows_to_show`; tests
+      in one file tests/output/test_write_helpers.py, 13 tests approved 2026-11-05,
+      a post without any demand gets no columns; a set time window for the rows is
+      postponed until after version 1.0, see there). Stubs in output.py and the 13
+      tests (15 cases) written by Claude 2026-11-05: all red, a trial implementation
+      in a scratch copy makes all 219 green. Then
+      `create_schedule_sheet` and `write_output`.
       Tab names (agreed): "Schedule" (the post schedule), later e.g. "Individual
       schedules". A file still open in Excel gives a
       PermissionError: turn it into a clear message in the command line, not here.
@@ -455,6 +462,20 @@ After the minimal viable scheduler:
       per volunteer grouped by team) for small changes by hand without the tool.
 - [ ] Output: an individual schedules tab (per volunteer their shifts; the old
       "Individual Schedules" tab is from the 2025 layout and does not match 2026).
+- [ ] Output: a set time window for the Schedule rows (agreed 2026-11-05, postponed by
+      the user; version 1.0 fits the rows to the demand). Optional Settings row, e.g.
+      `Schedule shows` = `08:00-02:00`, same format and rules as an availability range
+      (reuse the `parse_availability` parsing); `Settings.schedule_shows: str = ""`
+      (empty = fit to demand), read by `rows_to_show(problem)` (signature unchanged).
+      Optional row, so the workbook format version stays 1. **User's choices:** the
+      window is a minimum (demand outside it still gets rows, never hide a shift); a day
+      without demand is left out entirely; one window for every day. Tests planned for
+      test_write_helpers.py: set window shows rows before and after the demand
+      (08:00-20:00, demand 10:00-12:00); window past midnight belongs to the same day
+      (Saturday 08:00-02:00 ends at block 175); demand outside the window still gets
+      rows; day without demand gets no rows even with a window. Plus in
+      test_read_settings.py: accepted and stored, missing row gives "", invalid range =
+      WorkbookError naming the setting.
 - [ ] Collect and show all input errors at once instead of stopping at the first one
       (e.g. a list of every typo in the workbook; fits the window program later).
 - [ ] Time step and day boundary configurable (e.g. 30 min blocks, another boundary).

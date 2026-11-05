@@ -54,6 +54,7 @@ hand.
 - [ ] Event wishes (REALLY want / would like to attend), read from the form answers
 - [ ] Maximum hours and a fair spread of work
 - [ ] More output: a "no double booking" check tab, and individual schedules
+- [ ] Choose the times the schedule shows (e.g. 08:00-02:00), instead of only the open hours
 - [ ] All input errors shown at once, instead of stopping at the first one
 - [ ] Maybe: also read `.ods` files (LibreOffice / Nextcloud); for now save as `.xlsx`
 - [ ] A small program with a window: pick the input workbook, start a run, see errors

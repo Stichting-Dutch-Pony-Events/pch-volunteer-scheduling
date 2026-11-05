@@ -4,7 +4,32 @@ Layout of this file (like workbook.py): write_output first (the table of content
 one create_<name>_sheet function per tab, then the helpers they use. The helpers are
 plain functions without openpyxl, so they can be tested without writing a file.
 """
-from scheduler.model import Schedule
+from scheduler.model import Problem, Schedule
+
+
+def slot_columns(problem: Problem) -> list[tuple[str, int]]:
+    """The columns of the Schedule tab after Day and Time: [(post, slot), ...], slots from 1.
+
+    Posts in the order of problem.posts; each post gets as many columns as its highest
+    demand at any block. A post without any demand gets no columns.
+    Example: Tickets needs at most 2, Infobooth 1 -> [("Tickets", 1), ("Tickets", 2),
+    ("Infobooth", 1)]
+    """
+    raise NotImplementedError  # stub, so the tests can run and fail
+
+
+def column_header(post: str, slot: int, slot_count: int) -> str:
+    """The header text of one column: "Tickets 2", or just "Infobooth" if it has one slot."""
+    raise NotImplementedError  # stub, so the tests can run and fail
+
+
+def rows_to_show(problem: Problem) -> list[int]:
+    """The blocks that get a row on the Schedule tab, in time order.
+
+    Per convention day: every block from the first to the last block with demand that day,
+    gaps included. A day without any demand gets no rows.
+    """
+    raise NotImplementedError  # stub, so the tests can run and fail
 
 
 def assign_slots(schedule: Schedule) -> dict[tuple[str, int, int], str]:
