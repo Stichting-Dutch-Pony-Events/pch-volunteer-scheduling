@@ -17,8 +17,8 @@ The puzzle itself is solved by [Google OR-Tools](https://developers.google.com/o
 ## Status
 
 In development. The solver works on small made-up examples (in the tests), and the
-input workbook can be read and the schedule written to Excel; running it from the
-command line on real data is the next part.
+whole chain runs from the command line (input workbook in, schedule in Excel out);
+running it on real data is the next part.
 
 ### Done
 
@@ -33,6 +33,7 @@ command line on real data is the next part.
       a time range)
 - [x] Reading the input workbook, with clear errors for typos
 - [x] Writing the schedule to Excel: a schedule per post with nicknames
+- [x] Running it from the command line
 
 ### Roadmap to version 1.0
 
@@ -40,7 +41,6 @@ Version 1.0 makes a schedule from the real input workbook that follows the main 
 rules (meal breaks come later), run from the command line. Details can then be fixed by
 hand.
 
-- [ ] Running it from the command line
 - [ ] A clear message when no schedule is possible, saying where it gets stuck
 - [ ] First run on real data, compared with the hand-made 2026 schedule
 - [ ] Faster, with a time limit, if real data needs it
@@ -125,6 +125,18 @@ python -m venv .venv
 .venv\Scripts\activate
 pip install -r requirements.txt
 ```
+
+### Making a schedule
+
+```powershell
+python -m scheduler input.xlsx output.xlsx
+```
+
+Reads the input workbook, makes a schedule and writes it to `output.xlsx` (tab
+"Schedule": one column per post, one row per 15 minutes). If the output already
+exists you are asked before it is overwritten; add `--overwrite` to skip that
+question. `python -m scheduler --help` shows the options. Keep real input and output
+outside the repository: they contain volunteer names.
 
 ### Running the tests
 

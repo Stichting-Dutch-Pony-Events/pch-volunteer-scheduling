@@ -446,7 +446,7 @@ come after, the user can fix details by hand meanwhile):
       Tests mostly on the pure functions, a few write to `tmp_path` and read back.
       Later: post colours, printable versions (split over tabs), "changes vs previous
       run".
-- [ ] Command line: run it end to end, e.g. `python -m scheduler input.xlsx output.xlsx`
+- [x] Command line: run it end to end, e.g. `python -m scheduler input.xlsx output.xlsx`
       (until now the solver is only reached from tests).
       **Design (agreed 2026-11-05):** `scheduler/__main__.py` (Python's convention: it
       runs on `python -m scheduler`) with `main(arguments: list[str]) -> int` (exit code
@@ -462,7 +462,14 @@ come after, the user can fix details by hand meanwhile):
       with pytest's `capsys` (catch printed text) and `monkeypatch` (fake `input()`,
       `solve`, `write_output`); one `subprocess.run([sys.executable, "-m", ...])` test
       runs the real command. Stub plus 14 tests (18 cases) written by Claude: all red,
-      a trial implementation makes all 257 green. Next: implement `main`.
+      a trial implementation makes all 257 green. The user implemented `main` with
+      the steps as comments (Claude wrote step 1 and the tidy-ups): 257 tests green,
+      and `python -m scheduler tests/data/test_input.xlsx <out>` works (2026-11-05).
+      Added (user's idea): an existing output is first opened with `"ab"` and closed
+      without writing, so a file locked by Excel is refused *before* solving (Excel
+      locks, LibreOffice usually doesn't); the `except PermissionError` in step 4 stays
+      for a file opened during solving. Test fakes `open` only in the command line
+      module (`monkeypatch.setattr(command_line, "open", ..., raising=False)`). 258 green.
 - [ ] Clear message when no schedule is possible: simple checks before solving, e.g.
       "Tickets, Saturday 14:00: needs 3, only 2 qualified volunteers available"
       (a bare NoScheduleFound on real data gives no clue where to look).
@@ -559,6 +566,11 @@ line first**, then the clear message when no schedule is possible (still part of
 version 1.0, roadmap order changed accordingly), then the first real run.
 2026-11-03: on branch `feature/output-excel`; old schedule read, scope agreed (post
 schedules first), design proposal and open questions under the output Excel item.
+2026-11-05: **output Excel and command line done** on `feature/output-excel`
+(`write_output` + `create_schedule_sheet` + helpers in output.py, `main` in
+`scheduler/__main__.py`), 257 tests green. Next: merge the branch into `develop`, then
+the clear message when no schedule is possible, then the first real run (save the
+output outside the repo: it holds real nicknames).
 Possible small follow-up: a file with an .xlsx name that is not a real workbook
 (e.g. damaged) gives openpyxl's own error (zipfile.BadZipFile), not a WorkbookError.
 In this session the user often asked Claude to write the tests and/or the code once

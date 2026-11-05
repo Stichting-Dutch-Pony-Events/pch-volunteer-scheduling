@@ -3,7 +3,9 @@
 Python runs this file when you type "python -m scheduler". All the work happens in main(),
 which takes the arguments as a list, so the tests can call it directly without a terminal.
 """
+import argparse
 import sys
+from pathlib import Path
 
 from scheduler.output import write_output
 from scheduler.solver import NoScheduleFound, solve
@@ -18,8 +20,83 @@ def main(arguments: list[str]) -> int:
     must be .xlsx, must not be the input file, and its folder must exist. An existing output
     is only overwritten after the user answers y/yes, or with --overwrite.
     """
-    raise NotImplementedError  # stub, so the tests can run and fail
+    # 1. Read the arguments with argparse.
+    #    First describe what the command expects; the texts are shown by --help.
+    parser = argparse.ArgumentParser(
+        prog="python -m scheduler",
+        description="Makes a volunteer schedule from an input workbook.")
+    # Without dashes: positional arguments, required and in this order.
+    parser.add_argument("input", help="the input workbook (.xlsx)")
+    parser.add_argument("output", help="the output workbook to write (.xlsx)")
+    # With dashes: optional. store_true = True when typed, False when not.
+    parser.add_argument("--overwrite", action="store_true",
+                        help="replace an existing output file without asking")
 
+    # Then let argparse read the words. On missing or unknown arguments it prints the
+    # usage and stops the program itself (SystemExit, code 2), so we never get further.
+    options = parser.parse_args(arguments)
+
+    # Not called input/output: input() is Python's own function, which we need in step 3.
+    input_path = Path(options.input)
+    output_path = Path(options.output)
+
+    # 2. Cheap checks on the output, before the slow work.
+    if output_path.suffix.lower() != ".xlsx":
+        print(f"The output {output_path} must be an .xlsx file.", file=sys.stderr)
+        return 1
+
+    # resolve() makes the full path, so "in.xlsx" and ".\in.xlsx" count as the same file.
+    if input_path.resolve() == output_path.resolve():
+        print(f"The output {output_path} is the input file; choose another name.",
+              file=sys.stderr)
+        return 1
+
+    if not output_path.parent.is_dir():
+        print(f"The output folder {output_path.parent} does not exist.", file=sys.stderr)
+        return 1
+
+    # 3. An existing output must be writable (not open in Excel), and is only overwritten
+    #    after a y/yes (Enter = no), or with --overwrite.
+    if output_path.exists():
+        # Open for appending ("ab") and close again without writing: the content stays as
+        # it is, but a file locked by Excel raises PermissionError. ("ab" would create a
+        # missing file, hence only for an existing one.) Step 4 still catches the file
+        # being opened during solving.
+        try:
+            with open(output_path, "ab"):
+                pass
+        except PermissionError:
+            print(f"Cannot write {output_path}: is it open in Excel? Close it and try again.",
+                  file=sys.stderr)
+            return 1
+
+    if output_path.exists() and not options.overwrite:
+        answer = input(f"{output_path} already exists. Overwrite it? [y/N] ")
+        if answer.strip().lower() not in ["y", "yes"]:
+            print("Nothing written.", file=sys.stderr)
+            return 1
+
+    # 4. The slow work: read, solve, write. Each error gives one line on stderr (no
+    #    traceback) and exit code 1.
+    try:
+        problem = read_problem(path=input_path)
+        schedule = solve(problem=problem)
+        write_output(problem=problem, schedule=schedule, path=output_path)
+    except WorkbookError as error:
+        # Its message already names the tab and row.
+        print(error, file=sys.stderr)
+        return 1
+    except NoScheduleFound as error:
+        print(f"No schedule possible: {error}", file=sys.stderr)
+        return 1
+    except PermissionError:
+        print(f"Cannot write {output_path}: is it open in Excel? Close it and try again.",
+              file=sys.stderr)
+        return 1
+
+    # 5. Done.
+    print(f"Schedule written to {output_path}")
+    return 0
 
 if __name__ == "__main__":
     # sys.argv[0] is the program itself; the rest are the words typed after it.

@@ -14,8 +14,11 @@ TEST_WORKBOOK = Path(__file__).parent.parent / "data" / "test_input.xlsx"
 REPOSITORY = Path(__file__).parent.parent.parent
 
 
-def _fail_if_called(*arguments) -> None:
-    """Stands in for a function that must not be called in this test."""
+def _fail_if_called(*arguments, **keywords) -> None:
+    """Stands in for a function that must not be called in this test.
+
+    *arguments and **keywords accept any arguments, positional or by name (problem=...).
+    """
     raise AssertionError("This function should not have been called.")
 
 
@@ -233,6 +236,27 @@ def test_output_open_in_excel_prints_a_clear_message(tmp_path, monkeypatch, caps
     assert result == 1
     assert "output.xlsx" in printed.err
     assert "Excel" in printed.err
+
+
+def test_output_open_in_excel_is_refused_before_solving(tmp_path, monkeypatch, capsys):
+    """An existing output that cannot be opened (open in Excel) stops the run before solving."""
+    # Arrange
+    output = _existing_output(tmp_path)
+    monkeypatch.setattr(command_line, "solve", _fail_if_called)
+
+    # A file really open in Excel is hard to make in a test, so open() pretends. Setting
+    # "open" on the command line module only replaces it there (Python looks in the module
+    # before its built-in functions); raising=False: the module has no "open" of its own yet.
+    def fake_open(*arguments, **keywords):
+        raise PermissionError("[Errno 13] Permission denied")
+    monkeypatch.setattr(command_line, "open", fake_open, raising=False)
+
+    # Act
+    result = command_line.main([str(TEST_WORKBOOK), str(output), "--overwrite"])
+
+    # Assert
+    assert result == 1
+    assert "Excel" in capsys.readouterr().err
 
 
 # --- the real command ---
