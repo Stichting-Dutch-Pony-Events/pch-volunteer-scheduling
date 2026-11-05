@@ -562,6 +562,11 @@ After the minimal viable scheduler:
   - Timer: `time.perf_counter()`, e.g. "Solved in 12.3 s"; better per phase (reading,
     building the model, solving, writing) to see where the time goes. Small, could be
     done any time (also helps judge "faster model building").
+    **Partly done (2026-11-05):** `_say(message)` in `__main__.py` prints each step to
+    stdout with the time and `flush=True`: "[14:03:12] Reading ...", "Solving (this can
+    take a few minutes)", "Writing ...", "Schedule written to ...". Two tests in
+    test_main.py (steps in order; every line starts with [HH:MM:SS]). 266 green.
+    Building the model and solving are still one step (both inside `solve()`).
   - Progress: with only hard rules CP-SAT stops at the first valid schedule, so no
     percentage is possible; show the phase plus elapsed time, and CP-SAT's own log
     (`log_search_progress = True`) behind `--verbose`. Once there are soft rules, a

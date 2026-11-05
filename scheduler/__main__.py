@@ -5,6 +5,7 @@ which takes the arguments as a list, so the tests can call it directly without a
 """
 import argparse
 import sys
+from datetime import datetime
 from pathlib import Path
 
 from scheduler.output import write_output
@@ -77,10 +78,13 @@ def main(arguments: list[str]) -> int:
             return 1
 
     # 4. The slow work: read, solve, write. Each error gives one line on stderr (no
-    #    traceback) and exit code 1.
+    #    traceback) and exit code 1. Each step first says what it does, with the time.
     try:
+        _say(f"Reading {input_path}")
         problem = read_problem(path=input_path)
+        _say("Solving (this can take a few minutes)")
         schedule = solve(problem=problem)
+        _say(f"Writing {output_path}")
         write_output(problem=problem, schedule=schedule, path=output_path)
     except WorkbookError as error:
         # Its message already names the tab and row.
@@ -95,8 +99,19 @@ def main(arguments: list[str]) -> int:
         return 1
 
     # 5. Done.
-    print(f"Schedule written to {output_path}")
+    _say(f"Schedule written to {output_path}")
     return 0
+
+
+def _say(message: str) -> None:
+    """Print a progress message to normal output, starting with the time: [14:03:12] ...
+
+    flush=True shows the line right away; otherwise Python may hold it back until the
+    program ends, and you would not see "Solving" while it is solving.
+    """
+    now = datetime.now().strftime("%H:%M:%S")
+    print(f"[{now}] {message}", flush=True)
+
 
 if __name__ == "__main__":
     # sys.argv[0] is the program itself; the rest are the words typed after it.

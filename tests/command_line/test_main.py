@@ -1,3 +1,4 @@
+import re
 import shutil
 import subprocess
 import sys
@@ -58,6 +59,38 @@ def test_success_message_names_the_output_file(tmp_path, capsys):
     # capsys catches everything that was printed: .out for normal output, .err for errors.
     printed = capsys.readouterr()
     assert "output.xlsx" in printed.out
+
+
+def test_progress_messages_show_each_step_in_order(tmp_path, capsys):
+    """While running, the program says it is reading, solving and writing, in that order."""
+    # Arrange
+    output = tmp_path / "output.xlsx"
+
+    # Act
+    command_line.main([str(TEST_WORKBOOK), str(output)])
+
+    # Assert
+    printed = capsys.readouterr().out
+    reading = printed.index("Reading")    # .index raises ValueError if the word is missing
+    solving = printed.index("Solving")
+    writing = printed.index("Writing")
+    assert reading < solving < writing
+
+
+def test_progress_messages_start_with_the_time(tmp_path, capsys):
+    """Every line the program prints during a normal run starts with the time, e.g. [14:03:12]."""
+    # Arrange
+    output = tmp_path / "output.xlsx"
+
+    # Act
+    command_line.main([str(TEST_WORKBOOK), str(output)])
+
+    # Assert
+    # A regular expression: "[", two digits, ":", two digits, ":", two digits, "] ".
+    lines = capsys.readouterr().out.splitlines()
+    assert len(lines) > 0
+    for line in lines:
+        assert re.match(r"\[\d\d:\d\d:\d\d\] ", line), line
 
 
 def test_missing_arguments_stop_with_a_usage_message():
