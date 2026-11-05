@@ -17,7 +17,8 @@ The puzzle itself is solved by [Google OR-Tools](https://developers.google.com/o
 ## Status
 
 In development. The solver works on small made-up examples (in the tests), and the
-input workbook can be read; running it end to end on real data is the next part.
+input workbook can be read and the schedule written to Excel; running it from the
+command line on real data is the next part.
 
 ### Done
 
@@ -31,6 +32,7 @@ input workbook can be read; running it end to end on real data is the next part.
 - [x] Availability: volunteers are only scheduled when they are there (whole days or
       a time range)
 - [x] Reading the input workbook, with clear errors for typos
+- [x] Writing the schedule to Excel: a schedule per post with nicknames
 
 ### Roadmap to version 1.0
 
@@ -38,7 +40,6 @@ Version 1.0 makes a schedule from the real input workbook that follows the main 
 rules (meal breaks come later), run from the command line. Details can then be fixed by
 hand.
 
-- [ ] Writing the schedule to Excel: a schedule per post with nicknames
 - [ ] Running it from the command line
 - [ ] A clear message when no schedule is possible, saying where it gets stuck
 - [ ] First run on real data, compared with the hand-made 2026 schedule

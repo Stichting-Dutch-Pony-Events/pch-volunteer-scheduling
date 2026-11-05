@@ -372,7 +372,7 @@ come after, the user can fix details by hand meanwhile):
           `Problem(volunteers, posts, demand, settings)`.
     - [x] end-to-end tests on `tests/data/test_input.xlsx`: reads without errors, a few
           spot checks, and `solve()` finds a schedule.
-- [ ] Write output Excel. Branch `feature/output-excel` (the command line goes in the
+- [x] Write output Excel. Branch `feature/output-excel` (the command line goes in the
       same branch). Output is .xlsx.
       **Scope (user, 2026-11-03):** version 1.0 = **post schedules with nicknames**,
       like the old TicketingInfoboothGopher / TicketCheckSecurity tabs. Later updates,
@@ -435,8 +435,9 @@ come after, the user can fix details by hand meanwhile):
       ending in .xlsx = ValueError (other file types maybe later). Stub plus 6 tests
       (8 cases) in tests/output/test_write_output.py written by Claude, including an
       end-to-end test (test workbook -> solve -> write; filled cells = total demand):
-      all red, a trial implementation makes all 239 green. Next: implement
-      `write_output`, then the command line (same branch).
+      all red, a trial implementation makes all 239 green. `write_output` implemented
+      by Claude: 239 tests green (2026-11-05). **The output Excel is done**; next: the
+      command line (same branch).
       Tab names (agreed): "Schedule" (the post schedule), later e.g. "Individual
       schedules". A file still open in Excel gives a
       PermissionError: turn it into a clear message in the command line, not here.
