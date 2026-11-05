@@ -17,7 +17,8 @@ The puzzle itself is solved by [Google OR-Tools](https://developers.google.com/o
 ## Status
 
 In development. The solver works on small made-up examples (in the tests), and the
-input workbook can be read; running it end to end on real data is the next part.
+whole chain runs from the command line (input workbook in, schedule in Excel out);
+running it on real data is the next part.
 
 ### Done
 
@@ -31,6 +32,8 @@ input workbook can be read; running it end to end on real data is the next part.
 - [x] Availability: volunteers are only scheduled when they are there (whole days or
       a time range)
 - [x] Reading the input workbook, with clear errors for typos
+- [x] Writing the schedule to Excel: a schedule per post with nicknames
+- [x] Running it from the command line
 
 ### Roadmap to version 1.0
 
@@ -39,8 +42,6 @@ rules (meal breaks come later), run from the command line. Details can then be f
 hand.
 
 - [ ] A clear message when no schedule is possible, saying where it gets stuck
-- [ ] Writing the schedule to Excel (overview, per post, per volunteer)
-- [ ] Running it from the command line
 - [ ] First run on real data, compared with the hand-made 2026 schedule
 - [ ] Faster, with a time limit, if real data needs it
 
@@ -53,6 +54,10 @@ hand.
 - [ ] Meal breaks
 - [ ] Event wishes (REALLY want / would like to attend), read from the form answers
 - [ ] Maximum hours and a fair spread of work
+- [ ] More output: a "no double booking" check tab, and individual schedules
+- [ ] Choose the times the schedule shows (e.g. 08:00-02:00), instead of only the open hours
+- [ ] A nicer command line: how long it took, progress while solving, a summary, more
+      options
 - [ ] All input errors shown at once, instead of stopping at the first one
 - [ ] Maybe: also read `.ods` files (LibreOffice / Nextcloud); for now save as `.xlsx`
 - [ ] A small program with a window: pick the input workbook, start a run, see errors
@@ -122,6 +127,18 @@ python -m venv .venv
 .venv\Scripts\activate
 pip install -r requirements.txt
 ```
+
+### Making a schedule
+
+```powershell
+python -m scheduler input.xlsx output.xlsx
+```
+
+Reads the input workbook, makes a schedule and writes it to `output.xlsx` (tab
+"Schedule": one column per post, one row per 15 minutes). If the output already
+exists you are asked before it is overwritten; add `--overwrite` to skip that
+question. `python -m scheduler --help` shows the options. Keep real input and output
+outside the repository: they contain volunteer names.
 
 ### Running the tests
 
