@@ -129,6 +129,68 @@ def add_minimum_stretch_rule(model: cp_model.CpModel, problem: Problem, works: W
                 model.add(-sum(before) + sum(run) - sum(after) <= run_length - 1 + sum(escapes))
 
 
+def add_stay_at_post_rule(model: cp_model.CpModel, problem: Problem, works: Works) -> None:
+    """Hard rule: within a work stretch a volunteer stays at their post.
+
+    A volunteer only moves on to another post at a moment their post needs fewer people
+    than in the block before (closing counts too). Then at most that many people may move
+    on, and everyone who stops working there at that moment (a break, or the end of their
+    availability) uses up one of those places. Handovers (one stops, another starts while
+    the post needs the same people) are not limited by this rule.
+    """
+    # Look at every post at every moment it was open just before: previous_block -> block.
+    for (post, previous_block), needed_before in problem.demand.items():
+        block = previous_block + 1
+        needed_now = problem.demand.get((post, block), 0)   # 0 = closed
+        drop = needed_before - needed_now                   # how many people fewer
+
+        movers = []    # per volunteer: 1 if they move from this post to another post
+        stoppers = []  # per volunteer: 1 if they stop working here and go nowhere
+        for volunteer in problem.volunteers:
+            was_here = works.get((volunteer.name, post, previous_block))
+            if was_here is None:
+                continue  # could not work this post just before, so can't move on from it
+
+            # This volunteer's variables in the new block: at other posts, and at any post.
+            elsewhere_now = []
+            for other_post in problem.posts:
+                if other_post.name != post:
+                    other = works.get((volunteer.name, other_post.name, block))
+                    if other is not None:
+                        elsewhere_now.append(other)
+            working_now = list(elsewhere_now)
+            here_now = works.get((volunteer.name, post, block))
+            if here_now is not None:
+                working_now.append(here_now)
+
+            if drop <= 0:
+                # The post needs the same or more people: nobody moves on to another post.
+                # "Here before" + "elsewhere now" may not both be 1.
+                if elsewhere_now:
+                    model.add(was_here + sum(elsewhere_now) <= 1)
+                continue
+
+            # The post needs fewer people: count who moves on and who stops. Each count
+            # variable is forced to 1 when it happens (here before and elsewhere now: the
+            # sum reaches 2). Setting it to 1 without reason would only make the limit
+            # below stricter, so the solver never gains anything by that.
+            if elsewhere_now:
+                moves = model.new_bool_var(f"{volunteer.name} moves on from {post} in {block}")
+                model.add(moves >= was_here + sum(elsewhere_now) - 1)
+                movers.append(moves)
+            stops = model.new_bool_var(f"{volunteer.name} stops at {post} in {block}")
+            model.add(stops >= was_here - sum(working_now))
+            stoppers.append(stops)
+
+        # Only when someone moves on: movers and stoppers together fit in the drop.
+        # (Without anyone moving, stopping is free: that covers normal handovers.)
+        if movers:
+            someone_moves = model.new_bool_var(f"someone moves on from {post} in {block}")
+            for moves in movers:
+                model.add(someone_moves >= moves)
+            model.add(sum(movers) + sum(stoppers) <= drop).only_enforce_if(someone_moves)
+
+
 def _blocks_in_demand(problem: Problem) -> set[int]:
     """Every block that appears in the demand, each only once."""
     blocks = set()

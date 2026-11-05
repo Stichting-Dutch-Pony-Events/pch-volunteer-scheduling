@@ -19,6 +19,7 @@ def solve(problem: Problem) -> Schedule:
     rules.add_minimum_stretch_rule(model, problem, works)
     rules.add_maximum_stretch_rule(model, problem, works)
     rules.add_minimum_break_rule(model, problem, works)
+    rules.add_stay_at_post_rule(model, problem, works)
 
     return _solve_and_read_schedule(model, works)
 
