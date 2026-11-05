@@ -4,9 +4,20 @@ Layout of this file (like workbook.py): write_output first (the table of content
 one create_<name>_sheet function per tab, then the helpers they use. The helpers are
 plain functions without openpyxl, so they can be tested without writing a file.
 """
+from pathlib import Path
+
 from openpyxl import Workbook
 
 from scheduler.model import Problem, Schedule, BLOCKS_PER_DAY, time_of
+
+
+def write_output(problem: Problem, schedule: Schedule, path: str | Path) -> None:
+    """Write the schedule to a new .xlsx workbook at path, overwriting an existing file.
+
+    The table of contents of the output: a new workbook, one create_<name>_sheet call per
+    tab (now only "Schedule"), then save. A path that does not end in .xlsx is a ValueError.
+    """
+    raise NotImplementedError  # stub, so the tests can run and fail
 
 
 def create_schedule_sheet(workbook: Workbook, problem: Problem, schedule: Schedule) -> None:

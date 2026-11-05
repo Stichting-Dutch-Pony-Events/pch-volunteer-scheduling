@@ -130,7 +130,8 @@ tests/                test_hello.py, test_model.py, test_time_blocks.py;
 tests/solver/         test_solver_availability.py, test_solver_basics.py,
                       test_solver_work_stretches.py
 tests/output/         test_assign_slots.py, test_write_helpers.py,
-                      test_create_schedule_sheet.py (tests of writing the output workbook)
+                      test_create_schedule_sheet.py, test_write_output.py (tests of
+                      writing the output workbook)
 tests/workbook/       test_celltext.py, test_availability.py, test_find_columns.py,
                       test_read_settings.py, test_read_volunteers.py,
                       test_read_posts.py, test_read_skills.py, test_read_demand.py,
@@ -428,8 +429,14 @@ come after, the user can fix details by hand meanwhile):
       "Schedule" tab = ValueError (user: guards against calling it twice). Stub plus 8
       tests in tests/output/test_create_schedule_sheet.py written by Claude: all red,
       a trial implementation makes all 231 green. Implemented (user wrote steps 1-2,
-      Claude 3-5): 231 tests green. Next:
-      `create_schedule_sheet` and `write_output`.
+      Claude 3-5): 231 tests green.
+      `write_output(problem, schedule, path: str | Path)` (agreed 2026-11-05): an
+      existing file is overwritten (the command line will warn the user); a path not
+      ending in .xlsx = ValueError (other file types maybe later). Stub plus 6 tests
+      (8 cases) in tests/output/test_write_output.py written by Claude, including an
+      end-to-end test (test workbook -> solve -> write; filled cells = total demand):
+      all red, a trial implementation makes all 239 green. Next: implement
+      `write_output`, then the command line (same branch).
       Tab names (agreed): "Schedule" (the post schedule), later e.g. "Individual
       schedules". A file still open in Excel gives a
       PermissionError: turn it into a clear message in the command line, not here.
