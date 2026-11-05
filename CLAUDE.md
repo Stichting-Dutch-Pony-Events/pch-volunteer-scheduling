@@ -516,6 +516,22 @@ After the minimal viable scheduler:
       rows; day without demand gets no rows even with a window. Plus in
       test_read_settings.py: accepted and stored, missing row gives "", invalid range =
       WorkbookError naming the setting.
+- [ ] Nicer command line (user's wish list, 2026-11-05):
+  - Timer: `time.perf_counter()`, e.g. "Solved in 12.3 s"; better per phase (reading,
+    building the model, solving, writing) to see where the time goes. Small, could be
+    done any time (also helps judge "faster model building").
+  - Progress: with only hard rules CP-SAT stops at the first valid schedule, so no
+    percentage is possible; show the phase plus elapsed time, and CP-SAT's own log
+    (`log_search_progress = True`) behind `--verbose`. Once there are soft rules, a
+    `CpSolverSolutionCallback` can report each better schedule (penalty and the gap to
+    CP-SAT's best bound), and a time limit means "keep the best so far".
+  - Ideas (Claude, not decided): a summary after a run (volunteers, posts, shifts,
+    hours per volunteer min/max/average, who got no shift); `--check` (only read and
+    check the workbook, no solving); `--time-limit SECONDS` (goes with the time-limit
+    setting); `--open` (open the output when done, `os.startfile`); optional output
+    name (e.g. `<input>_schedule.xlsx`, maybe with a timestamp); `--seed` (same schedule
+    again, or an alternative); `--verbose` / `--quiet`; `--version` (scheduler and
+    workbook format version); a separate exit code for "no schedule possible" (e.g. 3).
 - [ ] Collect and show all input errors at once instead of stopping at the first one
       (e.g. a list of every typo in the workbook; fits the window program later).
 - [ ] Time step and day boundary configurable (e.g. 30 min blocks, another boundary).
