@@ -50,7 +50,8 @@ likes to write tests (and often code) themselves; Claude reviews and explains.
    in each test and removes its skip line (then sees it go red). Code stubs in
    `scheduler/` raise `NotImplementedError`.
 4. **The user handles version control** in VS Code / Sourcetree.
-   Do not commit, push, branch or run other git commands that change state. Suggest a
+   Do not commit, push, branch or run other git commands that change state, unless the
+   user specifically asks for that one action (confirmed 2026-11-05). Suggest a
    commit message when a step is done. Read-only git commands (status, log, branch) are fine.
    **Branches (agreed 2026-11-01):** `main` = working versions (merge at milestones such
    as version 1.0, maybe tag `v1.0`). `develop` = everyday work; small one-session steps
@@ -72,6 +73,9 @@ likes to write tests (and often code) themselves; Claude reviews and explains.
    not a real change; use `git -c core.autocrlf=true status`.
 7. The `.venv` is a Windows venv: the user runs the tests in VS Code
    (`python -m pytest`), not from a Linux shell.
+8. **Never run the scheduler on the real data (the 2026 draft) without the user's
+   explicit permission each time** (user, 2026-11-05): a run takes about 5 minutes. The
+   test suite and the test workbook are fine.
 
 ## Privacy (important)
 
@@ -129,7 +133,7 @@ scheduler/            model.py (data classes), solver.py, rules.py (hard rules),
 tests/                test_hello.py, test_model.py, test_time_blocks.py;
                       data/test_input.xlsx (made-up workbook)
 tests/solver/         test_solver_availability.py, test_solver_basics.py,
-                      test_solver_work_stretches.py
+                      test_solver_work_stretches.py, test_solver_stay_at_post.py
 tests/output/         test_assign_slots.py, test_write_helpers.py,
                       test_create_schedule_sheet.py, test_write_output.py (tests of
                       writing the output workbook)
@@ -480,7 +484,45 @@ come after, the user can fix details by hand meanwhile):
       `pytest.raises(NoScheduleFound)` also catches the children. New tests can then
       check the specific child (and its message). Plain NoScheduleFound stays for
       "the solver found no schedule" when no pre-check spots a cause.
-- [ ] First end-to-end run on real data; compare with the hand-made 2026 schedule
+- [ ] First end-to-end run on real data; compare with the hand-made 2026 schedule.
+      **First run done (2026-11-05)** on the 2026 draft: a schedule was found, all 45
+      volunteers got work. Claude's analysis (scratch script, totals only): 285 work
+      stretches, 155 of them exactly 60 min; 1074 post segments, 830 of them only 15 min
+      (stretches of 3-4 segments are typical); 789 post switches inside a stretch, 736
+      of them while the old post stayed open with the same or more people (39 because
+      it closed, 14 because it needed fewer people). Hours per volunteer 2-20, average
+      8.1. Expected: there is no objective yet, so CP-SAT takes any valid schedule.
+- [x] **New hard rule (user, 2026-11-05): stay at your post during a work stretch.**
+      Switching post inside a stretch only when the old post comes to an end; later a
+      soft rule with a weight. On `develop` (one-session step). `add_stay_at_post_rule`
+      in rules.py, tests in tests/solver/test_solver_stay_at_post.py.
+      **Decided (user):** "comes to an end" = the post needs fewer people at block b than
+      at b - 1 (closing = fewer, down to 0), and **only as many people as it needs fewer
+      may move to another post at b** (3 -> 2: at most one). **Revised (user):** people
+      who stop working at that moment (break, end of availability) use up the drop too:
+      movers <= drop - stoppers, checked only when someone moves. Because always
+      drop = movers + stoppers - arrivals, this means "when someone moves on from a post,
+      nobody new arrives there at that moment"; normal handovers (one stops, another
+      starts, same demand) stay allowed. (Rejected: movers + stoppers <= drop, which
+      would forbid every handover at an open post.)
+      Tests (2026-11-05, written by Claude): 6 tests + 1 skipped stub (test 6: solve the
+      test workbook and count afterwards that every move fits the drop). Forced red:
+      may_not_leave_an_open_post, only_as_many_as_the_post_needs_fewer, a_volunteer_
+      stopping_uses_up_the_switch; guards: closes, needs_fewer_people, after_a_break.
+      Trial implementation in a scratch copy: all 264 green (+1 skipped), and the real
+      draft is still solvable: 244 of 287 stretches at one post, every move because the
+      post closed (38) or needed fewer people (6). But that run took 378 s, the trial
+      scanned all of `works` for every volunteer/post/block: build a lookup per
+      volunteer/block once (see "Faster model building").
+      **Implemented** by Claude in rules.py (per post and moment: drop <= 0 = nobody
+      moves on; otherwise count variables for movers/stoppers and
+      `movers + stoppers <= drop` only_enforce_if someone moves), one line in
+      `solve()`: 264 tests green, test 6 still skipped (2026-11-05).
+      **Later (user, 2026-11-05): the output slots with this rule.** If Tickets goes from
+      3 to 2 and the volunteer in slot 2 moves on while slot 3 stays, `assign_slots`
+      leaves slot 2 empty and slot 3 filled (a gap). The user wants the stayer moved up
+      to slot 2 then, but that may cascade back to earlier blocks (the stayer should then
+      have been in slot 2 for their whole shift). Think about this and solve it later.
 - [ ] Faster model building (group variables per volunteer/block once instead of
       `_variables_of` scanning all of `works` on every call), if real data is slow.
       Plus a solver time limit (a setting), so a big run can't hang forever.

@@ -32,6 +32,8 @@ running it on real data is the next part.
 - [x] Availability: volunteers are only scheduled when they are there (whole days or
       a time range)
 - [x] Reading the input workbook, with clear errors for typos
+- [x] Volunteers stay at their post during a work stretch (they only move on when
+      their post needs fewer people)
 - [x] Writing the schedule to Excel: a schedule per post with nicknames
 - [x] Running it from the command line
 
