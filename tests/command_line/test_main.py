@@ -77,6 +77,41 @@ def test_progress_messages_show_each_step_in_order(tmp_path, capsys):
     assert reading < solving < writing
 
 
+def test_solved_message_comes_between_solving_and_writing(tmp_path, capsys):
+    """Right after solving, the program says it is solved and how long that took."""
+    # Arrange
+    output = tmp_path / "output.xlsx"
+
+    # Act
+    command_line.main([str(TEST_WORKBOOK), str(output)])
+
+    # Assert
+    printed = capsys.readouterr().out
+    solving = printed.index("Solving")
+    solved = printed.index("Solved, this took ")
+    writing = printed.index("Writing")
+    assert solving < solved < writing
+
+
+@pytest.mark.parametrize("seconds, expected_text", [
+    (3.24, "3.2 s"),
+    (0.04, "0.0 s"),
+    (75, "1 min 15 s"),
+    (312.4, "5 min 12 s"),
+    (119.6, "2 min 0 s"),
+])
+def test_format_duration_gives_seconds_or_minutes_and_seconds(seconds, expected_text):
+    """Under a minute in seconds with one decimal, from a minute in whole minutes and seconds."""
+    # Arrange
+    # Nothing to set up: the seconds and the expected text come from parametrize.
+
+    # Act
+    result = command_line.format_duration(seconds)
+
+    # Assert
+    assert result == expected_text
+
+
 def test_progress_messages_start_with_the_time(tmp_path, capsys):
     """Every line the program prints during a normal run starts with the time, e.g. [14:03:12]."""
     # Arrange

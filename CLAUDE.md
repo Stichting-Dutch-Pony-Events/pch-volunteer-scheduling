@@ -566,6 +566,9 @@ After the minimal viable scheduler:
     stdout with the time and `flush=True`: "[14:03:12] Reading ...", "Solving (this can
     take a few minutes)", "Writing ...", "Schedule written to ...". Two tests in
     test_main.py (steps in order; every line starts with [HH:MM:SS]). 266 green.
+    Then "Solved, this took 5 min 12 s" right after solving (`time.perf_counter()`
+    around `solve()`; public `format_duration(seconds)`: under 60 s "3.2 s", else whole
+    minutes and seconds, rounded first so 119.6 = "2 min 0 s"). 272 green.
     Building the model and solving are still one step (both inside `solve()`).
   - Progress: with only hard rules CP-SAT stops at the first valid schedule, so no
     percentage is possible; show the phase plus elapsed time, and CP-SAT's own log

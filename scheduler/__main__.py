@@ -5,6 +5,7 @@ which takes the arguments as a list, so the tests can call it directly without a
 """
 import argparse
 import sys
+import time
 from datetime import datetime
 from pathlib import Path
 
@@ -83,7 +84,10 @@ def main(arguments: list[str]) -> int:
         _say(f"Reading {input_path}")
         problem = read_problem(path=input_path)
         _say("Solving (this can take a few minutes)")
+        solving_started = time.perf_counter()   # a stopwatch: only differences matter
         schedule = solve(problem=problem)
+        solving_seconds = time.perf_counter() - solving_started
+        _say(f"Solved, this took {format_duration(solving_seconds)}")
         _say(f"Writing {output_path}")
         write_output(problem=problem, schedule=schedule, path=output_path)
     except WorkbookError as error:
@@ -101,6 +105,18 @@ def main(arguments: list[str]) -> int:
     # 5. Done.
     _say(f"Schedule written to {output_path}")
     return 0
+
+
+def format_duration(seconds: float) -> str:
+    """A duration as text: under a minute "3.2 s", from a minute on "5 min 12 s"."""
+    if seconds < 60:
+        return f"{seconds:.1f} s"
+
+    # Round to whole seconds first, so 119.6 becomes 2 min 0 s and not 1 min 60 s.
+    whole_seconds = round(seconds)
+    minutes = whole_seconds // 60
+    rest = whole_seconds % 60
+    return f"{minutes} min {rest} s"
 
 
 def _say(message: str) -> None:
