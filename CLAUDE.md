@@ -124,7 +124,8 @@ Fictional nicknames for tests and examples (never use real nicknames):
 ReferenceDocuments/   (not in git) real data, DATA_NOTES.md, draft input workbook
 scheduler/            model.py (data classes), solver.py, rules.py (hard rules),
                       workbook.py (reads the input workbook), output.py (writes the
-                      output workbook), hello.py (setup check)
+                      output workbook), __main__.py (the command line, run with
+                      `python -m scheduler`), hello.py (setup check)
 tests/                test_hello.py, test_model.py, test_time_blocks.py;
                       data/test_input.xlsx (made-up workbook)
 tests/solver/         test_solver_availability.py, test_solver_basics.py,
@@ -136,6 +137,7 @@ tests/workbook/       test_celltext.py, test_availability.py, test_find_columns.
                       test_read_settings.py, test_read_volunteers.py,
                       test_read_posts.py, test_read_skills.py, test_read_demand.py,
                       test_read_problem.py (one test file per reader part)
+tests/command_line/   test_main.py (tests of the command line)
                       Every test folder has an empty __init__.py (like tests/ itself).
 requirements.txt      ortools>=9.15, openpyxl>=3.1, pytest>=8.0
 ```
@@ -445,7 +447,22 @@ come after, the user can fix details by hand meanwhile):
       Later: post colours, printable versions (split over tabs), "changes vs previous
       run".
 - [ ] Command line: run it end to end, e.g. `python -m scheduler input.xlsx output.xlsx`
-      (until now the solver is only reached from tests)
+      (until now the solver is only reached from tests).
+      **Design (agreed 2026-11-05):** `scheduler/__main__.py` (Python's convention: it
+      runs on `python -m scheduler`) with `main(arguments: list[str]) -> int` (exit code
+      0 = written, 1 = something went wrong) and `argparse`. Usage: `python -m scheduler
+      input.xlsx output.xlsx [--overwrite]`, both names required. Cheap checks first,
+      before reading and solving: output must be .xlsx, must not be the input file, its
+      folder must exist. Existing output: ask `Overwrite it? [y/N]`, only y/yes goes on
+      (Enter = no, then "Nothing written." and exit 1); `--overwrite` skips the question.
+      Then read, solve, write, print "Schedule written to ...". Errors = one line on
+      stderr, exit 1, no traceback: WorkbookError (its own message), NoScheduleFound
+      ("No schedule possible: ..."), PermissionError ("open in Excel? close it").
+      Tests in tests/command_line/test_main.py: mostly call `main([...])` directly,
+      with pytest's `capsys` (catch printed text) and `monkeypatch` (fake `input()`,
+      `solve`, `write_output`); one `subprocess.run([sys.executable, "-m", ...])` test
+      runs the real command. Stub plus 14 tests (18 cases) written by Claude: all red,
+      a trial implementation makes all 257 green. Next: implement `main`.
 - [ ] Clear message when no schedule is possible: simple checks before solving, e.g.
       "Tickets, Saturday 14:00: needs 3, only 2 qualified volunteers available"
       (a bare NoScheduleFound on real data gives no clue where to look).
