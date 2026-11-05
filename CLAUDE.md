@@ -427,7 +427,8 @@ come after, the user can fix details by hand meanwhile):
       `time_of`), the day on every row (easy filtering), a workbook that already has a
       "Schedule" tab = ValueError (user: guards against calling it twice). Stub plus 8
       tests in tests/output/test_create_schedule_sheet.py written by Claude: all red,
-      a trial implementation makes all 231 green. Then
+      a trial implementation makes all 231 green. Implemented (user wrote steps 1-2,
+      Claude 3-5): 231 tests green. Next:
       `create_schedule_sheet` and `write_output`.
       Tab names (agreed): "Schedule" (the post schedule), later e.g. "Individual
       schedules". A file still open in Excel gives a

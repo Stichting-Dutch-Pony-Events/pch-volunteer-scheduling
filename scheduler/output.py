@@ -6,7 +6,7 @@ plain functions without openpyxl, so they can be tested without writing a file.
 """
 from openpyxl import Workbook
 
-from scheduler.model import Problem, Schedule, BLOCKS_PER_DAY
+from scheduler.model import Problem, Schedule, BLOCKS_PER_DAY, time_of
 
 
 def create_schedule_sheet(workbook: Workbook, problem: Problem, schedule: Schedule) -> None:
@@ -18,7 +18,38 @@ def create_schedule_sheet(workbook: Workbook, problem: Problem, schedule: Schedu
     cell. The header row and the Day and Time columns are frozen. A workbook that already
     has a "Schedule" tab is a ValueError (e.g. the function was called twice).
     """
-    raise NotImplementedError  # stub, so the tests can run and fail
+    # 1. Guard against duplicate sheets
+    if "Schedule" in workbook.sheetnames:
+        raise ValueError("The workbook already has a 'Schedule' tab.")
+    sheet = workbook.create_sheet("Schedule")
+
+    # 2. Collect columns and names before the loops
+    columns = slot_columns(problem)      # [("Tickets", 1), ("Tickets", 2), ("Infobooth", 1)]
+    names = assign_slots(schedule)       # {("Tickets", 1, 32): "Mock Mane", ...}
+    slot_count_per_post = {}             # {"Tickets": 2, "Infobooth": 1}
+    for post, slot in columns:
+        if post not in slot_count_per_post:
+            slot_count_per_post[post] = 0
+        slot_count_per_post[post] = slot_count_per_post[post] + 1
+
+    # 3. The header row: Day, Time, then one header per column.
+    header = ["Day", "Time"]
+    for post, slot in columns:
+        header.append(column_header(post, slot, slot_count_per_post[post]))
+    sheet.append(header)
+
+    # 4. One row per block. The cells follow the same columns list as the header, so each
+    #    nickname lands under the right header. .get gives None (an empty cell) when nobody
+    #    sits in that slot during this block.
+    for block in rows_to_show(problem):
+        day, time = time_of(block, problem.settings)
+        row = [day, time]
+        for post, slot in columns:
+            row.append(names.get((post, slot, block)))
+        sheet.append(row)
+
+    # 5. Keep the header row and the Day and Time columns in view when scrolling.
+    sheet.freeze_panes = "C2"
 
 
 def slot_columns(problem: Problem) -> list[tuple[str, int]]:
