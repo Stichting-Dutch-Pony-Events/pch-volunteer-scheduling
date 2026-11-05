@@ -129,8 +129,8 @@ tests/                test_hello.py, test_model.py, test_time_blocks.py;
                       data/test_input.xlsx (made-up workbook)
 tests/solver/         test_solver_availability.py, test_solver_basics.py,
                       test_solver_work_stretches.py
-tests/output/         test_assign_slots.py, test_write_helpers.py (tests of writing the
-                      output workbook)
+tests/output/         test_assign_slots.py, test_write_helpers.py,
+                      test_create_schedule_sheet.py (tests of writing the output workbook)
 tests/workbook/       test_celltext.py, test_availability.py, test_find_columns.py,
                       test_read_settings.py, test_read_volunteers.py,
                       test_read_posts.py, test_read_skills.py, test_read_demand.py,
@@ -422,7 +422,12 @@ come after, the user can fix details by hand meanwhile):
       tests (15 cases) written by Claude 2026-11-05: all red, a trial implementation
       in a scratch copy makes all 219 green. The user implemented the three helpers;
       plus 4 tests for `column_header`'s ValueErrors (slot count < 1, slot < 1, slot >
-      slot count, empty post). 223 tests green (2026-11-05). Then
+      slot count, empty post). 223 tests green (2026-11-05).
+      `create_schedule_sheet` (agreed 2026-11-05): times as text ("14:00", from
+      `time_of`), the day on every row (easy filtering), a workbook that already has a
+      "Schedule" tab = ValueError (user: guards against calling it twice). Stub plus 8
+      tests in tests/output/test_create_schedule_sheet.py written by Claude: all red,
+      a trial implementation makes all 231 green. Then
       `create_schedule_sheet` and `write_output`.
       Tab names (agreed): "Schedule" (the post schedule), later e.g. "Individual
       schedules". A file still open in Excel gives a

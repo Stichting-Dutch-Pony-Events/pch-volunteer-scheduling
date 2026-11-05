@@ -4,7 +4,21 @@ Layout of this file (like workbook.py): write_output first (the table of content
 one create_<name>_sheet function per tab, then the helpers they use. The helpers are
 plain functions without openpyxl, so they can be tested without writing a file.
 """
+from openpyxl import Workbook
+
 from scheduler.model import Problem, Schedule, BLOCKS_PER_DAY
+
+
+def create_schedule_sheet(workbook: Workbook, problem: Problem, schedule: Schedule) -> None:
+    """Add the tab "Schedule" to the workbook: one row per block, one column per post slot.
+
+    Row 1 is the header: Day, Time, then one column per (post, slot) from slot_columns.
+    Below it one row per block from rows_to_show, with the day and time as text (night rows
+    under their convention day) and the nickname of whoever sits in that slot, or an empty
+    cell. The header row and the Day and Time columns are frozen. A workbook that already
+    has a "Schedule" tab is a ValueError (e.g. the function was called twice).
+    """
+    raise NotImplementedError  # stub, so the tests can run and fail
 
 
 def slot_columns(problem: Problem) -> list[tuple[str, int]]:
