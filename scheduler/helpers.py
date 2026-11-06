@@ -18,9 +18,9 @@ def set_debug_time(on: bool) -> None:
 
 
 def debug_print(message: str, destination: TextIO | None = None) -> None:
-    """If debugging is on, print a tab and "[14:03:12.345] message" to destination.
+    """If debugging is on, print "DEBUG [14:03:12.345] message" to destination.
 
-    The tab indents the debug lines under the normal progress lines of the command line.
+    "DEBUG" tells the debug lines apart from the normal progress lines of the command line.
     destination defaults to stdout; it is looked up when called, not when Python reads this
     line, so a replaced sys.stdout (as pytest's capsys does) is used. Prints nothing while
     debugging is off.
@@ -34,4 +34,4 @@ def debug_print(message: str, destination: TextIO | None = None) -> None:
         true_destination = destination
 
     now = datetime.now().strftime("%H:%M:%S.%f")[:-3]   # %f = microseconds: keep 3 digits
-    print(f"\t[{now}] {message}", flush=True, file=true_destination)
+    print(f"DEBUG [{now}] {message}", flush=True, file=true_destination)

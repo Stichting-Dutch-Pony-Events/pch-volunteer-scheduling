@@ -288,6 +288,28 @@ def test_without_debug_time_flag_debug_printing_is_off(tmp_path, monkeypatch):
     assert helpers.debug_time_on is False
 
 
+def test_debug_time_flag_prints_debug_lines_from_reading_solving_and_writing(
+        tmp_path, monkeypatch, capsys):
+    """With --debug-time, the readers, the rules and the sheet writers each print a line."""
+    # Arrange
+    monkeypatch.setattr(helpers, "debug_time_on", False)
+    output = tmp_path / "output.xlsx"
+
+    # Act
+    command_line.main([str(TEST_WORKBOOK), str(output), "--debug-time"])
+
+    # Assert
+    # Debug lines start with "DEBUG ["; one from each part is enough to show they are there.
+    debug_lines = []
+    for line in capsys.readouterr().out.splitlines():
+        if line.startswith("DEBUG ["):
+            debug_lines.append(line)
+    debug_text = "\n".join(debug_lines)
+    assert "read_settings" in debug_text
+    assert "add_demand_rule" in debug_text
+    assert "create_schedule_sheet" in debug_text
+
+
 # --- errors give one clear line and exit code 1 ---
 
 def test_typo_in_the_workbook_prints_the_workbook_error(tmp_path, capsys):
