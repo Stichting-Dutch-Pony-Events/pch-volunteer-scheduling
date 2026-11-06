@@ -590,24 +590,31 @@ After the minimal viable scheduler:
   - **`--debug-time` (user, 2026-11-06), in progress:** `scheduler/helpers.py` with an
     on/off switch `debug_time_on = False`, `set_debug_time(on: bool)` and
     `debug_print(message: str, destination: TextIO | None = None) -> None`: only when on,
-    prints "[14:03:12.345] message" (milliseconds) with flush=True to destination,
+    prints "DEBUG [14:03:12.345] message" (milliseconds) with flush=True to destination,
     default sys.stdout looked up at call time (a `=sys.stdout` default would be fixed
     when Python reads the def, so capsys could not catch it). Separate module because
     rules.py and solver.py will call it too; the command line will call
     `set_debug_time(options.debug_time)`. 7 tests in tests/test_helpers.py (tests that
     switch it on use monkeypatch, so the switch is reset after each test). Stubs plus
     tests written by Claude: 6 red, 1 guard green; a trial implementation makes all 280
-    green. Implemented by the user (2026-11-06; a tab before the time, so debug lines
-    sit indented under the progress lines). pycodestyle added to requirements.txt and
+    green. Implemented by the user (2026-11-06; first with a tab before the time, then
+    changed to a "DEBUG " prefix, user's choice). pycodestyle added to requirements.txt and
     the whole project made clean (`--max-line-length=100`).
     The flag: 2 tests in test_main.py ("debug output" section): `--debug-time` switches
     `helpers.debug_time_on` on; without the flag `main` switches it off, even if it
     was on. Both red (argparse: unrecognized argument; switch untouched); a trial
     (`add_argument("--debug-time", action="store_true")`, then
     `set_debug_time(options.debug_time)` right after `parse_args`) makes all 282
-    green. Implemented by Claude (2026-11-06): 282 green, shown in `--help`. Next:
-    debug_print calls in solve() and the rules, plus a test that the output then
-    contains debug lines.
+    green. Implemented by Claude (2026-11-06): 282 green, shown in `--help`.
+    **debug_print calls (user's idea, 2026-11-06):** not in the table-of-contents
+    functions (read_problem, solve, write_output) but as the first line of each
+    `read_*` tab reader ("read_settings: reading tab Settings"), each `add_*_rule`
+    ("add_demand_rule: adding the rule") and each `create_*_sheet` ("creating tab
+    Schedule"). So a new reader/rule/tab announces itself, and the time between two
+    lines is how long the step before took. Test:
+    `test_debug_time_flag_prints_debug_lines_from_reading_solving_and_writing`
+    (one line from each part). 283 green. Not covered yet: the gap after the last rule
+    is CP-SAT itself plus reading the schedule (no line of its own).
   - Progress: with only hard rules CP-SAT stops at the first valid schedule, so no
     percentage is possible; show the phase plus elapsed time, and CP-SAT's own log
     (`log_search_progress = True`) behind `--verbose`. Once there are soft rules, a

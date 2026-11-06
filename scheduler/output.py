@@ -8,6 +8,7 @@ from pathlib import Path
 
 from openpyxl import Workbook
 
+from scheduler.helpers import debug_print
 from scheduler.model import Problem, Schedule, BLOCKS_PER_DAY, time_of
 
 
@@ -41,6 +42,7 @@ def create_schedule_sheet(workbook: Workbook, problem: Problem, schedule: Schedu
     cell. The header row and the Day and Time columns are frozen. A workbook that already
     has a "Schedule" tab is a ValueError (e.g. the function was called twice).
     """
+    debug_print("create_schedule_sheet: creating tab Schedule")
     # 1. Guard against duplicate sheets
     if "Schedule" in workbook.sheetnames:
         raise ValueError("The workbook already has a 'Schedule' tab.")

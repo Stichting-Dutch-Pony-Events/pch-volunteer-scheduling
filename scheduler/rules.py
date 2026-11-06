@@ -6,6 +6,7 @@ same arguments: the model, the problem, and the works variables made in solver.p
 """
 from ortools.sat.python import cp_model
 
+from scheduler.helpers import debug_print
 from scheduler.model import MINUTES_PER_BLOCK, Problem, runs_of_consecutive_blocks
 
 # The solver's yes/no variables: (volunteer_name, post, block) -> variable.
@@ -16,6 +17,7 @@ Works = dict[tuple[str, str, int], cp_model.IntVar]
 
 def add_demand_rule(model: cp_model.CpModel, problem: Problem, works: Works) -> None:
     """Hard rule: every open block of a post gets exactly the number of people needed."""
+    debug_print("add_demand_rule: adding the rule")
     for (post, block), needed in problem.demand.items():
         # Collect the variables of everyone who could work this post in this block.
         people_here = []
@@ -29,6 +31,7 @@ def add_demand_rule(model: cp_model.CpModel, problem: Problem, works: Works) -> 
 
 def add_no_double_booking_rule(model: cp_model.CpModel, problem: Problem, works: Works) -> None:
     """Hard rule: no volunteer works more than one post in the same block."""
+    debug_print("add_no_double_booking_rule: adding the rule")
     for block in _blocks_of_event(problem):
         for volunteer in problem.volunteers:
             # Collect the variables of every post this volunteer could work in this block.
@@ -41,6 +44,7 @@ def add_no_double_booking_rule(model: cp_model.CpModel, problem: Problem, works:
 
 def add_maximum_stretch_rule(model: cp_model.CpModel, problem: Problem, works: Works) -> None:
     """Hard rule: no volunteer works longer than the maximum number of blocks in a row."""
+    debug_print("add_maximum_stretch_rule: adding the rule")
     max_number_of_blocks = problem.settings.max_stretch_minutes // MINUTES_PER_BLOCK
 
     for volunteer in problem.volunteers:
@@ -54,6 +58,7 @@ def add_maximum_stretch_rule(model: cp_model.CpModel, problem: Problem, works: W
 
 def add_minimum_break_rule(model: cp_model.CpModel, problem: Problem, works: Works) -> None:
     """Hard rule: no volunteer has a break shorter than the minimum break."""
+    debug_print("add_minimum_break_rule: adding the rule")
     min_break_blocks = problem.settings.min_break_minutes // MINUTES_PER_BLOCK
     if min_break_blocks <= 1:
         return
@@ -83,6 +88,7 @@ def add_minimum_stretch_rule(model: cp_model.CpModel, problem: Problem, works: W
     Exception: a shorter stretch is allowed if it is exactly one short piece of demand
     (see _short_pieces), worked entirely at that piece's post.
     """
+    debug_print("add_minimum_stretch_rule: adding the rule")
     min_stretch_blocks = problem.settings.min_stretch_minutes // MINUTES_PER_BLOCK
     if min_stretch_blocks <= 1:
         return
@@ -139,6 +145,7 @@ def add_stay_at_post_rule(model: cp_model.CpModel, problem: Problem, works: Work
     have had too short work-stretches. Handovers (one stops, another starts while the post
     needs the same people) are not limited by this rule.
     """
+    debug_print("add_stay_at_post_rule: adding the rule")
     min_stretch_blocks = problem.settings.min_stretch_minutes // MINUTES_PER_BLOCK
 
     # Look at every post at every moment it was open just before: previous_block -> block.

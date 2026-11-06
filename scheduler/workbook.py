@@ -13,6 +13,7 @@ from pathlib import Path
 import openpyxl
 from openpyxl.worksheet.worksheet import Worksheet
 
+from scheduler.helpers import debug_print
 from scheduler.model import Post, Problem, Settings, Volunteer, block_of
 from scheduler.model import MINUTES_PER_BLOCK, DAY_STARTS_AT_HOUR, BLOCKS_PER_DAY
 
@@ -115,6 +116,7 @@ def read_settings(sheet: Worksheet) -> Settings:
     (meals, maximum hours, weights) are accepted and ignored. Raises WorkbookError for a
     missing, empty, duplicate or unknown setting, or a value that is not allowed.
     """
+    debug_print(f"read_settings: reading tab {sheet.title}")
     # 1. Isolate the headers and their respective column numbers
     columns = find_columns(sheet, ["Setting", "Value"])
 
@@ -184,6 +186,7 @@ def read_volunteers(sheet: Worksheet, settings: Settings) -> dict[str, set[int]]
     missing column, a nickname used twice, a row with availability but no nickname, an
     invalid availability, or a volunteer who is not available on any day.
     """
+    debug_print(f"read_volunteers: reading tab {sheet.title}")
     # 1. The Nickname column and one column per convention day.
     columns = find_columns(sheet, ["Nickname"] + list(settings.days))
 
@@ -232,6 +235,7 @@ def read_posts(sheet: Worksheet) -> list[Post]:
     An empty row is skipped. Raises WorkbookError for a missing Post column, a post
     that appears twice, or a tab without any posts.
     """
+    debug_print(f"read_posts: reading tab {sheet.title}")
     columns = find_columns(sheet, ["Post"])
 
     posts = []
@@ -261,6 +265,7 @@ def read_skills(sheet: Worksheet) -> dict[str, dict[str, int]]:
     scores but no nickname, a score that is not empty, 1, 2 or 3, or a volunteer without
     any score.
     """
+    debug_print(f"read_skills: reading tab {sheet.title}")
     nickname_column = find_columns(sheet, ["Nickname"])["Nickname"]
 
     # 1. The post columns: every column except these.
@@ -311,6 +316,7 @@ def read_demand(sheet: Worksheet, settings: Settings) -> dict[tuple[str, int], i
     numbers), the same Day and Time twice, or a number that is not a whole number of at
     least 0.
     """
+    debug_print(f"read_demand: reading tab {sheet.title}")
     columns = find_columns(sheet, ["Day", "Time"])
     post_columns = _post_columns(sheet, not_posts=["Day", "Time", "Notes"])
 
