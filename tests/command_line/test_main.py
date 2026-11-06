@@ -8,6 +8,7 @@ import openpyxl
 import pytest
 
 import scheduler.__main__ as command_line
+from scheduler import helpers
 from scheduler.solver import NoScheduleFound
 
 
@@ -255,6 +256,36 @@ def test_no_question_when_the_output_does_not_exist_yet(tmp_path, monkeypatch):
 
     # Assert
     assert result == 0
+
+
+# --- debug output ---
+
+def test_debug_time_flag_switches_debug_printing_on(tmp_path, monkeypatch):
+    """With --debug-time, the program switches debug_print on."""
+    # Arrange
+    # monkeypatch puts the switch back as it was after this test.
+    monkeypatch.setattr(helpers, "debug_time_on", False)
+    output = tmp_path / "output.xlsx"
+
+    # Act
+    command_line.main([str(TEST_WORKBOOK), str(output), "--debug-time"])
+
+    # Assert
+    assert helpers.debug_time_on is True
+
+
+def test_without_debug_time_flag_debug_printing_is_off(tmp_path, monkeypatch):
+    """Without --debug-time, debug_print is switched off, even if it was on before."""
+    # Arrange
+    # On before the run, so the test shows that main really switches it off.
+    monkeypatch.setattr(helpers, "debug_time_on", True)
+    output = tmp_path / "output.xlsx"
+
+    # Act
+    command_line.main([str(TEST_WORKBOOK), str(output)])
+
+    # Assert
+    assert helpers.debug_time_on is False
 
 
 # --- errors give one clear line and exit code 1 ---

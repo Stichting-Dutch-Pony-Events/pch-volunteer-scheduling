@@ -597,7 +597,16 @@ After the minimal viable scheduler:
     `set_debug_time(options.debug_time)`. 7 tests in tests/test_helpers.py (tests that
     switch it on use monkeypatch, so the switch is reset after each test). Stubs plus
     tests written by Claude: 6 red, 1 guard green; a trial implementation makes all 280
-    green. Next: implement, then the flag in the command line, then debug_print calls.
+    green. Implemented by the user (2026-11-06; a tab before the time, so debug lines
+    sit indented under the progress lines). pycodestyle added to requirements.txt and
+    the whole project made clean (`--max-line-length=100`).
+    The flag: 2 tests in test_main.py ("debug output" section): `--debug-time` switches
+    `helpers.debug_time_on` on; without the flag `main` switches it off, even if it
+    was on. Both red (argparse: unrecognized argument; switch untouched); a trial
+    (`add_argument("--debug-time", action="store_true")`, then
+    `set_debug_time(options.debug_time)` right after `parse_args`) makes all 282
+    green. Next: implement, then debug_print calls in solve() and the rules, plus a
+    test that the output then contains debug lines.
   - Progress: with only hard rules CP-SAT stops at the first valid schedule, so no
     percentage is possible; show the phase plus elapsed time, and CP-SAT's own log
     (`log_search_progress = True`) behind `--verbose`. Once there are soft rules, a
