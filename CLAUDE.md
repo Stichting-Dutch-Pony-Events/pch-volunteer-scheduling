@@ -518,6 +518,18 @@ come after, the user can fix details by hand meanwhile):
       moves on; otherwise count variables for movers/stoppers and
       `movers + stoppers <= drop` only_enforce_if someone moves), one line in
       `solve()`: 264 tests green, test 6 still skipped (2026-11-05).
+      **Tightened (user, 2026-11-06), tests changed, rule not yet:** a move is only for
+      someone whose stretch would otherwise be shorter than the minimum: a volunteer
+      who has worked every one of the last `min_stretch` blocks before b may not move
+      on (exactly the minimum done = no move; they stop instead). Avoids e.g. 2.5 hours
+      at a closing post plus 15 minutes elsewhere. Planned constraint, per possible move:
+      `moves + (their work in each of the min_stretch blocks before b) <= min_stretch`.
+      Tests: the moves in tests 1-4 and 7 now happen at block 2 (after 30 min) so each
+      still tests one thing; new forced test
+      `test_volunteer_who_already_worked_the_minimum_may_not_move_on` (Tickets 0-3,
+      then Infobooth 4-7, only Mock Mane): red now. Checked in scratch copies: with the
+      planned line all 273 green (+1 skipped); without the stay-at-post rule the 4
+      forced tests all find a schedule (so they fail only because of this rule).
       **Later (user, 2026-11-05): the output slots with this rule.** If Tickets goes from
       3 to 2 and the volunteer in slot 2 moves on while slot 3 stays, `assign_slots`
       leaves slot 2 empty and slot 3 filled (a gap). The user wants the stayer moved up
