@@ -1,5 +1,6 @@
 from ortools.sat.python import cp_model
 
+from scheduler.helpers import debug_print
 from scheduler.model import Schedule, Problem
 from scheduler import rules
 
@@ -31,6 +32,7 @@ def _create_variables(model: cp_model.CpModel, problem: Problem) -> rules.Works:
     post and is available in that block. 1 = the volunteer works there in that block, 0 = not.
     Returns a dict: (volunteer_name, post, block) -> variable (see rules.Works).
     """
+    debug_print("_create_variables: creating the yes/no variables")
     works: rules.Works = {}
     for (post, block) in problem.demand:
         for volunteer in problem.volunteers:
@@ -44,6 +46,8 @@ def _create_variables(model: cp_model.CpModel, problem: Problem) -> rules.Works:
 
 def _solve_and_read_schedule(model: cp_model.CpModel, works: rules.Works) -> Schedule:
     """Run the solver and turn every variable set to 1 into an assignment."""
+    # The gap between this line and the next output is CP-SAT's own search time.
+    debug_print("_solve_and_read_schedule: running CP-SAT")
     solver = cp_model.CpSolver()
     status = solver.solve(model)
 

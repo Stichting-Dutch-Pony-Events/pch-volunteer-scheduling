@@ -613,8 +613,11 @@ After the minimal viable scheduler:
     Schedule"). So a new reader/rule/tab announces itself, and the time between two
     lines is how long the step before took. Test:
     `test_debug_time_flag_prints_debug_lines_from_reading_solving_and_writing`
-    (one line from each part). 283 green. Not covered yet: the gap after the last rule
-    is CP-SAT itself plus reading the schedule (no line of its own).
+    (one line from each part). 283 green. Plus, in solver.py, a line at the start of
+    `_create_variables` and one just before `solver.solve(model)` in
+    `_solve_and_read_schedule` ("running CP-SAT"), so building the model and CP-SAT's
+    own search can be told apart; test
+    `test_debug_time_flag_prints_debug_lines_for_the_variables_and_cp_sat`. 284 green.
   - Progress: with only hard rules CP-SAT stops at the first valid schedule, so no
     percentage is possible; show the phase plus elapsed time, and CP-SAT's own log
     (`log_search_progress = True`) behind `--verbose`. Once there are soft rules, a

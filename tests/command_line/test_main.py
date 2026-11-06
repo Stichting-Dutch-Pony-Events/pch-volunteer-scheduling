@@ -310,6 +310,28 @@ def test_debug_time_flag_prints_debug_lines_from_reading_solving_and_writing(
     assert "create_schedule_sheet" in debug_text
 
 
+def test_debug_time_flag_prints_debug_lines_for_the_variables_and_cp_sat(
+        tmp_path, monkeypatch, capsys):
+    """With --debug-time, making the variables and running CP-SAT each print a line."""
+    # Arrange
+    monkeypatch.setattr(helpers, "debug_time_on", False)
+    output = tmp_path / "output.xlsx"
+
+    # Act
+    command_line.main([str(TEST_WORKBOOK), str(output), "--debug-time"])
+
+    # Assert
+    # With these two lines the time spent building the model and in CP-SAT can be told
+    # apart: the gap after the last rule is then only CP-SAT.
+    debug_lines = []
+    for line in capsys.readouterr().out.splitlines():
+        if line.startswith("DEBUG ["):
+            debug_lines.append(line)
+    debug_text = "\n".join(debug_lines)
+    assert "_create_variables" in debug_text
+    assert "running CP-SAT" in debug_text
+
+
 # --- errors give one clear line and exit code 1 ---
 
 def test_typo_in_the_workbook_prints_the_workbook_error(tmp_path, capsys):
