@@ -129,8 +129,9 @@ ReferenceDocuments/   (not in git) real data, DATA_NOTES.md, draft input workboo
 scheduler/            model.py (data classes), solver.py, rules.py (hard rules),
                       workbook.py (reads the input workbook), output.py (writes the
                       output workbook), __main__.py (the command line, run with
-                      `python -m scheduler`), hello.py (setup check)
-tests/                test_hello.py, test_model.py, test_time_blocks.py;
+                      `python -m scheduler`), helpers.py (debug_print), hello.py
+                      (setup check)
+tests/                test_hello.py, test_model.py, test_time_blocks.py, test_helpers.py;
                       data/test_input.xlsx (made-up workbook)
 tests/solver/         test_solver_availability.py, test_solver_basics.py,
                       test_solver_work_stretches.py, test_solver_stay_at_post.py
@@ -584,6 +585,17 @@ After the minimal viable scheduler:
     around `solve()`; public `format_duration(seconds)`: under 60 s "3.2 s", else whole
     minutes and seconds, rounded first so 119.6 = "2 min 0 s"). 272 green.
     Building the model and solving are still one step (both inside `solve()`).
+  - **`--debug-time` (user, 2026-11-06), in progress:** `scheduler/helpers.py` with an
+    on/off switch `debug_time_on = False`, `set_debug_time(on: bool)` and
+    `debug_print(message: str, destination: TextIO | None = None) -> None`: only when on,
+    prints "[14:03:12.345] message" (milliseconds) with flush=True to destination,
+    default sys.stdout looked up at call time (a `=sys.stdout` default would be fixed
+    when Python reads the def, so capsys could not catch it). Separate module because
+    rules.py and solver.py will call it too; the command line will call
+    `set_debug_time(options.debug_time)`. 7 tests in tests/test_helpers.py (tests that
+    switch it on use monkeypatch, so the switch is reset after each test). Stubs plus
+    tests written by Claude: 6 red, 1 guard green; a trial implementation makes all 280
+    green. Next: implement, then the flag in the command line, then debug_print calls.
   - Progress: with only hard rules CP-SAT stops at the first valid schedule, so no
     percentage is possible; show the phase plus elapsed time, and CP-SAT's own log
     (`log_search_progress = True`) behind `--verbose`. Once there are soft rules, a
