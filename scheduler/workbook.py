@@ -36,7 +36,7 @@ KNOWN_SETTINGS = {"Workbook format version", "Time step", "Day boundary", "Days"
                   "Weight: shift longer than preferred", "Weight: unfair spread of hours"}
 
 REQUIRED_SETTINGS = {"Workbook format version", "Time step", "Day boundary", "Days",
-                    "Minimum work stretch", "Maximum work stretch", "Minimum break"}
+                     "Minimum work stretch", "Maximum work stretch", "Minimum break"}
 
 
 class WorkbookError(Exception):
@@ -118,9 +118,9 @@ def read_settings(sheet: Worksheet) -> Settings:
     # 1. Isolate the headers and their respective column numbers
     columns = find_columns(sheet, ["Setting", "Value"])
 
-    # 2. Fetch all (unparsed) settings from Setttings sheet
+    # 2. Fetch all (unparsed) settings from the Settings sheet
     unparsed_settings = dict()
-    for rownumber in range(2,sheet.max_row + 1):
+    for rownumber in range(2, sheet.max_row + 1):
         setting_name = cell_text(sheet.cell(row=rownumber, column=columns["Setting"]).value)
         if setting_name == "":
             continue

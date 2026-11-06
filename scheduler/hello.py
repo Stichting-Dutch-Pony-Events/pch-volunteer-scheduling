@@ -1,5 +1,6 @@
 from ortools.sat.python import cp_model
 
+
 def hello() -> str:
     return "Hello, PonyCon!"
 

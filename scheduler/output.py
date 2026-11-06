@@ -128,7 +128,7 @@ def rows_to_show(problem: Problem) -> list[int]:
     gaps included. A day without any demand gets no rows.
     """
 
-    min_max_per_day = {} # day: str -> (min_block: int, max_block: int)
+    min_max_per_day = {}  # day: str -> (min_block: int, max_block: int)
 
     for post, block in problem.demand:
         day_number = block // BLOCKS_PER_DAY
@@ -149,7 +149,6 @@ def rows_to_show(problem: Problem) -> list[int]:
         if day in min_max_per_day:             # a day without demand gets no rows
             min_to_show, max_to_show = min_max_per_day[day]
             blocks_to_show.extend(range(min_to_show, max_to_show + 1))
-
 
     return blocks_to_show
 

@@ -114,4 +114,3 @@ def test_single_block_is_a_run_of_one():
 
     # Assert
     assert runs == [(3, 4)]
-

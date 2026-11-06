@@ -22,7 +22,8 @@ def test_yes_means_the_whole_convention_day():
     assert result == expected
 
 
-@pytest.mark.parametrize("text", ["Yes", "YES", "yes"], ids=["capital", "all capitals", "lowercase"])
+@pytest.mark.parametrize("text", ["Yes", "YES", "yes"],
+                         ids=["capital", "all capitals", "lowercase"])
 def test_yes_is_not_case_sensitive(text):
     """Case sensitivity of 'yes' should be ignored."""
     # Arrange
