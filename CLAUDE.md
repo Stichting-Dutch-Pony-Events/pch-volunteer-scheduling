@@ -144,7 +144,9 @@ tests/workbook/       test_celltext.py, test_availability.py, test_find_columns.
                       test_read_problem.py (one test file per reader part)
 tests/command_line/   test_main.py (tests of the command line)
                       Every test folder has an empty __init__.py (like tests/ itself).
-requirements.txt      ortools>=9.15, openpyxl>=3.1, pytest>=8.0
+requirements.txt      ortools>=9.15, openpyxl>=3.1, pytest>=8.0, pycodestyle>=2.15
+                      (style check: `python -m pycodestyle --max-line-length=100
+                      scheduler tests`)
 ```
 
 ## Domain: how scheduling was done by hand
