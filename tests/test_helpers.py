@@ -59,8 +59,8 @@ def test_debug_print_writes_the_message_when_debugging_is_on(monkeypatch):
     assert "Building the model" in destination.getvalue()
 
 
-def test_debug_print_starts_with_the_time_in_milliseconds(monkeypatch):
-    """The line starts with the time to the millisecond, e.g. [14:03:12.345]."""
+def test_debug_print_starts_with_a_tab_and_the_time_in_milliseconds(monkeypatch):
+    """The line starts with a tab and the time to the millisecond, e.g. [14:03:12.345]."""
     # Arrange
     monkeypatch.setattr(helpers, "debug_time_on", True)
     destination = io.StringIO()
@@ -69,8 +69,9 @@ def test_debug_print_starts_with_the_time_in_milliseconds(monkeypatch):
     debug_print("Building the model", destination)
 
     # Assert
-    # "[", hours, ":", minutes, ":", seconds, ".", three digits, "] ", then the message.
-    assert re.fullmatch(r"\[\d\d:\d\d:\d\d\.\d{3}\] Building the model\n",
+    # A tab, "[", hours, ":", minutes, ":", seconds, ".", three digits, "] ", then the
+    # message.
+    assert re.fullmatch(r"\t\[\d\d:\d\d:\d\d\.\d{3}\] Building the model\n",
                         destination.getvalue())
 
 
