@@ -1,4 +1,4 @@
-"""The command line: python -m scheduler input.xlsx output.xlsx [--overwrite]
+"""The command line: python -m scheduler input.xlsx output.xlsx [--overwrite] [--debug-time]
 
 Python runs this file when you type "python -m scheduler". All the work happens in main(),
 which takes the arguments as a list, so the tests can call it directly without a terminal.
@@ -9,6 +9,7 @@ import time
 from datetime import datetime
 from pathlib import Path
 
+from scheduler.helpers import set_debug_time
 from scheduler.output import write_output
 from scheduler.solver import NoScheduleFound, solve
 from scheduler.workbook import WorkbookError, read_problem
@@ -33,10 +34,16 @@ def main(arguments: list[str]) -> int:
     # With dashes: optional. store_true = True when typed, False when not.
     parser.add_argument("--overwrite", action="store_true",
                         help="replace an existing output file without asking")
+    parser.add_argument("--debug-time", action="store_true",
+                        help="print timing details while running")
 
     # Then let argparse read the words. On missing or unknown arguments it prints the
     # usage and stops the program itself (SystemExit, code 2), so we never get further.
     options = parser.parse_args(arguments)
+
+    # Always set the switch, also to False, so every run starts in a known state.
+    # (argparse turns the dash into an underscore: --debug-time -> options.debug_time.)
+    set_debug_time(options.debug_time)
 
     # Not called input/output: input() is Python's own function, which we need in step 3.
     input_path = Path(options.input)

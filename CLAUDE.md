@@ -605,8 +605,9 @@ After the minimal viable scheduler:
     was on. Both red (argparse: unrecognized argument; switch untouched); a trial
     (`add_argument("--debug-time", action="store_true")`, then
     `set_debug_time(options.debug_time)` right after `parse_args`) makes all 282
-    green. Next: implement, then debug_print calls in solve() and the rules, plus a
-    test that the output then contains debug lines.
+    green. Implemented by Claude (2026-11-06): 282 green, shown in `--help`. Next:
+    debug_print calls in solve() and the rules, plus a test that the output then
+    contains debug lines.
   - Progress: with only hard rules CP-SAT stops at the first valid schedule, so no
     percentage is possible; show the phase plus elapsed time, and CP-SAT's own log
     (`log_search_progress = True`) behind `--verbose`. Once there are soft rules, a
