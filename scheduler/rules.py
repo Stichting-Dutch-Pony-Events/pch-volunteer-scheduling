@@ -135,9 +135,12 @@ def add_stay_at_post_rule(model: cp_model.CpModel, problem: Problem, works: Work
     A volunteer only moves on to another post at a moment their post needs fewer people
     than in the block before (closing counts too). Then at most that many people may move
     on, and everyone who stops working there at that moment (a break, or the end of their
-    availability) uses up one of those places. Handovers (one stops, another starts while
-    the post needs the same people) are not limited by this rule.
+    availability) uses up one of those places. The volunteers that are moving would otherwise
+    have had too short work-stretches. Handovers (one stops, another starts while the post
+    needs the same people) are not limited by this rule.
     """
+    min_stretch_blocks = problem.settings.min_stretch_minutes // MINUTES_PER_BLOCK
+
     # Look at every post at every moment it was open just before: previous_block -> block.
     for (post, previous_block), needed_before in problem.demand.items():
         block = previous_block + 1
@@ -178,6 +181,18 @@ def add_stay_at_post_rule(model: cp_model.CpModel, problem: Problem, works: Work
                 moves = model.new_bool_var(f"{volunteer.name} moves on from {post} in {block}")
                 model.add(moves >= was_here + sum(elsewhere_now) - 1)
                 movers.append(moves)
+
+                # Only someone who has not yet worked a full minimum stretch may move on.
+                # Collect their work (any post) in the min_stretch_blocks blocks just before
+                # this block: if all of those are 1, the sum alone already reaches
+                # min_stretch_blocks, so moves has to be 0.
+                worked_just_before = []
+                for earlier_block in range(block - min_stretch_blocks, block):
+                    for any_post in problem.posts:
+                        earlier = works.get((volunteer.name, any_post.name, earlier_block))
+                        if earlier is not None:
+                            worked_just_before.append(earlier)
+                model.add(moves + sum(worked_just_before) <= min_stretch_blocks)
             stops = model.new_bool_var(f"{volunteer.name} stops at {post} in {block}")
             model.add(stops >= was_here - sum(working_now))
             stoppers.append(stops)

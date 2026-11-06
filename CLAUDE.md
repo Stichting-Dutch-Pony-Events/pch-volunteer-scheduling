@@ -530,6 +530,8 @@ come after, the user can fix details by hand meanwhile):
       then Infobooth 4-7, only Mock Mane): red now. Checked in scratch copies: with the
       planned line all 273 green (+1 skipped); without the stay-at-post rule the 4
       forced tests all find a schedule (so they fail only because of this rule).
+      **Implemented** by Claude (2026-11-06): the line is in the `drop > 0` part of
+      `add_stay_at_post_rule`, after each `moves` variable. 273 green, 1 skipped.
       **Later (user, 2026-11-05): the output slots with this rule.** If Tickets goes from
       3 to 2 and the volunteer in slot 2 moves on while slot 3 stays, `assign_slots`
       leaves slot 2 empty and slot 3 filled (a gap). The user wants the stayer moved up
