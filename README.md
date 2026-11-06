@@ -45,7 +45,8 @@ hand.
 
 - [ ] A clear message when no schedule is possible, saying where it gets stuck
 - [ ] First run on real data, compared with the hand-made 2026 schedule
-- [ ] Faster, with a time limit, if real data needs it
+- [x] Faster: a run on the real data takes seconds instead of minutes
+- [ ] A time limit for the solver, so a big run can't hang
 
 ### After version 1.0
 

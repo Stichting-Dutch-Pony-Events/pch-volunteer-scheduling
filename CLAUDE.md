@@ -543,6 +543,43 @@ come after, the user can fix details by hand meanwhile):
 - [ ] Faster model building (group variables per volunteer/block once instead of
       `_variables_of` scanning all of `works` on every call), if real data is slow.
       Plus a solver time limit (a setting), so a big run can't hang forever.
+      **NEXT (user, 2026-11-06): measured with `--debug-time` on the 2026 draft** (with
+      the tightened stay-at-post rule: a schedule was found). Solving took 5 min 23 s
+      (323 s), of which ~311 s is *building the model* and only ~12 s CP-SAT itself:
+      | step                          | time      | share |
+      |-------------------------------|-----------|-------|
+      | add_minimum_stretch_rule      | 3 min 33 s | 66%  |
+      | add_minimum_break_rule        | 1 min 1 s | 19%   |
+      | add_maximum_stretch_rule      | 22.6 s    | 7%    |
+      | add_no_double_booking_rule    | 13.4 s    | 4%    |
+      | CP-SAT + reading the schedule | 11.8 s    | 4%    |
+      | add_demand_rule               | 0.8 s     |       |
+      | add_stay_at_post_rule         | 0.5 s     |       |
+      | _create_variables             | 0.1 s     |       |
+      Reading the workbook and writing the output: well under a second each.
+      Likely cause: the four slow rules call `_variables_of`, which scans all of `works`
+      on every call (in add_minimum_stretch_rule several times per volunteer, block and
+      run length). add_stay_at_post_rule looks variables up directly with `works.get`
+      and takes 0.5 s for similar work, which supports this. Plan to discuss: build a
+      lookup {(volunteer, block): [variables]} once (e.g. in solve() or a helper) and
+      let `_variables_of` use it; keep the rules' logic the same, so the existing tests
+      guard the refactor (they must stay green, and the same schedules must come out).
+      Also add_demand_rule scans all of `works` per (post, block): a {(post, block):
+      [variables]} lookup. Measure again with `--debug-time` afterwards (only with the
+      user's permission for a real-data run).
+      **Done by Claude (2026-11-06), refactor without new tests:**
+      `_variables_by_volunteer_and_block(works)` in rules.py builds
+      `{(volunteer_name, block): [variables]}` once (type alias
+      `VariablesByVolunteerAndBlock`); each of the four slow rules makes it once at its
+      start as `lookup`, and `_variables_of(lookup, name, first, after)` loops over the
+      asked blocks with `lookup.get(...)` instead of scanning works. add_demand_rule
+      groups per (post, block) the same way. Rule signatures and solve() unchanged.
+      Checked: 284 green, pycodestyle clean, and on the test workbook the model is
+      identical (156 variables, 1410 constraints, same order-free fingerprint of the
+      linear constraints; scratch script); building the rules went from 0.141 s to
+      0.032 s there. **Real draft, measured by the user (2026-11-06): the whole run in
+      about 14 s** (was 5 min 23 s for solving alone). Still open in this item: a solver
+      time limit (a setting).
 - [ ] Small: optional guard test for a break across 06:00; remove hello.py and
       test_hello.py once they're no longer useful
 
