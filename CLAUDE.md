@@ -625,7 +625,9 @@ come after, the user can fix details by hand meanwhile):
         `scheduler/__init__.py`, layout here updated. Step 1 done by Claude
         (2026-11-08): 284 green, 1 skipped, tests unchanged. Step 2 done (hello.py and
         test_hello.py removed; README project structure brought up to date). Step 3
-        done (test_model.py and test_time_blocks.py in tests/model/, 282 green). **Option B
+        done (test_model.py and test_time_blocks.py in tests/model/, 282 green). Step 4
+        done (map of the modules in the docstring of scheduler/__init__.py; keep it up
+        to date when a module is added, e.g. checks.py). **Option B
         (subpackages
         reading/, solving/, writing/ mirroring the tests) postponed until after the soft
         rules** (user), when rules.py splits into hard and soft rules.
