@@ -637,6 +637,16 @@ come after, the user can fix details by hand meanwhile):
         consecutive blocks become one range; all shortages listed; total shortage raises
         NotEnoughVolunteers; both children are NoScheduleFound; a rule conflict still
         gives plain NoScheduleFound).
+      - **Stubs written by Claude (2026-11-08), the user implements:** errors.py has
+        `NotEnoughQualified` and `NotEnoughVolunteers` (real classes, children of
+        NoScheduleFound); `scheduler/checks.py` with `MAX_LINES = 10`,
+        `check_problem(problem)` (check 1 first, check 2 only if check 1 found nothing)
+        and the helpers `not_enough_qualified_lines(problem) -> list[str]` and
+        `not_enough_volunteers_lines(problem) -> list[str]` (empty list = fine), all
+        raising NotImplementedError; tests/solver/test_checks.py has the 9 test stubs
+        (10 cases: the subclass test is parametrized). `check_problem` is **not yet
+        called from solve()**: that line comes once the checks work (otherwise every
+        solver test hits NotImplementedError). Map in scheduler/__init__.py updated.
 - [ ] Maximum hours as a **hard rule** (moved into 1.0, user 2026-11-08): per day and in
       total, defaults from the Settings rows "Default maximum hours per day" (8) / "total"
       (16), per volunteer from the Volunteers columns "Max hours per day" / "Max hours
