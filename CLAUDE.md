@@ -73,9 +73,11 @@ likes to write tests (and often code) themselves; Claude reviews and explains.
    not a real change; use `git -c core.autocrlf=true status`.
 7. The `.venv` is a Windows venv: the user runs the tests in VS Code
    (`python -m pytest`), not from a Linux shell.
-8. **Never run the scheduler on the real data (the 2026 draft) without the user's
-   explicit permission each time** (user, 2026-11-05): a run takes about 5 minutes. The
-   test suite and the test workbook are fine.
+8. **Never run the scheduler on real data without the user's explicit permission each
+   time** (user, 2026-11-05; kept 2026-11-08 although a run now takes ~14 s): real data
+   means the 2026 draft and any other real input, e.g. data from other conventions. The
+   user wants to stay in control of those runs. The test suite and the test workbook
+   are fine.
 
 ## Privacy (important)
 
@@ -143,6 +145,9 @@ tests/workbook/       test_celltext.py, test_availability.py, test_find_columns.
                       test_read_posts.py, test_read_skills.py, test_read_demand.py,
                       test_read_problem.py (one test file per reader part)
 tests/command_line/   test_main.py (tests of the command line)
+templates/            VolunteerInput_template.xlsx: empty input workbook (all tabs and
+                      headers, Settings with example values from PonyCon Holland 2026,
+                      no volunteer data). In git: .gitignore allows `templates/*.xlsx`.
                       Every test folder has an empty __init__.py (like tests/ itself).
 requirements.txt      ortools>=9.15, openpyxl>=3.1, pytest>=8.0, pycodestyle>=2.15
                       (style check: `python -m pycodestyle --max-line-length=100
@@ -682,7 +687,9 @@ After the minimal viable scheduler:
 - [ ] Meal breaks. Check the windows with the user first: the workbook Settings say
       lunch 11:30-14:00 and dinner 17:30-19:30, this file says 12:00-14:00 and
       18:00-19:00.
-- [ ] Event wishes (includes reading the form CSV)
+- [ ] Event wishes (includes reading the form CSV). Then also revisit the Events tab
+      columns: the template still has the header "Name in 2026 sheet" (user, 2026-11-08:
+      change it when this functionality is added).
 - [ ] Maximum hours and fair spread
 - [ ] Maybe: Question vetting, Manestage clean and Sardine duty by the same person
 - [ ] Maybe: switch rules on/off from the workbook (may need a Rule class then)
