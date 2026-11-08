@@ -592,7 +592,46 @@ come after, the user can fix details by hand meanwhile):
 
 **Roadmap revised (user, 2026-11-08), the rest of version 1.0 in this order:**
 - [ ] Clear message when no schedule is possible: see the item above (pre-checks,
-      NoScheduleFound children). **Next.**
+      NoScheduleFound children). **Next.** Feature branch suggested:
+      `feature/no-schedule-messages`.
+      **Design (agreed 2026-11-08; first a small refactor, see below):**
+      - Quick, exact checks before CP-SAT starts; if one finds something, a specific
+        child of NoScheduleFound is raised; if none does, CP-SAT runs as now and plain
+        NoScheduleFound remains for "the rules together don't fit".
+      - Check 1, `NotEnoughQualified(NoScheduleFound)`: at a block a post needs more
+        people than there are volunteers who are qualified *and* available then. The
+        line lists who is qualified and available, and **separately who is qualified
+        but not available then** (user), e.g. "Tickets, Saturday 14:00-15:30: needs 3,
+        only 2 qualified and available (Mock Mane, Testy Hooves); qualified but not
+        available: Dummy Dash". Consecutive blocks with the same problem = one line with
+        a time range.
+      - Check 2, `NotEnoughVolunteers(NoScheduleFound)`: at a block all posts together
+        need more people than there are volunteers available (each post alone may look
+        fine), e.g. "Saturday 14:00: the posts need 30 people in total, only 28
+        volunteers available".
+      - All problems at once (unlike input errors): one error whose message is a list;
+        at most 10 lines plus "and N more".
+      - Error classes in a new `scheduler/errors.py` (NoScheduleFound and its children;
+        WorkbookError maybe too), checks in a new `scheduler/checks.py` with
+        `check_problem(problem) -> None`, one line at the start of `solve()`. solver.py
+        imports the errors, so `from scheduler.solver import NoScheduleFound` keeps
+        working. A separate errors module avoids a circular import (checks needs the
+        errors, solver needs checks). The command line already catches NoScheduleFound.
+      - **Refactor first (user chose option A, 2026-11-08), on the feature branch, green
+        after every step:** 1. `scheduler/errors.py` with WorkbookError and
+        NoScheduleFound, workbook.py and solver.py import them from there (test imports
+        unchanged); 2. remove hello.py and test_hello.py; 3. test_model.py and
+        test_time_blocks.py into `tests/model/`; 4. a one-line-per-module map in
+        `scheduler/__init__.py`, layout here updated. Step 1 done by Claude
+        (2026-11-08): 284 green, 1 skipped, tests unchanged. **Option B (subpackages
+        reading/, solving/, writing/ mirroring the tests) postponed until after the soft
+        rules** (user), when rules.py splits into hard and soft rules.
+      - Tests in tests/solver/test_checks.py (9 suggested 2026-11-08: raises for a
+        post short of qualified people; message names post/day/time; lists qualified+
+        available; qualified-but-unavailable don't count (and are listed separately);
+        consecutive blocks become one range; all shortages listed; total shortage raises
+        NotEnoughVolunteers; both children are NoScheduleFound; a rule conflict still
+        gives plain NoScheduleFound).
 - [ ] Maximum hours as a **hard rule** (moved into 1.0, user 2026-11-08): per day and in
       total, defaults from the Settings rows "Default maximum hours per day" (8) / "total"
       (16), per volunteer from the Volunteers columns "Max hours per day" / "Max hours

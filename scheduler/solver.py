@@ -1,12 +1,9 @@
 from ortools.sat.python import cp_model
 
+from scheduler.errors import NoScheduleFound
 from scheduler.helpers import debug_print
 from scheduler.model import Schedule, Problem
 from scheduler import rules
-
-
-class NoScheduleFound(Exception):
-    """Raised when no schedule can satisfy all the hard rules."""
 
 
 def solve(problem: Problem) -> Schedule:

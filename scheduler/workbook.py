@@ -13,6 +13,7 @@ from pathlib import Path
 import openpyxl
 from openpyxl.worksheet.worksheet import Worksheet
 
+from scheduler.errors import WorkbookError
 from scheduler.helpers import debug_print
 from scheduler.model import Post, Problem, Settings, Volunteer, block_of
 from scheduler.model import MINUTES_PER_BLOCK, DAY_STARTS_AT_HOUR, BLOCKS_PER_DAY
@@ -38,13 +39,6 @@ KNOWN_SETTINGS = {"Workbook format version", "Time step", "Day boundary", "Days"
 
 REQUIRED_SETTINGS = {"Workbook format version", "Time step", "Day boundary", "Days",
                      "Minimum work stretch", "Maximum work stretch", "Minimum break"}
-
-
-class WorkbookError(Exception):
-    """Raised when the input workbook has a mistake, e.g. a missing column or a typo.
-
-    The message starts with the tab, so the user knows where to look.
-    """
 
 
 def read_problem(path: str | Path) -> Problem:
