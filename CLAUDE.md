@@ -136,9 +136,9 @@ ReferenceDocuments/   (not in git) real data, DATA_NOTES.md, draft input workboo
 scheduler/            model.py (data classes), solver.py, rules.py (hard rules),
                       workbook.py (reads the input workbook), output.py (writes the
                       output workbook), __main__.py (the command line, run with
-                      `python -m scheduler`), helpers.py (debug_print), hello.py
-                      (setup check)
-tests/                test_hello.py, test_model.py, test_time_blocks.py, test_helpers.py;
+                      `python -m scheduler`), helpers.py (debug_print), errors.py
+                      (WorkbookError, NoScheduleFound)
+tests/                test_model.py, test_time_blocks.py, test_helpers.py;
                       data/test_input.xlsx (made-up workbook)
 tests/solver/         test_solver_availability.py, test_solver_basics.py,
                       test_solver_work_stretches.py, test_solver_stay_at_post.py
@@ -623,7 +623,9 @@ come after, the user can fix details by hand meanwhile):
         unchanged); 2. remove hello.py and test_hello.py; 3. test_model.py and
         test_time_blocks.py into `tests/model/`; 4. a one-line-per-module map in
         `scheduler/__init__.py`, layout here updated. Step 1 done by Claude
-        (2026-11-08): 284 green, 1 skipped, tests unchanged. **Option B (subpackages
+        (2026-11-08): 284 green, 1 skipped, tests unchanged. Step 2 done (hello.py and
+        test_hello.py removed; README project structure brought up to date). **Option B
+        (subpackages
         reading/, solving/, writing/ mirroring the tests) postponed until after the soft
         rules** (user), when rules.py splits into hard and soft rules.
       - Tests in tests/solver/test_checks.py (9 suggested 2026-11-08: raises for a
@@ -645,8 +647,8 @@ come after, the user can fix details by hand meanwhile):
 - [ ] Small: write test 6 of the stay-at-post rule (still a skipped stub).
 - [ ] Small: a damaged file with an .xlsx name (zipfile.BadZipFile) becomes a clear
       WorkbookError.
-- [ ] Small: optional guard test for a break across 06:00; remove hello.py and
-      test_hello.py once they're no longer useful
+- [ ] Small: optional guard test for a break across 06:00 (hello.py and test_hello.py
+      were removed on 2026-11-08)
 
 **Version 1.0 = all of the above**: a schedule for real data that follows the hard rules
 (except meal breaks and fixed shifts; including maximum hours), run from the command
