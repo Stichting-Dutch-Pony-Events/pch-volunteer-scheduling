@@ -138,8 +138,8 @@ scheduler/            model.py (data classes), solver.py, rules.py (hard rules),
                       output workbook), __main__.py (the command line, run with
                       `python -m scheduler`), helpers.py (debug_print), errors.py
                       (WorkbookError, NoScheduleFound)
-tests/                test_model.py, test_time_blocks.py, test_helpers.py;
-                      data/test_input.xlsx (made-up workbook)
+tests/                test_helpers.py; data/test_input.xlsx (made-up workbook)
+tests/model/          test_model.py, test_time_blocks.py (tests of model.py)
 tests/solver/         test_solver_availability.py, test_solver_basics.py,
                       test_solver_work_stretches.py, test_solver_stay_at_post.py
 tests/output/         test_assign_slots.py, test_write_helpers.py,
@@ -624,7 +624,8 @@ come after, the user can fix details by hand meanwhile):
         test_time_blocks.py into `tests/model/`; 4. a one-line-per-module map in
         `scheduler/__init__.py`, layout here updated. Step 1 done by Claude
         (2026-11-08): 284 green, 1 skipped, tests unchanged. Step 2 done (hello.py and
-        test_hello.py removed; README project structure brought up to date). **Option B
+        test_hello.py removed; README project structure brought up to date). Step 3
+        done (test_model.py and test_time_blocks.py in tests/model/, 282 green). **Option B
         (subpackages
         reading/, solving/, writing/ mirroring the tests) postponed until after the soft
         rules** (user), when rules.py splits into hard and soft rules.

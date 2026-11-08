@@ -106,12 +106,11 @@ pch-volunteer-scheduling/
 ├── tests/
 │   ├── command_line/        tests of the command line
 │   ├── data/                small made-up input workbook for the tests
+│   ├── model/               tests of the data classes and time helpers
 │   ├── output/              tests of writing the output workbook
 │   ├── solver/              tests of the solver and its rules
 │   ├── workbook/            tests of reading the input workbook
-│   ├── test_helpers.py
-│   ├── test_model.py
-│   └── test_time_blocks.py
+│   └── test_helpers.py
 ├── requirements.txt
 └── README.md
 ```
