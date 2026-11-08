@@ -81,6 +81,11 @@ likes to write tests (and often code) themselves; Claude reviews and explains.
 
 ## Privacy (important)
 
+**Currently handling privacy data (user, 2026-11-08): the UKPC26 conversion.** Be extra
+cautious: write progress, findings and decisions about that data **only** in
+`ReferenceDocuments/DATA_NOTES.md`, never here, in the README, in code, tests, commit
+messages or anywhere else in the repo. Here at most a one-line status without details.
+
 The repo is on GitHub (`Stichting-Dutch-Pony-Events/pch-volunteer-scheduling`, GPL-3.0).
 It is currently private, but **always treat it as public**. The user asked to be warned
 whenever they are (or might be) putting privacy-sensitive data into the repo: check
@@ -545,10 +550,10 @@ come after, the user can fix details by hand meanwhile):
       leaves slot 2 empty and slot 3 filled (a gap). The user wants the stayer moved up
       to slot 2 then, but that may cascade back to earlier blocks (the stayer should then
       have been in slot 2 for their whole shift). Think about this and solve it later.
-- [ ] Faster model building (group variables per volunteer/block once instead of
+- [x] Faster model building (group variables per volunteer/block once instead of
       `_variables_of` scanning all of `works` on every call), if real data is slow.
-      Plus a solver time limit (a setting), so a big run can't hang forever.
-      **NEXT (user, 2026-11-06): measured with `--debug-time` on the 2026 draft** (with
+      (The solver time limit that was part of this item is now its own item below.)
+      Measured (user, 2026-11-06) with `--debug-time` on the 2026 draft** (with
       the tightened stay-at-post rule: a schedule was found). Solving took 5 min 23 s
       (323 s), of which ~311 s is *building the model* and only ~12 s CP-SAT itself:
       | step                          | time      | share |
@@ -583,13 +588,30 @@ come after, the user can fix details by hand meanwhile):
       identical (156 variables, 1410 constraints, same order-free fingerprint of the
       linear constraints; scratch script); building the rules went from 0.141 s to
       0.032 s there. **Real draft, measured by the user (2026-11-06): the whole run in
-      about 14 s** (was 5 min 23 s for solving alone). Still open in this item: a solver
-      time limit (a setting).
+      about 14 s** (was 5 min 23 s for solving alone).
+
+**Roadmap revised (user, 2026-11-08), the rest of version 1.0 in this order:**
+- [ ] Clear message when no schedule is possible: see the item above (pre-checks,
+      NoScheduleFound children). **Next.**
+- [ ] Maximum hours as a **hard rule** (moved into 1.0, user 2026-11-08): per day and in
+      total, defaults from the Settings rows "Default maximum hours per day" (8) / "total"
+      (16), per volunteer from the Volunteers columns "Max hours per day" / "Max hours
+      total" (empty = default). Why: large-data tests gave one volunteer 26 hours while
+      16 got nothing, and the PCH draft run went up to 20 hours. (Fair spread stays a
+      soft rule after 1.0.)
+- [ ] Solver time limit (a setting), so a big run can't hang forever (large-data runs
+      with minimum stretch 60 / break 30 took over 3 minutes in CP-SAT).
+- [ ] Compare a real PCH 2026 run with the hand-made 2026 schedule (see "First
+      end-to-end run" above; the run works, the comparison isn't done).
+- [ ] Small: write test 6 of the stay-at-post rule (still a skipped stub).
+- [ ] Small: a damaged file with an .xlsx name (zipfile.BadZipFile) becomes a clear
+      WorkbookError.
 - [ ] Small: optional guard test for a break across 06:00; remove hello.py and
       test_hello.py once they're no longer useful
 
 **Version 1.0 = all of the above**: a schedule for real data that follows the hard rules
-(except meal breaks and fixed shifts), run from the command line. The user fixes details by hand.
+(except meal breaks and fixed shifts; including maximum hours), run from the command
+line. The user fixes details by hand.
 
 After the minimal viable scheduler:
 - [ ] Fixed shifts placed by hand are kept (Fixed tab). **Postponed (2026-11-01):**
@@ -690,8 +712,17 @@ After the minimal viable scheduler:
 - [ ] Event wishes (includes reading the form CSV). Then also revisit the Events tab
       columns: the template still has the header "Name in 2026 sheet" (user, 2026-11-08:
       change it when this functionality is added).
-- [ ] Maximum hours and fair spread
+- [ ] Fair spread of hours (soft rule; maximum hours moved into version 1.0)
+- [ ] Output: with the stay-at-post rule, a gap can appear between slot columns when a
+      post needs fewer people (see the stay-at-post item; cosmetic, the right people are
+      in the schedule).
 - [ ] Maybe: Question vetting, Manestage clean and Sardine duty by the same person
+- [ ] **Think about one-off event shifts (user, 2026-11-08; Claude: remind the user once
+      the large-data test runs are done).** Big conventions have many "posts" that are
+      really a single event (open once, for one hour, one person). As separate posts they
+      make the Posts/Skills/Demand tabs very wide. Ideas to discuss: an "Event assistance"
+      post with the event name as a note, posts with a group and a shared skill, or a
+      separate tab for one-off tasks.
 - [ ] Maybe: switch rules on/off from the workbook (may need a Rule class then)
 - [ ] Future wish: a small program with a window, e.g. to pick the input workbook, start
       a run and show errors clearly, so it can be used without the command line.

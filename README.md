@@ -40,13 +40,15 @@ running it on real data is the next part.
 ### Roadmap to version 1.0
 
 Version 1.0 makes a schedule from the real input workbook that follows the main hard
-rules (meal breaks come later), run from the command line. Details can then be fixed by
-hand.
+rules (meal breaks come later), including a maximum number of hours per volunteer, run
+from the command line. Details can then be fixed by hand.
 
-- [ ] A clear message when no schedule is possible, saying where it gets stuck
-- [ ] First run on real data, compared with the hand-made 2026 schedule
 - [x] Faster: a run on the real data takes seconds instead of minutes
+- [ ] A clear message when no schedule is possible, saying where it gets stuck
+- [ ] A maximum number of hours per volunteer, per day and in total
 - [ ] A time limit for the solver, so a big run can't hang
+- [ ] First run on real data, compared with the hand-made 2026 schedule
+- [ ] Small tidy-ups: a clear error for a damaged workbook, a few extra tests
 
 ### After version 1.0
 
@@ -56,7 +58,7 @@ hand.
       post, preferring what people are good at, shifts of preferably at most 2 hours
 - [ ] Meal breaks
 - [ ] Event wishes (REALLY want / would like to attend), read from the form answers
-- [ ] Maximum hours and a fair spread of work
+- [ ] A fair spread of work over the volunteers
 - [ ] More output: a "no double booking" check tab, and individual schedules
 - [ ] Choose the times the schedule shows (e.g. 08:00-02:00), instead of only the open hours
 - [ ] A nicer command line: how long it took, progress while solving, a summary, more
