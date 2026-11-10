@@ -246,6 +246,27 @@ def test_both_check_errors_are_a_kind_of_no_schedule_found(error):
     assert result
 
 
+def test_solve_runs_the_checks_and_raises_not_enough_qualified():
+    """solve() runs the checks first, so a shortage gives NotEnoughQualified."""
+    # Arrange
+    volunteers = [Volunteer(name="Mock Mane", skills={"Tickets": 1},
+                            available_blocks=ALL_DAYS),
+                  Volunteer(name="Testy Hooves", skills={"Infobooth": 1},
+                            available_blocks=ALL_DAYS)]
+
+    problem = Problem(volunteers=volunteers,
+                      posts=[Post(name="Tickets"), Post(name="Infobooth")],
+                      demand={("Tickets", 0): 2},
+                      settings=RULES)
+
+    # Act
+    # (Act and Assert are combined, pytest.raises checks the exception while the call runs.)
+
+    # Assert
+    with pytest.raises(NotEnoughQualified):
+        solve(problem)
+
+
 def test_a_conflict_between_rules_still_raises_plain_no_schedule_found():
     """When no check finds a cause, solve() raises NoScheduleFound itself, not a child."""
     # Arrange
