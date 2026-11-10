@@ -641,12 +641,32 @@ come after, the user can fix details by hand meanwhile):
         `NotEnoughQualified` and `NotEnoughVolunteers` (real classes, children of
         NoScheduleFound); `scheduler/checks.py` with `MAX_LINES = 10`,
         `check_problem(problem)` (check 1 first, check 2 only if check 1 found nothing)
-        and the helpers `not_enough_qualified_lines(problem) -> list[str]` and
-        `not_enough_volunteers_lines(problem) -> list[str]` (empty list = fine), all
+        and the helpers `_not_enough_qualified_lines(problem) -> list[str]` and
+        `_not_enough_volunteers_lines(problem) -> list[str]` (empty list = fine; private
+        since 2026-11-08, user: only used inside checks.py, tested via check_problem), all
         raising NotImplementedError; tests/solver/test_checks.py has the 9 test stubs
         (10 cases: the subclass test is parametrized). `check_problem` is **not yet
         called from solve()**: that line comes once the checks work (otherwise every
         solver test hits NotImplementedError). Map in scheduler/__init__.py updated.
+      - **Status at the end of 2026-11-08 (continue here):** the user wrote all 9 tests
+        in test_checks.py (reviewed: 7 red on the stub, 3 guards green: both subclass
+        cases and the plain-NoScheduleFound test via solve()). Leftover nits there:
+        `range(0,4)` needs a space (line ~115), "timeranges" -> "time ranges". The user
+        is implementing `_not_enough_qualified_lines` (step 1, collecting per post and
+        block who is qualified and available / qualified but unavailable, is done).
+        Open from Claude's last review: (1) `messages.append(line)` is missing, so it
+        always returns []; (2) `check_problem` is still the stub (minimal version: call
+        the helper, `raise NotEnoughQualified("\n".join(lines))` if any); (3) end time
+        of a range at the very end of the convention: `time_of(block_after_last)` raises
+        for block 288, use "last block + 15 min" (small helper); (4) a run takes the
+        details of its first block: group per (post, details text) before
+        `runs_of_consecutive_blocks` (or add a test "different shortages on consecutive
+        blocks give two lines" and do it later); style: lines 52-53 indent, line 67 too
+        long, double blank line, unused imports all_blocks/day_of; optional `v` ->
+        `volunteer`, "nobody qualified and available" instead of "only 0 ... ()".
+        After that: `MAX_LINES` + "and N more", check 2 (`_not_enough_volunteers_lines`),
+        call `check_problem` from `solve()` plus a test that solve() raises
+        NotEnoughQualified, then update the README.
 - [ ] Maximum hours as a **hard rule** (moved into 1.0, user 2026-11-08): per day and in
       total, defaults from the Settings rows "Default maximum hours per day" (8) / "total"
       (16), per volunteer from the Volunteers columns "Max hours per day" / "Max hours
