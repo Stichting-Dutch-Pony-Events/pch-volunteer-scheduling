@@ -134,10 +134,12 @@ def read_settings(sheet: Worksheet) -> Settings:
         if key not in KNOWN_SETTINGS:
             raise WorkbookError(f"Settings: unknown setting {key!r}")
 
-    # 4. Check for presence of all required settings
+    # 4. Check that all required settings are there and filled in
     for required_setting in REQUIRED_SETTINGS:
         if required_setting not in unparsed_settings:
             raise WorkbookError(f"Settings: Missing required setting {required_setting!r}")
+        if unparsed_settings[required_setting] == "":
+            raise WorkbookError(f"Settings: the required setting {required_setting!r} is empty.")
 
     # 5. Check the required settings one by one and turn them into Settings
     version = _whole_number(unparsed_settings, "Workbook format version")
@@ -165,26 +167,17 @@ def read_settings(sheet: Worksheet) -> Settings:
             raise WorkbookError(f"Settings, 'Days': {day!r} appears more than once.")
         days.append(day)
 
-    # Default hour limits (in minutes, None = no limit): at most 24 hours per day, and in
-    # total at most 24 hours for each day of the convention.
+    # Default hour limits (in minutes, None = no limit). Step 4 made sure they're not empty.
     per_day_name = "Default maximum hours per day"
     total_name = "Default maximum hours total"
     try:
-        default_per_day = _hour_limit(unparsed_settings[per_day_name], 24)
+        default_per_day, default_total = _hour_limits(
+            (per_day_name, unparsed_settings[per_day_name]),
+            (total_name, unparsed_settings[total_name]),
+            len(days))
     except ValueError as error:
-        # Put the setting in front of the message from _hour_limit.
-        raise WorkbookError(f"Settings, {per_day_name!r}: {error}") from None
-    try:
-        default_total = _hour_limit(unparsed_settings[total_name], 24 * len(days))
-    except ValueError as error:
-        raise WorkbookError(f"Settings, {total_name!r}: {error} "
-                            f"(24 hours for each of the {len(days)} days)") from None
-
-    # Per day may not be more than the total, but only when both are a number.
-    if default_per_day is not None and default_total is not None:
-        if default_per_day > default_total:
-            raise WorkbookError(f"Settings: {per_day_name!r} ({default_per_day // 60}) is "
-                                f"more than {total_name!r} ({default_total // 60}).")
+        # Put the tab in front of the message from _hour_limits.
+        raise WorkbookError(f"Settings, {error}") from None
 
     return Settings(
         min_stretch_minutes=_whole_number(unparsed_settings, "Minimum work stretch"),
@@ -253,37 +246,24 @@ def read_volunteers(sheet: Worksheet, settings: Settings) -> dict[str, Volunteer
             raise WorkbookError(f"Volunteers, row {row}: {nickname} is not available on any day. "
                                 f"Remove the row if they are not coming.")
 
-        # 5. The hour limits: an empty cell = the default from the settings, otherwise
-        #    _hour_limit (whole hours or "none"). The checks only look at written values.
-        where = f"Volunteers, row {row} ({nickname})"   # in front of every message below
+        # 5. The hour limits, checked by _hour_limits (whole hours or "none"; it only
+        #    compares the two when both are written as a number in this row).
         per_day_text = hour_limits["Max hours per day"]
         total_text = hour_limits["Max hours total"]
+        try:
+            max_minutes_per_day, max_minutes_total = _hour_limits(
+                ("Max hours per day", per_day_text),
+                ("Max hours total", total_text),
+                len(settings.days))
+        except ValueError as error:
+            # Put tab, row and volunteer in front of the message from _hour_limits.
+            raise WorkbookError(f"Volunteers, row {row} ({nickname}), {error}") from None
 
+        # An empty cell gets the default from the settings (_hour_limits gave None for it).
         if per_day_text == "":
             max_minutes_per_day = settings.default_max_minutes_per_day
-        else:
-            try:
-                max_minutes_per_day = _hour_limit(per_day_text, 24)
-            except ValueError as error:
-                raise WorkbookError(f"{where}, Max hours per day: {error}") from None
-
         if total_text == "":
             max_minutes_total = settings.default_max_minutes_total
-        else:
-            try:
-                max_minutes_total = _hour_limit(total_text, 24 * len(settings.days))
-            except ValueError as error:
-                raise WorkbookError(f"{where}, Max hours total: {error} (24 hours for each "
-                                    f"of the {len(settings.days)} days)") from None
-
-        # Per day may not be more than the total, but only when both are written as a
-        # number in this row (a default or "none" is never compared).
-        if per_day_text != "" and total_text != "":
-            if max_minutes_per_day is not None and max_minutes_total is not None:
-                if max_minutes_per_day > max_minutes_total:
-                    raise WorkbookError(f"{where}: Max hours per day "
-                                        f"({max_minutes_per_day // 60}) is more than Max hours "
-                                        f"total ({max_minutes_total // 60}).")
 
         # Skills are on another tab: read_problem fills them in.
         volunteers[nickname] = Volunteer(name=nickname,
@@ -500,13 +480,45 @@ def _whole_number(settings: dict[str, str], name: str) -> int:
                             f"number.") from None
 
 
-def _hour_limit(text: str, max_hours: int) -> int | None:
-    """An hour limit cell (already through cell_text) as minutes.
+def _hour_limits(per_day: tuple[str, str], total: tuple[str, str],
+                 number_of_days: int) -> tuple[int | None, int | None]:
+    """The hour limits per day and in total of one Settings or Volunteers row, in minutes.
+
+    per_day and total are (name, text): the setting or column name for the messages, and
+    the cell text (already through cell_text). Each text goes through _hour_limit, with at
+    most 24 hours per day and in total at most 24 hours for each day of the convention.
+    An empty text gives None: read_volunteers then fills in the default, read_settings
+    never lets an empty value get here. Per day may not be more than the total, but only
+    when both are a number. Raises ValueError naming the setting or column; the reader
+    puts the tab (and row) in front of the message.
+    """
+    per_day_name, per_day_text = per_day   # unpack the (name, text) pairs
+    total_name, total_text = total
+
+    per_day_minutes = None
+    if per_day_text != "":
+        per_day_minutes = _hour_limit(per_day_name, per_day_text, 24)
+
+    total_minutes = None
+    if total_text != "":
+        total_minutes = _hour_limit(total_name, total_text, 24 * number_of_days)
+
+    # Only compare two numbers: an empty text or "none" (both None here) is never compared.
+    if per_day_minutes is not None and total_minutes is not None:
+        if per_day_minutes > total_minutes:
+            raise ValueError(f"{per_day_name} ({per_day_minutes // 60}) is more than "
+                             f"{total_name} ({total_minutes // 60}).")
+
+    return per_day_minutes, total_minutes
+
+
+def _hour_limit(name: str, text: str, max_hours: int) -> int | None:
+    """One hour limit cell (already through cell_text) as minutes.
 
     Whole hours from 1 up to max_hours (24 for a day, 24 times the number of days for the
     total) give that many hours in minutes; "none" (case ignored) = no limit, None.
-    Anything else raises ValueError; the reader puts tab, row, volunteer or setting in
-    front of the message. An empty Volunteers cell is handled by its reader (the default).
+    Anything else raises ValueError starting with name (the setting or column); the
+    reader puts the tab (and row) in front. An empty text is handled by _hour_limits.
     """
     if text.lower() == "none":
         return None
@@ -515,14 +527,14 @@ def _hour_limit(text: str, max_hours: int) -> int | None:
         hours = int(text)
     except ValueError:
         # from None: show only our clear message, not the ValueError behind it
-        raise ValueError(f"{text!r} is not a whole number of hours "
+        raise ValueError(f"{name}: {text!r} is not a whole number of hours "
                          f"(or \"none\" for no limit).") from None
 
     if hours < 1:
-        raise ValueError(f"{hours} hours is not allowed: at least 1 "
+        raise ValueError(f"{name}: {hours} hours is not allowed: at least 1 "
                          f"(or \"none\" for no limit).")
     if hours > max_hours:
-        raise ValueError(f"{hours} is more than {max_hours} hours.")
+        raise ValueError(f"{name}: {hours} is more than the maximum of {max_hours} hours.")
 
     return hours * 60  # hours -> minutes
 

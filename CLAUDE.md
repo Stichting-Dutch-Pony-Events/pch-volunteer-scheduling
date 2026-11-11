@@ -772,6 +772,20 @@ come after, the user can fix details by hand meanwhile):
         with the two columns, compare `.available_blocks`; test_read_problem's in-memory
         workbook + GOOD_PROBLEM 480/960). 319 green, 17 skipped (the 10 + 1 new stubs).
         **Next:** the user fills in the 10 Volunteers stubs + test 19, then the refactor.
+        **Refactor part 1 done (2026-11-11, Claude):** `_hour_limits` in workbook.py,
+        used by both readers (messages now "Settings, <setting>: ..." and "Volunteers, row
+        N (nickname), <column>: ..."); read_settings step 4 also rejects an empty required
+        setting (else an empty default limit would silently mean "no limit"). 319 green,
+        17 skipped. Still to do: `_settings_by_name`, `_check_fixed_settings`, `_days`,
+        `_available_blocks_of_row`.
+        **Status at the end of the morning of 2026-11-11 (continue here):** 3b committed
+        (`cf0bfdf`, the accidentally committed template was taken out with an amend).
+        The user chose to do **the reader refactor next** (the plan above:
+        `_hour_limits` shared by read_settings and read_volunteers, split read_settings
+        into `_settings_by_name` / `_check_fixed_settings` / `_days`, and
+        `_available_blocks_of_row` for read_volunteers), with the tests unchanged and
+        green; then the 10 Volunteers stubs + test 19 (Testy Hooves 4 per day / none in
+        the test workbook), then the pre-checks for maximum hours.
 - [ ] Warnings before solving (user, 2026-11-11; in 1.0, right after maximum hours):
       problems that don't stop a run but are probably a mistake in the input. First one:
       a volunteer who can never be scheduled (no block where a post they're qualified
