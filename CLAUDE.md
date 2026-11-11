@@ -225,8 +225,16 @@ Meals: Saturday lunch 12:00-14:00, Saturday dinner 18:00-19:00, Sunday lunch 12:
 
 Tabs: ReadMe, Settings, Volunteers, Posts, Skills, Events, Demand, Wishes, Fixed (there
 is no separate Meals tab; the meal windows are rows in Settings).
-The workbook has its own ReadMe tab explaining each tab. Yellow cells = a guess or
-question to check. Posts include e.g. Tickets, Infobooth, Vendorguarding,
+The workbook has its own ReadMe tab explaining each tab. **Formatting (user,
+2026-11-11):** header row coloured, everything below it white (no fixed fills; the
+yellow "to check" cells of the draft are listed in DATA_NOTES.md instead). Kept: the
+conditional formatting on Skills (green by score) and Demand (empty = grey = closed).
+Note for openpyxl: a conditional-formatting fill needs `bgColor` as well as `fgColor`
+(`PatternFill(fill_type="solid", fgColor=x, bgColor=x)`), otherwise Excel shows no
+colour (LibreOffice does); fixed in all four workbooks on 2026-11-11.
+Header row: post columns on Skills and Demand vertical (90 degrees), the other headers
+of Volunteers, Posts, Events, Wishes and Fixed at 45 degrees; Settings and ReadMe
+straight. Posts include e.g. Tickets, Infobooth, Vendorguarding,
 AD Vendorhall guarding, Question vetting, Manestage clean, Sardine duty, Event setup
 (Panel/Workshop room), Event assistance, Signing session, Ticket check (Manestage/
 Stairs/Balcony), Driving, Security (several), GoH Security 1/2, Evening games,
@@ -684,6 +692,29 @@ come after, the user can fix details by hand meanwhile):
       total" (empty = default). Why: large-data tests gave one volunteer 26 hours while
       16 got nothing, and the PCH draft run went up to 20 hours. (Fair spread stays a
       soft rule after 1.0.)
+      **Design (agreed 2026-11-11):** branch `feature/maximum-hours`.
+      - Model: `Volunteer.max_minutes_per_day: int | None = None` and
+        `max_minutes_total: int | None = None`, in **minutes**; None = no limit (so the
+        existing `Volunteer(...)` calls in the tests don't change).
+      - Workbook: **whole hours only** (user: the time step may change later, so no
+        partial hours; assumption: limits are always at least whole hours). 0 = error
+        (not working that day belongs in availability). Settings rows "Default maximum
+        hours per day" / "total" become **required** (format version stays 1: every
+        workbook already has them). Volunteers columns "Max hours per day" / "Max hours
+        total" required headers; **empty cell = the Settings default**, **`none` = no
+        limit** for that volunteer (user), anything else = error naming the volunteer.
+      - Per day = per convention day (06:00-06:00, night shifts count to their day).
+        Only time at a post counts.
+      - Order: 1. model fields; 2. rules `add_maximum_hours_per_day_rule` and
+        `add_maximum_hours_total_rule` (sum of a volunteer's variables per day / overall
+        <= limit in blocks) + tests/solver/test_solver_maximum_hours.py; 3. reader;
+        4. pre-checks (see "Possible further checks"); 5. a real-data run (permission!).
+      - Done first (2026-11-11), in the template, the test workbook and both real
+        workbooks: header row 45 degrees on Volunteers, Posts, Events, Wishes, Fixed;
+        Skills and Demand post headers back to vertical (user); fixed background fills
+        removed below the header (draft and test workbook; conditional formatting kept).
+        Backups `..._before_diagonal_headers.xlsx` and
+        `..._before_white_background.xlsx`; cell contents checked identical, 295 green.
 - [ ] Solver time limit (a setting), so a big run can't hang forever (large-data runs
       with minimum stretch 60 / break 30 took over 3 minutes in CP-SAT).
 - [ ] Compare a real PCH 2026 run with the hand-made 2026 schedule (see "First
@@ -713,6 +744,10 @@ After the minimal viable scheduler:
       per volunteer grouped by team) for small changes by hand without the tool.
 - [ ] Output: an individual schedules tab (per volunteer their shifts; the old
       "Individual Schedules" tab is from the 2025 layout and does not match 2026).
+      **Use the post colours** from the Colour column on Posts (user, 2026-11-11; the
+      reader then also reads Group and Colour). Showing the colour on the Posts tab
+      itself was considered and skipped for now (options: fixed fills, or conditional
+      formatting with a fixed palette of group colours).
 - [ ] Output: a set time window for the Schedule rows (agreed 2026-11-05, postponed by
       the user; version 1.0 fits the rows to the demand). Optional Settings row, e.g.
       `Schedule shows` = `08:00-02:00`, same format and rules as an availability range
