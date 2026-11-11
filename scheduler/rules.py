@@ -7,7 +7,8 @@ same arguments: the model, the problem, and the works variables made in solver.p
 from ortools.sat.python import cp_model
 
 from scheduler.helpers import debug_print
-from scheduler.model import MINUTES_PER_BLOCK, Problem, runs_of_consecutive_blocks
+from scheduler.model import Problem, runs_of_consecutive_blocks, block_of
+from scheduler.model import MINUTES_PER_BLOCK, BLOCKS_PER_DAY
 
 # The solver's yes/no variables: (volunteer_name, post, block) -> variable.
 # Defined here rather than in solver.py, because solver.py imports this file (the other
@@ -231,7 +232,24 @@ def add_maximum_hours_per_day_rule(model: cp_model.CpModel, problem: Problem,
     A convention day runs from 06:00 to 06:00, so night work counts toward the day it
     belongs to. Only time at a post counts. No limit (None) = no rule for that volunteer.
     """
-    raise NotImplementedError  # stub, so the tests can run and fail
+    debug_print("add_maximum_hours_per_day_rule: adding the rule")
+
+    lookup = _variables_by_volunteer_and_block(works)
+    for volunteer in problem.volunteers:
+        if volunteer.max_minutes_per_day is None:
+            continue
+
+        for day in problem.settings.days:
+            # A convention day: from its 06:00 up to the next day's 06:00 (not included).
+            start_block = block_of(day, "06:00", problem.settings)
+            block_after_last = start_block + BLOCKS_PER_DAY
+
+            variables = _variables_of(lookup, volunteer.name, start_block, block_after_last)
+            if not variables:
+                continue  # can't work that day (not available, or no demand): nothing to limit
+
+            # Each variable is one block of MINUTES_PER_BLOCK minutes, so compare in blocks.
+            model.add(sum(variables) <= volunteer.max_minutes_per_day // MINUTES_PER_BLOCK)
 
 
 def add_maximum_hours_total_rule(model: cp_model.CpModel, problem: Problem,
@@ -240,7 +258,23 @@ def add_maximum_hours_total_rule(model: cp_model.CpModel, problem: Problem,
 
     Only time at a post counts. No limit (None) = no rule for that volunteer.
     """
-    raise NotImplementedError  # stub, so the tests can run and fail
+    debug_print("add_maximum_hours_total_rule: adding the rule")
+
+    lookup = _variables_by_volunteer_and_block(works)
+    for volunteer in problem.volunteers:
+        if volunteer.max_minutes_total is None:
+            continue
+
+        # The whole convention: from block 0 up to the end of the last day (not included).
+        start_block = 0
+        block_after_last = start_block + BLOCKS_PER_DAY * len(problem.settings.days)
+
+        variables = _variables_of(lookup, volunteer.name, start_block, block_after_last)
+        if not variables:
+            continue  # can't work at all (no demand they qualify for): nothing to limit
+
+        # Each variable is one block of MINUTES_PER_BLOCK minutes, so compare in blocks.
+        model.add(sum(variables) <= volunteer.max_minutes_total // MINUTES_PER_BLOCK)
 
 
 def _blocks_in_demand(problem: Problem) -> set[int]:

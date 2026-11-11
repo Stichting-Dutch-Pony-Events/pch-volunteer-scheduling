@@ -46,6 +46,7 @@ from the command line. Details can then be fixed by hand.
 - [x] Faster: a run on the real data takes seconds instead of minutes
 - [x] A clear message when no schedule is possible, saying where it gets stuck
 - [ ] A maximum number of hours per volunteer, per day and in total
+- [ ] Warnings for likely mistakes in the input, e.g. a volunteer who can never be scheduled
 - [ ] A time limit for the solver, so a big run can't hang
 - [ ] First run on real data, compared with the hand-made 2026 schedule
 - [ ] Small tidy-ups: a clear error for a damaged workbook, a few extra tests
@@ -57,6 +58,7 @@ from the command line. Details can then be fixed by hand.
 - [ ] Nicer schedules: shifts start and end on the hour or half hour, staying at one
       post, preferring what people are good at, shifts of preferably at most 2 hours
 - [ ] Meal breaks
+- [ ] Maybe: check any schedule against the rules, also one changed by hand afterwards
 - [ ] Event wishes (REALLY want / would like to attend), read from the form answers
 - [ ] A fair spread of work over the volunteers
 - [ ] More output: a "no double booking" check tab, and individual schedules

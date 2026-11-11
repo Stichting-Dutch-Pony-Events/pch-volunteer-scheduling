@@ -41,6 +41,10 @@ class Volunteer:
     # The blocks this volunteer can work (empty = never). For the whole weekend use
     # all_blocks(settings).
     available_blocks: set[int]
+    # The most this volunteer may work per convention day and over the whole convention,
+    # in minutes (None = no limit). The workbook gives whole hours.
+    max_minutes_per_day: int | None = None
+    max_minutes_total: int | None = None
 
 
 @dataclass

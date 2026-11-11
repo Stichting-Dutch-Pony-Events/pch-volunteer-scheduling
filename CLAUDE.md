@@ -715,6 +715,31 @@ come after, the user can fix details by hand meanwhile):
         removed below the header (draft and test workbook; conditional formatting kept).
         Backups `..._before_diagonal_headers.xlsx` and
         `..._before_white_background.xlsx`; cell contents checked identical, 295 green.
+      - **Tests written by Claude (2026-11-11; the user had wanted only stubs):**
+        test_model.py `test_volunteer_has_no_hour_limits_unless_given`;
+        tests/solver/test_solver_maximum_hours.py with 10 tests (daily: beyond raises,
+        up to is fine, each day separately, night counts to its convention day; total:
+        beyond raises, up to is fine; no limit; own limit per volunteer; together with
+        the maximum stretch (user's idea): 8 h Tickets, Mock Mane max 1 h -> raises,
+        max 2 h -> found with Mock Mane <= 2 h). Stubs `add_maximum_hours_per_day_rule`
+        and `add_maximum_hours_total_rule` in rules.py, not yet called from solve().
+        10 red, 1 green (the no-limit test). Trial in a scratch copy: with the rules all
+        306 green; without them exactly the 5 forced tests and `..._can_still_be_met`
+        fail. **Steps 1-2 done (2026-11-11, user implemented, Claude tidied comments):**
+        the two Volunteer fields, both rules (per day via `block_of(day, "06:00")` +
+        `BLOCKS_PER_DAY`; total over all days; `if not variables: continue`), two lines
+        in solve(). 306 green. **Next: step 3, the reader.**
+- [ ] Warnings before solving (user, 2026-11-11; in 1.0, right after maximum hours):
+      problems that don't stop a run but are probably a mistake in the input. First one:
+      a volunteer who can never be scheduled (no block where a post they're qualified
+      for is open while they're available = no variables), e.g. "Mock Mane can never be
+      scheduled: no post they are qualified for is open while they are available".
+      Proposed design: `find_warnings(problem) -> list[str]` in checks.py (plain list,
+      not Python's `warnings` module, not an exception); the command line calls it before
+      solving and prints each line with "Warning: " in front, then carries on; solve()
+      stays silent. Possible later warnings with the same mechanism: a post that is
+      never open, a volunteer available for less than the minimum stretch, after the
+      run who got no shift at all (see the CLI summary idea).
 - [ ] Solver time limit (a setting), so a big run can't hang forever (large-data runs
       with minimum stretch 60 / break 30 took over 3 minutes in CP-SAT).
 - [ ] Compare a real PCH 2026 run with the hand-made 2026 schedule (see "First
@@ -742,6 +767,15 @@ After the minimal viable scheduler:
       so no test churn). The reader skips the Fixed tab until then.
 - [ ] Output: a "No double check" tab (like the old one: events, wishes, one column
       per volunteer grouped by team) for small changes by hand without the tool.
+- [ ] Possible feature (not for 1.0, agreed 2026-11-11): `check_schedule(problem,
+      schedule)` re-checks every hard rule on a finished schedule in plain Python (no
+      CP-SAT) and lists the violations. Upsides: an independent second implementation
+      catches bugs in the rules themselves (CP-SAT follows the rules as written, not as
+      meant); checks all combinations on real runs, not only the tested ones; and checks
+      schedules that did not come from solve(): hand corrections after a run (the
+      automatic version of "No double check"), old hand-made schedules (e.g. 2026), later
+      fixed shifts. Cost: every rule written twice; checking hand edits needs a reader
+      for the output workbook.
 - [ ] Output: an individual schedules tab (per volunteer their shifts; the old
       "Individual Schedules" tab is from the 2025 layout and does not match 2026).
       **Use the post colours** from the Colour column on Posts (user, 2026-11-11; the
