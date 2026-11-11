@@ -1,16 +1,17 @@
 from ortools.sat.python import cp_model
 
+from scheduler.errors import NoScheduleFound
 from scheduler.helpers import debug_print
 from scheduler.model import Schedule, Problem
-from scheduler import rules
-
-
-class NoScheduleFound(Exception):
-    """Raised when no schedule can satisfy all the hard rules."""
+from scheduler import checks, rules
 
 
 def solve(problem: Problem) -> Schedule:
     """Find a schedule that meets all hard rules, using the OR-Tools CP-SAT solver."""
+    # Check problem for obvious unsolvable situations
+    checks.check_problem(problem)
+
+    # Build the model
     model = cp_model.CpModel()
     works = _create_variables(model, problem)
 

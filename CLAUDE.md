@@ -136,12 +136,14 @@ ReferenceDocuments/   (not in git) real data, DATA_NOTES.md, draft input workboo
 scheduler/            model.py (data classes), solver.py, rules.py (hard rules),
                       workbook.py (reads the input workbook), output.py (writes the
                       output workbook), __main__.py (the command line, run with
-                      `python -m scheduler`), helpers.py (debug_print), hello.py
-                      (setup check)
-tests/                test_hello.py, test_model.py, test_time_blocks.py, test_helpers.py;
-                      data/test_input.xlsx (made-up workbook)
+                      `python -m scheduler`), helpers.py (debug_print), errors.py
+                      (WorkbookError, NoScheduleFound and its children), checks.py
+                      (checks before solving: check_problem)
+tests/                test_helpers.py; data/test_input.xlsx (made-up workbook)
+tests/model/          test_model.py, test_time_blocks.py (tests of model.py)
 tests/solver/         test_solver_availability.py, test_solver_basics.py,
-                      test_solver_work_stretches.py, test_solver_stay_at_post.py
+                      test_solver_work_stretches.py, test_solver_stay_at_post.py,
+                      test_checks.py
 tests/output/         test_assign_slots.py, test_write_helpers.py,
                       test_create_schedule_sheet.py, test_write_output.py (tests of
                       writing the output workbook)
@@ -487,7 +489,8 @@ come after, the user can fix details by hand meanwhile):
       locks, LibreOffice usually doesn't); the `except PermissionError` in step 4 stays
       for a file opened during solving. Test fakes `open` only in the command line
       module (`monkeypatch.setattr(command_line, "open", ..., raising=False)`). 258 green.
-- [ ] Clear message when no schedule is possible: simple checks before solving, e.g.
+- [x] Clear message when no schedule is possible (done 2026-11-10, see the revised
+      roadmap below): simple checks before solving, e.g.
       "Tickets, Saturday 14:00: needs 3, only 2 qualified volunteers available"
       (a bare NoScheduleFound on real data gives no clue where to look).
       **Agreed: expand the error types.** NoScheduleFound becomes the parent class with
@@ -591,9 +594,91 @@ come after, the user can fix details by hand meanwhile):
       about 14 s** (was 5 min 23 s for solving alone).
 
 **Roadmap revised (user, 2026-11-08), the rest of version 1.0 in this order:**
-- [ ] Clear message when no schedule is possible: see the item above (pre-checks,
-      NoScheduleFound children). **Next.**
-- [ ] Maximum hours as a **hard rule** (moved into 1.0, user 2026-11-08): per day and in
+- [x] Clear message when no schedule is possible: see the item above (pre-checks,
+      NoScheduleFound children). **Done (2026-11-10)** on branch
+      `feature/no-schedule-messages` (to merge into `develop`).
+      **Design (agreed 2026-11-08; first a small refactor, see below):**
+      - Quick, exact checks before CP-SAT starts; if one finds something, a specific
+        child of NoScheduleFound is raised; if none does, CP-SAT runs as now and plain
+        NoScheduleFound remains for "the rules together don't fit".
+      - Check 1, `NotEnoughQualified(NoScheduleFound)`: at a block a post needs more
+        people than there are volunteers who are qualified *and* available then. The
+        line lists who is qualified and available, and **separately who is qualified
+        but not available then** (user), e.g. "Tickets, Saturday 14:00-15:30: needs 3,
+        only 2 qualified and available (Mock Mane, Testy Hooves); qualified but not
+        available: Dummy Dash". Consecutive blocks with the same problem = one line with
+        a time range.
+      - Check 2, `NotEnoughVolunteers(NoScheduleFound)`: at a block all posts together
+        need more people than there are volunteers available (each post alone may look
+        fine), e.g. "Saturday 14:00: the posts need 30 people in total, only 28
+        volunteers available".
+      - All problems at once (unlike input errors): one error whose message is a list;
+        at most 10 lines plus "and N more".
+      - Error classes in a new `scheduler/errors.py` (NoScheduleFound and its children;
+        WorkbookError maybe too), checks in a new `scheduler/checks.py` with
+        `check_problem(problem) -> None`, one line at the start of `solve()`. solver.py
+        imports the errors, so `from scheduler.solver import NoScheduleFound` keeps
+        working. A separate errors module avoids a circular import (checks needs the
+        errors, solver needs checks). The command line already catches NoScheduleFound.
+      - **Refactor first (user chose option A, 2026-11-08), on the feature branch, green
+        after every step:** 1. `scheduler/errors.py` with WorkbookError and
+        NoScheduleFound, workbook.py and solver.py import them from there (test imports
+        unchanged); 2. remove hello.py and test_hello.py; 3. test_model.py and
+        test_time_blocks.py into `tests/model/`; 4. a one-line-per-module map in
+        `scheduler/__init__.py`, layout here updated. Step 1 done by Claude
+        (2026-11-08): 284 green, 1 skipped, tests unchanged. Step 2 done (hello.py and
+        test_hello.py removed; README project structure brought up to date). Step 3
+        done (test_model.py and test_time_blocks.py in tests/model/, 282 green). Step 4
+        done (map of the modules in the docstring of scheduler/__init__.py; keep it up
+        to date when a module is added, e.g. checks.py). **Option B
+        (subpackages
+        reading/, solving/, writing/ mirroring the tests) postponed until after the soft
+        rules** (user), when rules.py splits into hard and soft rules.
+      - Tests in tests/solver/test_checks.py (9 suggested 2026-11-08: raises for a
+        post short of qualified people; message names post/day/time; lists qualified+
+        available; qualified-but-unavailable don't count (and are listed separately);
+        consecutive blocks become one range; all shortages listed; total shortage raises
+        NotEnoughVolunteers; both children are NoScheduleFound; a rule conflict still
+        gives plain NoScheduleFound).
+      - **Stubs written by Claude (2026-11-08), the user implements:** errors.py has
+        `NotEnoughQualified` and `NotEnoughVolunteers` (real classes, children of
+        NoScheduleFound); `scheduler/checks.py` with `MAX_LINES = 10`,
+        `check_problem(problem)` (check 1 first, check 2 only if check 1 found nothing)
+        and the helpers `_not_enough_qualified_lines(problem) -> list[str]` and
+        `_not_enough_volunteers_lines(problem) -> list[str]` (empty list = fine; private
+        since 2026-11-08, user: only used inside checks.py, tested via check_problem), all
+        raising NotImplementedError; tests/solver/test_checks.py has the 9 test stubs
+        (10 cases: the subclass test is parametrized). `check_problem` is **not yet
+        called from solve()**: that line comes once the checks work (otherwise every
+        solver test hits NotImplementedError). Map in scheduler/__init__.py updated.
+      - **Done (2026-11-10), implemented by the user:** `check_problem` is the first
+        line of `solve()` (before building the model). Both helpers describe the shortage
+        per block as text (`end_line`, the part after the time) and collect blocks per
+        (post, text), so only blocks with exactly the same shortage merge into one time
+        range (`runs_of_consecutive_blocks`). `_message(lines)` cuts at `MAX_LINES` and
+        adds "and N more"; `_end_time(block_after_last, settings)` gives "06:00" for a
+        range that runs to the very end of the convention (where `time_of` would raise).
+        Tests added by Claude: different shortages on consecutive blocks give separate
+        lines; the message stops at the maximum (monkeypatches `checks.MAX_LINES` to 10)
+        and counts the rest; `solve()` raises NotEnoughQualified. 295 green, 1 skipped.
+        Measured on large data (user's permission): both checks together ~10 ms, so no
+        lookup/cache needed.
+      - **Possible further checks (Claude, 2026-11-10; not planned, add when useful):**
+        - Maximum hours, **with the maximum-hours item**: total demand in hours > sum of
+          everyone's maximum hours; per post, demand in hours > what the qualified
+          volunteers can work together (also per day).
+        - Groups of posts within one block (between check 1 and check 2): e.g. Tickets
+          and Infobooth together need 3 but share the same 2 qualified people. Exact
+          version: a matching per block (can every place get its own qualified, available
+          volunteer?), catches everything within one block; the hard part is a message
+          that names the short group. Only if plain NoScheduleFound on real data leaves
+          the user guessing.
+        - Rules over time (stretches, breaks; e.g. a post open longer than the maximum
+          stretch with one qualified person): hard to check exactly, left to CP-SAT.
+        - Later features: a fixed shift that is impossible (not qualified/available),
+          meal breaks.
+- [ ] Maximum hours as a **hard rule** (**next**; moved into 1.0, user 2026-11-08; add
+      the maximum-hours pre-checks with it, see "Possible further checks" above): per day and in
       total, defaults from the Settings rows "Default maximum hours per day" (8) / "total"
       (16), per volunteer from the Volunteers columns "Max hours per day" / "Max hours
       total" (empty = default). Why: large-data tests gave one volunteer 26 hours while
@@ -606,8 +691,8 @@ come after, the user can fix details by hand meanwhile):
 - [ ] Small: write test 6 of the stay-at-post rule (still a skipped stub).
 - [ ] Small: a damaged file with an .xlsx name (zipfile.BadZipFile) becomes a clear
       WorkbookError.
-- [ ] Small: optional guard test for a break across 06:00; remove hello.py and
-      test_hello.py once they're no longer useful
+- [ ] Small: optional guard test for a break across 06:00 (hello.py and test_hello.py
+      were removed on 2026-11-08)
 
 **Version 1.0 = all of the above**: a schedule for real data that follows the hard rules
 (except meal breaks and fixed shifts; including maximum hours), run from the command
