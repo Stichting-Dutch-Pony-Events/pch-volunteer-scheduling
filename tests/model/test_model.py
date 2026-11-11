@@ -1,4 +1,4 @@
-from scheduler.model import Schedule, Settings, runs_of_consecutive_blocks
+from scheduler.model import Schedule, Settings, Volunteer, runs_of_consecutive_blocks
 
 
 def test_default_settings_match_the_agreed_rules():
@@ -15,6 +15,18 @@ def test_default_settings_match_the_agreed_rules():
     # Assert
     assert (settings.min_stretch_minutes, settings.max_stretch_minutes,
             settings.min_break_minutes) == (60, 180, 30)
+
+
+def test_volunteer_has_no_hour_limits_unless_given():
+    """A Volunteer made without hour limits has none (None = no limit)."""
+    # Arrange
+    # (nothing to arrange: we make a Volunteer without the two limit fields)
+
+    # Act
+    volunteer = Volunteer(name="Mock Mane", skills={"Tickets": 1}, available_blocks={0})
+
+    # Assert
+    assert (volunteer.max_minutes_per_day, volunteer.max_minutes_total) == (None, None)
 
 
 def test_consecutive_blocks_form_one_work_stretch():

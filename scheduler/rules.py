@@ -224,6 +224,25 @@ def add_stay_at_post_rule(model: cp_model.CpModel, problem: Problem, works: Work
             model.add(sum(movers) + sum(stoppers) <= drop).only_enforce_if(someone_moves)
 
 
+def add_maximum_hours_per_day_rule(model: cp_model.CpModel, problem: Problem,
+                                   works: Works) -> None:
+    """Hard rule: a volunteer works at most max_minutes_per_day on each convention day.
+
+    A convention day runs from 06:00 to 06:00, so night work counts toward the day it
+    belongs to. Only time at a post counts. No limit (None) = no rule for that volunteer.
+    """
+    raise NotImplementedError  # stub, so the tests can run and fail
+
+
+def add_maximum_hours_total_rule(model: cp_model.CpModel, problem: Problem,
+                                 works: Works) -> None:
+    """Hard rule: a volunteer works at most max_minutes_total over the whole convention.
+
+    Only time at a post counts. No limit (None) = no rule for that volunteer.
+    """
+    raise NotImplementedError  # stub, so the tests can run and fail
+
+
 def _blocks_in_demand(problem: Problem) -> set[int]:
     """Every block that appears in the demand, each only once."""
     blocks = set()
