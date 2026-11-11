@@ -729,6 +729,21 @@ come after, the user can fix details by hand meanwhile):
         the two Volunteer fields, both rules (per day via `block_of(day, "06:00")` +
         `BLOCKS_PER_DAY`; total over all days; `if not variables: continue`), two lines
         in solve(). 306 green. **Next: step 3, the reader.**
+      - **Step 3 design (agreed 2026-11-11):** one reader per tab stays (user):
+        `read_volunteers` returns `dict[str, Volunteer]` (available blocks + both limits,
+        `skills={}`; `read_problem` fills in the skills). New Settings fields
+        `default_max_minutes_per_day` / `default_max_minutes_total` (default None). Both
+        Settings rows required; Settings and Volunteers cells: whole hours >= 1, or
+        `none` (case/spaces ignored) = no limit; per day <= 24, total <= 24 * days; per
+        day <= total only when both are written as numbers (Settings: the two defaults;
+        Volunteers: the same row). Empty Volunteers cell = the Settings default.
+        Shared helper `_hour_limit(text, max_hours) -> int | None` (stub, ValueError;
+        tested via the readers). Stubs written by Claude: 8 tests (13 cases) in
+        test_read_settings.py, 10 tests (16 cases) in test_read_volunteers.py (section
+        comments "Availability" / "Hour limits"), 1 in test_read_problem.py (needs
+        Testy Hooves with 4 per day / none total in tests/data/test_input.xlsx).
+        306 green, 30 skipped. The existing read_volunteers tests are left as they are
+        on purpose: the user wants to see them fail after the refactor, then fix them.
 - [ ] Warnings before solving (user, 2026-11-11; in 1.0, right after maximum hours):
       problems that don't stop a run but are probably a mistake in the input. First one:
       a volunteer who can never be scheduled (no block where a post they're qualified

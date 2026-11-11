@@ -427,6 +427,17 @@ def _whole_number(settings: dict[str, str], name: str) -> int:
                             f"number.") from None
 
 
+def _hour_limit(text: str, max_hours: int) -> int | None:
+    """An hour limit cell (already through cell_text, not empty) as minutes.
+
+    Whole hours from 1 up to max_hours (24 for a day, 24 times the number of days for the
+    total) give that many hours in minutes; "none" (case ignored) = no limit, None.
+    Anything else raises ValueError; the reader puts tab, row, volunteer or setting in
+    front of the message. An empty cell is handled by the reader (the default).
+    """
+    raise NotImplementedError  # stub, so the tests can run and fail
+
+
 def cell_text(value: str | int | float | time | None) -> str:
     """The value of a cell as tidy text: spaces around it removed, empty cell = "".
 

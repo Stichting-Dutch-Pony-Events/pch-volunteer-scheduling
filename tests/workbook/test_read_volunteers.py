@@ -26,6 +26,8 @@ def _volunteers_sheet(rows: list[tuple], header: tuple[str, ...] = HEADER) -> Wo
     return sheet
 
 
+# --- Availability ---
+
 def test_each_volunteer_gets_their_available_blocks():
     """Every volunteer gets the blocks of the days they are available."""
     # Arrange
@@ -161,3 +163,109 @@ def test_row_with_availability_but_no_nickname_raises_workbook_error():
     # Assert
     with pytest.raises(WorkbookError, match="Volunteers.*row 2"):   # row 1 is the header
         read_volunteers(sheet, RULES)
+
+
+# --- Hour limits ---
+
+def test_written_hour_limits_are_read_in_minutes():
+    """Max hours per day 4 and total 10 become 240 and 600 minutes on the Volunteer."""
+    # Arrange
+
+    # Act
+
+    # Assert
+    pytest.skip("not written yet")
+
+
+def test_empty_hour_limit_cell_gets_the_default_from_the_settings():
+    """An empty Max hours cell gets the default hour limit from the settings."""
+    # Arrange
+
+    # Act
+
+    # Assert
+    pytest.skip("not written yet")
+
+
+@pytest.mark.parametrize("value", ["none", "None", " NONE "])
+def test_none_as_hour_limit_means_no_limit(value):
+    """A Max hours cell with "none" means no limit (None); case and spaces are ignored."""
+    # Arrange
+
+    # Act
+
+    # Assert
+    pytest.skip("not written yet")
+
+
+@pytest.mark.parametrize("value", [7.5, "eight", "8h"], ids=["decimal", "word", "unit"])
+def test_hour_limit_that_is_not_a_whole_number_raises_workbook_error(value):
+    """A Max hours cell that is not a whole number is an error naming volunteer and column."""
+    # Arrange
+
+    # Act
+
+    # Assert
+    pytest.skip("not written yet")
+
+
+@pytest.mark.parametrize("value", [0, -2], ids=["zero", "negative"])
+def test_hour_limit_of_zero_or_less_raises_workbook_error(value):
+    """A Max hours cell of 0 or less is an error naming the volunteer."""
+    # Arrange
+
+    # Act
+
+    # Assert
+    pytest.skip("not written yet")
+
+
+def test_daily_limit_over_24_hours_raises_workbook_error():
+    """More than 24 Max hours per day is an error naming the volunteer (probably a typo)."""
+    # Arrange
+
+    # Act
+
+    # Assert
+    pytest.skip("not written yet")
+
+
+def test_total_limit_over_24_hours_per_day_raises_workbook_error():
+    """A Max hours total above 24 times the number of days is an error naming the volunteer."""
+    # Arrange
+
+    # Act
+
+    # Assert
+    pytest.skip("not written yet")
+
+
+def test_daily_limit_above_the_total_limit_in_the_same_row_raises_workbook_error():
+    """Per day higher than total, both written as a number, is an error naming the volunteer."""
+    # Arrange
+
+    # Act
+
+    # Assert
+    pytest.skip("not written yet")
+
+
+@pytest.mark.parametrize("column", ["Max hours per day", "Max hours total"])
+def test_missing_hour_limit_column_raises_workbook_error(column):
+    """A missing Max hours column is an error naming that column."""
+    # Arrange
+
+    # Act
+
+    # Assert
+    pytest.skip("not written yet")
+
+
+def test_completely_empty_rows_are_skipped_also_with_hour_limit_columns():
+    """An empty row is still skipped now that the hour limit columns are there."""
+    # Arrange
+
+    # Act
+
+    # Assert
+    pytest.skip("not written yet")

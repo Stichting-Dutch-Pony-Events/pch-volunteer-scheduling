@@ -280,3 +280,13 @@ def test_the_test_workbook_gives_a_schedule():
 
     # Assert
     assert len(schedule.assignments) > 0
+
+
+def test_read_problem_gives_each_volunteer_their_hour_limits():
+    """In the test workbook, Testy Hooves has their own limits (4 per day, none in total)."""
+    # Arrange
+
+    # Act
+
+    # Assert
+    pytest.skip("not written yet")

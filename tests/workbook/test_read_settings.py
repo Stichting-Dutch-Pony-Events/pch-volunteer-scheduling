@@ -271,3 +271,91 @@ def test_missing_value_column_raises_workbook_error():
     # Assert
     with pytest.raises(WorkbookError, match="Settings.*Value"):
         read_settings(sheet)
+
+
+# --- Default hour limits ---
+
+def test_default_hour_limits_are_read_in_minutes():
+    """Default maximum hours per day 8 and total 16 become 480 and 960 minutes."""
+    # Arrange
+
+    # Act
+
+    # Assert
+    pytest.skip("not written yet")
+
+
+@pytest.mark.parametrize("setting", ["Default maximum hours per day",
+                                     "Default maximum hours total"])
+def test_none_as_default_hour_limit_means_no_limit(setting):
+    """A default hour limit of "none" means no limit (None)."""
+    # Arrange
+
+    # Act
+
+    # Assert
+    pytest.skip("not written yet")
+
+
+@pytest.mark.parametrize("setting", ["Default maximum hours per day",
+                                     "Default maximum hours total"])
+def test_missing_default_hour_limit_raises_workbook_error(setting):
+    """Leaving out a default hour limit is an error naming that setting."""
+    # Arrange
+
+    # Act
+
+    # Assert
+    pytest.skip("not written yet")
+
+
+@pytest.mark.parametrize("value", [7.5, "eight", "8h"], ids=["decimal", "word", "unit"])
+def test_default_hour_limit_that_is_not_a_whole_number_raises_workbook_error(value):
+    """A default hour limit that is not a whole number of hours is an error naming the value."""
+    # Arrange
+
+    # Act
+
+    # Assert
+    pytest.skip("not written yet")
+
+
+@pytest.mark.parametrize("value", [0, -2], ids=["zero", "negative"])
+def test_default_hour_limit_of_zero_or_less_raises_workbook_error(value):
+    """A default hour limit of 0 or less is an error naming the setting."""
+    # Arrange
+
+    # Act
+
+    # Assert
+    pytest.skip("not written yet")
+
+
+def test_default_daily_limit_over_24_hours_raises_workbook_error():
+    """A default maximum of more than 24 hours per day is an error (probably a typo)."""
+    # Arrange
+
+    # Act
+
+    # Assert
+    pytest.skip("not written yet")
+
+
+def test_default_total_limit_over_24_hours_per_day_raises_workbook_error():
+    """A default total of more than 24 hours times the number of days is an error."""
+    # Arrange
+
+    # Act
+
+    # Assert
+    pytest.skip("not written yet")
+
+
+def test_default_daily_limit_above_the_default_total_raises_workbook_error():
+    """A default per day higher than the default total is an error naming both settings."""
+    # Arrange
+
+    # Act
+
+    # Assert
+    pytest.skip("not written yet")
