@@ -755,6 +755,23 @@ come after, the user can fix details by hand meanwhile):
         front; per day <= total only when both numbers). Settings fields default None.
         test_read_problem's in-memory workbook got the two rows (8/16). 319 green,
         17 skipped; both real workbooks still read. **Next: 3b.**
+        **Then (agreed 2026-11-11, after 3b): refactor the readers**, tests stay as they
+        are: `read_settings` becomes a table of contents with `_settings_by_name(sheet)`,
+        `_check_fixed_settings(...)`, `_days(text)`; `read_volunteers` gets
+        `_available_blocks_of_row(...)`; and one shared helper
+        `_hour_limits(per_day: (name, text), total: (name, text), number_of_days) ->
+        (int | None, int | None)` (ValueError naming the setting/column, per day <= total
+        only when both are numbers, empty -> None so read_volunteers fills in the
+        default); the readers only put "Settings, " / "Volunteers, row N (nickname), " in
+        front. Order reversed by the user (they were halfway through read_volunteers).
+        **3b, code done (2026-11-11; user implemented, Claude fixed):** read_volunteers
+        returns `dict[str, Volunteer]` (skills={}), empty limit cell = the settings
+        default, errors "Volunteers, row N (nickname), Max hours per day: ...", per day
+        <= total only when both cells are written, a row with only limits but no nickname
+        is an error; read_problem fills in `volunteer.skills`. Old tests adapted (HEADER
+        with the two columns, compare `.available_blocks`; test_read_problem's in-memory
+        workbook + GOOD_PROBLEM 480/960). 319 green, 17 skipped (the 10 + 1 new stubs).
+        **Next:** the user fills in the 10 Volunteers stubs + test 19, then the refactor.
 - [ ] Warnings before solving (user, 2026-11-11; in 1.0, right after maximum hours):
       problems that don't stop a run but are probably a mistake in the input. First one:
       a volunteer who can never be scheduled (no block where a post they're qualified

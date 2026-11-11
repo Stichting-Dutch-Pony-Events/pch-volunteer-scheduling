@@ -11,8 +11,10 @@ from scheduler.workbook import WorkbookError, read_volunteers
 RULES = Settings(min_stretch_minutes=60, max_stretch_minutes=180, min_break_minutes=30,
                  days=("Friday", "Saturday", "Sunday"))
 
-# Like the real Volunteers tab: Team and Notes are there but not read.
-HEADER = ("Nickname", "Team", "Friday", "Saturday", "Sunday", "Notes")
+# Like the real Volunteers tab: Team and Notes are there but not read. A row with only the
+# first five values leaves the hour limit cells empty (= the defaults from the settings).
+HEADER = ("Nickname", "Team", "Friday", "Saturday", "Sunday", "Max hours per day",
+          "Max hours total", "Notes")
 
 
 def _volunteers_sheet(rows: list[tuple], header: tuple[str, ...] = HEADER) -> Worksheet:
@@ -40,8 +42,8 @@ def test_each_volunteer_gets_their_available_blocks():
     volunteers = read_volunteers(sheet, RULES)
 
     # Assert
-    assert volunteers == {"Mock Mane": set(range(0, 96)),
-                          "Testy Hooves": set(range(104, 144))}
+    assert volunteers["Mock Mane"].available_blocks == set(range(0, 96))
+    assert volunteers["Testy Hooves"].available_blocks == set(range(104, 144))
 
 
 def test_availability_of_several_days_is_combined():
@@ -54,14 +56,15 @@ def test_availability_of_several_days_is_combined():
     volunteers = read_volunteers(sheet, RULES)
 
     # Assert
-    assert volunteers == {"Mock Mane": set(range(96, 192)) | set(range(200, 224))}
+    assert volunteers["Mock Mane"].available_blocks == set(range(96, 192)) | set(range(200, 224))
 
 
 def test_the_days_come_from_the_settings():
     """The day columns follow the Days setting: with Saturday as first day, it starts at block 0."""
     # Arrange
     # No Friday column, and the day columns in another order than in the settings.
-    custom_header = ("Nickname", "Team", "Sunday", "Saturday", "Notes")
+    custom_header = ("Nickname", "Team", "Sunday", "Saturday", "Notes", "Max hours per day",
+                     "Max hours total")
     volunteer_rows = [("Mock Mane", None, "no", "yes", "Columns in another order")]
     sheet = _volunteers_sheet(rows=volunteer_rows, header=custom_header)
 
@@ -72,7 +75,7 @@ def test_the_days_come_from_the_settings():
     volunteers = read_volunteers(sheet=sheet, settings=custom_rules)
 
     # Assert
-    assert volunteers == {"Mock Mane": set(range(0, 96))}  # Saturday is now blocks 0-95
+    assert volunteers["Mock Mane"].available_blocks == set(range(0, 96))  # Saturday: 0-95
 
 
 def test_empty_rows_are_skipped():
@@ -88,14 +91,14 @@ def test_empty_rows_are_skipped():
     volunteers = read_volunteers(sheet, RULES)
 
     # Assert
-    assert volunteers == {"Mock Mane": set(range(0, 96)),
-                          "Testy Hooves": set(range(104, 144))}
+    assert list(volunteers) == ["Mock Mane", "Testy Hooves"]
 
 
 def test_missing_day_column_raises_workbook_error():
     """A day from the settings without its own column is an error naming that day."""
     # Arrange
-    custom_header = ("Nickname", "Team", "Friday", "Saturday", "Notes")
+    custom_header = ("Nickname", "Team", "Friday", "Saturday", "Notes", "Max hours per day",
+                     "Max hours total")
     volunteer_rows = [("Mock Mane", None, "no", "yes", "Is the Sunday missing?")]
     sheet = _volunteers_sheet(volunteer_rows, header=custom_header)
 

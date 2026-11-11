@@ -16,9 +16,11 @@ TEST_WORKBOOK = Path(__file__).parent.parent / "data" / "test_input.xlsx"
 GOOD_PROBLEM = Problem(
     volunteers=[
         Volunteer(name="Mock Mane", skills={"Tickets": 3},
-                  available_blocks=set(range(0, 96))),        # all of Friday
+                  available_blocks=set(range(0, 96)),         # all of Friday
+                  max_minutes_per_day=480, max_minutes_total=960),   # the defaults
         Volunteer(name="Testy Hooves", skills={"Tickets": 1, "Infobooth": 3},
-                  available_blocks=set(range(112, 128))),     # Saturday 10:00-14:00
+                  available_blocks=set(range(112, 128)),      # Saturday 10:00-14:00
+                  max_minutes_per_day=480, max_minutes_total=960),
     ],
     posts=[Post(name="Tickets"), Post(name="Infobooth")],
     demand={("Tickets", 32): 1, ("Tickets", 33): 1,           # Friday 14:00-15:00
@@ -53,8 +55,8 @@ def _good_workbook() -> Workbook:
         ("Default maximum hours per day", 8),
         ("Default maximum hours total", 16)])
     _add_sheet(workbook, "Volunteers", [
-        ("Nickname", "Team", "Friday", "Saturday"),
-        ("Mock Mane", "Ticketing", "yes", "no"),
+        ("Nickname", "Team", "Friday", "Saturday", "Max hours per day", "Max hours total"),
+        ("Mock Mane", "Ticketing", "yes", "no"),        # empty limits: the defaults
         ("Testy Hooves", "Infobooth", "no", "10:00-14:00")])
     _add_sheet(workbook, "Posts", [
         ("Post",),

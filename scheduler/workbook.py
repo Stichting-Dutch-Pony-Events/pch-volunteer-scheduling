@@ -72,17 +72,17 @@ def read_problem(path: str | Path) -> Problem:
 
     # 3. Each tab on its own. Settings first: the other readers need the days.
     settings = read_settings(workbook["Settings"])
-    availability = read_volunteers(workbook["Volunteers"], settings)
+    volunteers = read_volunteers(workbook["Volunteers"], settings)
     posts = read_posts(workbook["Posts"])
     skills = read_skills(workbook["Skills"])
     demand = read_demand(workbook["Demand"], settings)
 
     # 4. Across tabs: the same volunteers on Volunteers and Skills...
-    for nickname in availability:
+    for nickname in volunteers:
         if nickname not in skills:
             raise WorkbookError(f"Skills: no row for {nickname} (from the Volunteers tab).")
     for nickname in skills:
-        if nickname not in availability:
+        if nickname not in volunteers:
             raise WorkbookError(f"Skills: {nickname} is not on the Volunteers tab.")
 
     # ...and the same posts on Posts, Skills and Demand.
@@ -92,13 +92,12 @@ def read_problem(path: str | Path) -> Problem:
     _check_same_posts(workbook["Skills"], ["Nickname", "Team", "Notes"], post_names)
     _check_same_posts(workbook["Demand"], ["Day", "Time", "Notes"], post_names)
 
-    # 5. Combine: each volunteer with their skills and availability.
-    volunteers = []
-    for nickname, available_blocks in availability.items():
-        volunteers.append(Volunteer(name=nickname, skills=skills[nickname],
-                                    available_blocks=available_blocks))
+    # 5. Combine: each volunteer gets their skills (the dict keeps the order of the sheet).
+    for nickname, volunteer in volunteers.items():
+        volunteer.skills = skills[nickname]
 
-    return Problem(volunteers=volunteers, posts=posts, demand=demand, settings=settings)
+    return Problem(volunteers=list(volunteers.values()), posts=posts, demand=demand,
+                   settings=settings)
 
 
 def read_settings(sheet: Worksheet) -> Settings:
@@ -196,34 +195,45 @@ def read_settings(sheet: Worksheet) -> Settings:
         default_max_minutes_total=default_total)
 
 
-def read_volunteers(sheet: Worksheet, settings: Settings) -> dict[str, set[int]]:
-    """The Volunteers tab as {nickname: available blocks}, in the order of the sheet.
+def read_volunteers(sheet: Worksheet, settings: Settings) -> dict[str, Volunteer]:
+    """The Volunteers tab as {nickname: Volunteer}, in the order of the sheet.
 
-    Reads the Nickname column and one availability column per day in settings.days (a
-    missing day column is an error); other columns are ignored. Each day's cell goes
-    through parse_availability and the days are combined. A completely empty row is
-    skipped. Raises WorkbookError (naming row, volunteer and day where possible) for a
-    missing column, a nickname used twice, a row with availability but no nickname, an
-    invalid availability, or a volunteer who is not available on any day.
+    Reads the Nickname column, one availability column per day in settings.days and the
+    columns Max hours per day and Max hours total (a missing column is an error). Each
+    day's cell goes through parse_availability and the days are combined. An hour limit
+    is whole hours or "none" (no limit); an empty cell gets the default from the
+    settings. Skills stay empty here: read_problem adds them from the Skills tab. A
+    completely empty row is skipped. Raises WorkbookError (naming row, volunteer and day
+    or column where possible) for a missing column, a nickname used twice, a row with
+    values but no nickname, an invalid availability or hour limit, a volunteer who is not
+    available on any day, or a written per day limit above the written total.
     """
     debug_print(f"read_volunteers: reading tab {sheet.title}")
-    # 1. The Nickname column and one column per convention day.
-    columns = find_columns(sheet, ["Nickname"] + list(settings.days))
+    # 1. The Nickname column, one column per convention day and the two hour limit columns.
+    limit_columns = ["Max hours per day", "Max hours total"]
+    columns = find_columns(sheet, ["Nickname"] + list(settings.days) + limit_columns)
 
     volunteers = {}
     for row in range(2, sheet.max_row + 1):
         nickname = cell_text(sheet.cell(row=row, column=columns["Nickname"]).value)
 
-        # 2. The availability cells of this row, per day: {"Friday": "yes", ...}
+        # 2. The cells of this row: availability per day {"Friday": "yes", ...} and the
+        #    hour limits {"Max hours per day": "8", ...}
         availability = {}
         for day in settings.days:
             availability[day] = cell_text(sheet.cell(row=row, column=columns[day]).value)
+        hour_limits = {}
+        for name in limit_columns:
+            hour_limits[name] = cell_text(sheet.cell(row=row, column=columns[name]).value)
 
         # 3. A row without nickname is only fine when it is completely empty.
         if nickname == "":
             for day in settings.days:
                 if availability[day] != "":
                     raise WorkbookError(f"Volunteers, row {row}: availability but no nickname.")
+            for name in limit_columns:
+                if hour_limits[name] != "":
+                    raise WorkbookError(f"Volunteers, row {row}: {name} but no nickname.")
             continue  # an empty row: skip it
 
         if nickname in volunteers:
@@ -243,7 +253,44 @@ def read_volunteers(sheet: Worksheet, settings: Settings) -> dict[str, set[int]]
             raise WorkbookError(f"Volunteers, row {row}: {nickname} is not available on any day. "
                                 f"Remove the row if they are not coming.")
 
-        volunteers[nickname] = blocks
+        # 5. The hour limits: an empty cell = the default from the settings, otherwise
+        #    _hour_limit (whole hours or "none"). The checks only look at written values.
+        where = f"Volunteers, row {row} ({nickname})"   # in front of every message below
+        per_day_text = hour_limits["Max hours per day"]
+        total_text = hour_limits["Max hours total"]
+
+        if per_day_text == "":
+            max_minutes_per_day = settings.default_max_minutes_per_day
+        else:
+            try:
+                max_minutes_per_day = _hour_limit(per_day_text, 24)
+            except ValueError as error:
+                raise WorkbookError(f"{where}, Max hours per day: {error}") from None
+
+        if total_text == "":
+            max_minutes_total = settings.default_max_minutes_total
+        else:
+            try:
+                max_minutes_total = _hour_limit(total_text, 24 * len(settings.days))
+            except ValueError as error:
+                raise WorkbookError(f"{where}, Max hours total: {error} (24 hours for each "
+                                    f"of the {len(settings.days)} days)") from None
+
+        # Per day may not be more than the total, but only when both are written as a
+        # number in this row (a default or "none" is never compared).
+        if per_day_text != "" and total_text != "":
+            if max_minutes_per_day is not None and max_minutes_total is not None:
+                if max_minutes_per_day > max_minutes_total:
+                    raise WorkbookError(f"{where}: Max hours per day "
+                                        f"({max_minutes_per_day // 60}) is more than Max hours "
+                                        f"total ({max_minutes_total // 60}).")
+
+        # Skills are on another tab: read_problem fills them in.
+        volunteers[nickname] = Volunteer(name=nickname,
+                                         skills={},
+                                         available_blocks=blocks,
+                                         max_minutes_per_day=max_minutes_per_day,
+                                         max_minutes_total=max_minutes_total)
 
     return volunteers
 
