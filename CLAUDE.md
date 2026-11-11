@@ -783,6 +783,12 @@ come after, the user can fix details by hand meanwhile):
         (RULES defaults 360/720) and test 19 (test workbook: Testy Hooves 4 per day / none
         total). 336 green, nothing skipped. Code came first, so each was checked by hand
         in a scratch copy: break one line, the matching test goes red.
+        **Reader refactor done (2026-11-11, Claude, tests unchanged, 336 green):**
+        read_settings is a table of contents over `_settings_by_name`,
+        `_check_setting_names`, `_check_fixed_settings`, `_days` and `_hour_limits`;
+        read_volunteers uses `_available_blocks_of_row` and `_hour_limits_of_row`. Helpers
+        used by one reader sit right after it. **Next: step 4, the maximum-hours
+        pre-checks.**
         **Status at the end of the morning of 2026-11-11 (continue here):** 3b committed
         (`cf0bfdf`, the accidentally committed template was taken out with an amend).
         The user chose to do **the reader refactor next** (the plan above:
