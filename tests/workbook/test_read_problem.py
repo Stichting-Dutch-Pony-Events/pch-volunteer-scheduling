@@ -26,7 +26,8 @@ GOOD_PROBLEM = Problem(
             ("Infobooth", 112): 1, ("Infobooth", 113): 1,     # Saturday 10:00-11:00
             ("Infobooth", 114): 1, ("Infobooth", 115): 1},
     settings=Settings(min_stretch_minutes=60, max_stretch_minutes=180,
-                      min_break_minutes=30, days=("Friday", "Saturday")))
+                      min_break_minutes=30, days=("Friday", "Saturday"),
+                      default_max_minutes_per_day=480, default_max_minutes_total=960))
 
 
 def _add_sheet(workbook: Workbook, title: str, rows: list[tuple]) -> None:
@@ -48,7 +49,9 @@ def _good_workbook() -> Workbook:
         ("Days", "Friday, Saturday"),
         ("Minimum work stretch", 60),
         ("Maximum work stretch", 180),
-        ("Minimum break", 30)])
+        ("Minimum break", 30),
+        ("Default maximum hours per day", 8),
+        ("Default maximum hours total", 16)])
     _add_sheet(workbook, "Volunteers", [
         ("Nickname", "Team", "Friday", "Saturday"),
         ("Mock Mane", "Ticketing", "yes", "no"),

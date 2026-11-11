@@ -747,6 +747,14 @@ come after, the user can fix details by hand meanwhile):
         **Order (user):** 3a Settings first (fill in the 8 settings tests, implement,
         green), then 3b read_volunteers + read_problem (refactor, fix old tests, the
         10 + 1 new tests).
+        **3a done (2026-11-11):** user wrote the settings tests (the separate "missing"
+        test merged into `test_missing_setting_raises_workbook_error`; GOOD_ROWS 6/12;
+        `_rows_with`/`_rows_without` take optional base rows); Claude implemented
+        `_hour_limit(text, max_hours)` (ValueError, "none" -> None, int(), 1..max,
+        hours * 60) and the part in `read_settings` (WorkbookError with the setting in
+        front; per day <= total only when both numbers). Settings fields default None.
+        test_read_problem's in-memory workbook got the two rows (8/16). 319 green,
+        17 skipped; both real workbooks still read. **Next: 3b.**
 - [ ] Warnings before solving (user, 2026-11-11; in 1.0, right after maximum hours):
       problems that don't stop a run but are probably a mistake in the input. First one:
       a volunteer who can never be scheduled (no block where a post they're qualified
