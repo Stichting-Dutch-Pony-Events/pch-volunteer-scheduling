@@ -290,8 +290,16 @@ def test_the_test_workbook_gives_a_schedule():
 def test_read_problem_gives_each_volunteer_their_hour_limits():
     """In the test workbook, Testy Hooves has their own limits (4 per day, none in total)."""
     # Arrange
+    # (Nothing to arrange: the test workbook is TEST_WORKBOOK.)
 
     # Act
+    problem = read_problem(TEST_WORKBOOK)
 
     # Assert
-    pytest.skip("not written yet")
+    volunteers = {}
+    for volunteer in problem.volunteers:
+        volunteers[volunteer.name] = volunteer
+    assert volunteers["Testy Hooves"].max_minutes_per_day == 240    # 4 hours
+    assert volunteers["Testy Hooves"].max_minutes_total is None     # "none" = no limit
+    assert volunteers["Mock Mane"].max_minutes_per_day == 480       # empty: the defaults
+    assert volunteers["Mock Mane"].max_minutes_total == 960         # (8 and 16 hours)

@@ -777,7 +777,12 @@ come after, the user can fix details by hand meanwhile):
         N (nickname), <column>: ..."); read_settings step 4 also rejects an empty required
         setting (else an empty default limit would silently mean "no limit"). 319 green,
         17 skipped. Still to do: `_settings_by_name`, `_check_fixed_settings`, `_days`,
-        `_available_blocks_of_row`.
+        `_available_blocks_of_row`. Then `_hour_limit(name, text, max_hours)` names the
+        setting/column itself (no re-raise in `_hour_limits`, user's choice).
+        **Tests filled in by Claude (2026-11-11, on request):** the 10 Volunteers tests
+        (RULES defaults 360/720) and test 19 (test workbook: Testy Hooves 4 per day / none
+        total). 336 green, nothing skipped. Code came first, so each was checked by hand
+        in a scratch copy: break one line, the matching test goes red.
         **Status at the end of the morning of 2026-11-11 (continue here):** 3b committed
         (`cf0bfdf`, the accidentally committed template was taken out with an amend).
         The user chose to do **the reader refactor next** (the plan above:
