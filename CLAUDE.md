@@ -688,7 +688,10 @@ come after, the user can fix details by hand meanwhile):
       with minimum stretch 60 / break 30 took over 3 minutes in CP-SAT).
 - [ ] Compare a real PCH 2026 run with the hand-made 2026 schedule (see "First
       end-to-end run" above; the run works, the comparison isn't done).
-- [ ] Small: write test 6 of the stay-at-post rule (still a skipped stub).
+- [x] Small: test 6 of the stay-at-post rule. **Dropped (user, 2026-11-11), stub removed:**
+      the solved test workbook has no post switches at all (checked: 0 moves in 3 runs),
+      so the test would check nothing; the 7 small solver tests already cover the rule.
+      295 green, nothing skipped.
 - [ ] Small: a damaged file with an .xlsx name (zipfile.BadZipFile) becomes a clear
       WorkbookError.
 - [ ] Small: optional guard test for a break across 06:00 (hello.py and test_hello.py

@@ -238,13 +238,3 @@ def test_volunteer_who_already_worked_the_minimum_may_not_move_on():
     # Assert
     with pytest.raises(NoScheduleFound):
         solve(problem)
-
-
-def test_test_workbook_schedule_follows_the_stay_at_post_rule():
-    """In the solved test workbook, every move to another post fits the drop in demand."""
-    # Arrange
-
-    # Act
-
-    # Assert
-    pytest.skip("not written yet")
