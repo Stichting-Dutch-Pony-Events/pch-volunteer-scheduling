@@ -744,6 +744,9 @@ come after, the user can fix details by hand meanwhile):
         Testy Hooves with 4 per day / none total in tests/data/test_input.xlsx).
         306 green, 30 skipped. The existing read_volunteers tests are left as they are
         on purpose: the user wants to see them fail after the refactor, then fix them.
+        **Order (user):** 3a Settings first (fill in the 8 settings tests, implement,
+        green), then 3b read_volunteers + read_problem (refactor, fix old tests, the
+        10 + 1 new tests).
 - [ ] Warnings before solving (user, 2026-11-11; in 1.0, right after maximum hours):
       problems that don't stop a run but are probably a mistake in the input. First one:
       a volunteer who can never be scheduled (no block where a post they're qualified

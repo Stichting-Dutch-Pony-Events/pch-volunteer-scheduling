@@ -20,11 +20,14 @@ GOOD_ROWS = [
     ("Minimum work stretch", 45),
     ("Maximum work stretch", 150),
     ("Minimum break", 20),
+    ("Default maximum hours per day", 6),
+    ("Default maximum hours total", 12),
 ]
 
 # What GOOD_ROWS should give.
 GOOD_SETTINGS = Settings(min_stretch_minutes=45, max_stretch_minutes=150,
-                         min_break_minutes=20, days=("Friday", "Saturday"))
+                         min_break_minutes=20, days=("Friday", "Saturday"),
+                         default_max_minutes_per_day=360, default_max_minutes_total=720)
 
 
 def _settings_sheet(rows: list[tuple], header: tuple[str, ...] = HEADER) -> Worksheet:
@@ -38,24 +41,25 @@ def _settings_sheet(rows: list[tuple], header: tuple[str, ...] = HEADER) -> Work
     return sheet
 
 
-def _rows_with(name: str, value: object) -> list[tuple]:
-    """A copy of GOOD_ROWS in which the setting with this name has another value."""
-    rows = []
-    for setting, good_value in GOOD_ROWS:
+def _rows_with(name: str, value: object, rows: list[tuple] = GOOD_ROWS) -> list[tuple]:
+    """A copy of rows (default GOOD_ROWS) in which the setting with this name has another
+    value. Pass the result back in as rows to change a second setting."""
+    new_rows = []
+    for setting, good_value in rows:
         if setting == name:
-            rows.append((setting, value))
+            new_rows.append((setting, value))
         else:
-            rows.append((setting, good_value))
-    return rows
+            new_rows.append((setting, good_value))
+    return new_rows
 
 
-def _rows_without(name: str) -> list[tuple]:
-    """A copy of GOOD_ROWS without the setting with this name."""
-    rows = []
-    for setting, good_value in GOOD_ROWS:
+def _rows_without(name: str, rows: list[tuple] = GOOD_ROWS) -> list[tuple]:
+    """A copy of rows (default GOOD_ROWS) without the setting with this name."""
+    new_rows = []
+    for setting, good_value in rows:
         if setting != name:
-            rows.append((setting, good_value))
-    return rows
+            new_rows.append((setting, good_value))
+    return new_rows
 
 
 def test_settings_tab_is_read_into_settings():
@@ -150,7 +154,8 @@ def test_day_boundary_typed_as_an_excel_time_is_accepted():
 @pytest.mark.parametrize(
     "missing_setting",
     ["Workbook format version", "Time step", "Day boundary", "Days",
-     "Minimum work stretch", "Maximum work stretch", "Minimum break"])
+     "Minimum work stretch", "Maximum work stretch", "Minimum break",
+     "Default maximum hours per day", "Default maximum hours total"])
 def test_missing_setting_raises_workbook_error(missing_setting):
     """Leaving out a required setting is an error naming that setting."""
     # Arrange
@@ -276,86 +281,105 @@ def test_missing_value_column_raises_workbook_error():
 # --- Default hour limits ---
 
 def test_default_hour_limits_are_read_in_minutes():
-    """Default maximum hours per day 8 and total 16 become 480 and 960 minutes."""
+    """Default maximum hours per day 6 and total 12 become 360 and 720 minutes."""
     # Arrange
+    sheet = _settings_sheet(GOOD_ROWS)
 
     # Act
+    result = read_settings(sheet)
 
     # Assert
-    pytest.skip("not written yet")
+    assert result.default_max_minutes_per_day == 360
+    assert result.default_max_minutes_total == 720
 
 
-@pytest.mark.parametrize("setting", ["Default maximum hours per day",
-                                     "Default maximum hours total"])
-def test_none_as_default_hour_limit_means_no_limit(setting):
+@pytest.mark.parametrize("setting, field", [
+    ("Default maximum hours per day", "default_max_minutes_per_day"),
+    ("Default maximum hours total", "default_max_minutes_total")])
+def test_none_as_default_hour_limit_means_no_limit(setting, field):
     """A default hour limit of "none" means no limit (None)."""
     # Arrange
+    rows = _rows_with(setting, "none")
+    sheet = _settings_sheet(rows)
 
     # Act
+    result = read_settings(sheet)
 
     # Assert
-    pytest.skip("not written yet")
-
-
-@pytest.mark.parametrize("setting", ["Default maximum hours per day",
-                                     "Default maximum hours total"])
-def test_missing_default_hour_limit_raises_workbook_error(setting):
-    """Leaving out a default hour limit is an error naming that setting."""
-    # Arrange
-
-    # Act
-
-    # Assert
-    pytest.skip("not written yet")
+    assert getattr(result, field) is None
 
 
 @pytest.mark.parametrize("value", [7.5, "eight", "8h"], ids=["decimal", "word", "unit"])
 def test_default_hour_limit_that_is_not_a_whole_number_raises_workbook_error(value):
     """A default hour limit that is not a whole number of hours is an error naming the value."""
     # Arrange
+    rows = _rows_with("Default maximum hours per day", value)
+    sheet = _settings_sheet(rows)
 
     # Act
+    # (Act and Assert are combined, pytest.raises checks the exception while the call runs.)
 
     # Assert
-    pytest.skip("not written yet")
+    with pytest.raises(WorkbookError, match=f"Settings.*{value}"):
+        read_settings(sheet)
 
 
 @pytest.mark.parametrize("value", [0, -2], ids=["zero", "negative"])
 def test_default_hour_limit_of_zero_or_less_raises_workbook_error(value):
     """A default hour limit of 0 or less is an error naming the setting."""
     # Arrange
+    rows = _rows_with("Default maximum hours per day", value)
+    sheet = _settings_sheet(rows)
 
     # Act
+    # (Act and Assert are combined, pytest.raises checks the exception while the call runs.)
 
     # Assert
-    pytest.skip("not written yet")
+    with pytest.raises(WorkbookError, match="Settings.*Default maximum hours per day"):
+        read_settings(sheet)
 
 
 def test_default_daily_limit_over_24_hours_raises_workbook_error():
     """A default maximum of more than 24 hours per day is an error (probably a typo)."""
     # Arrange
+    # Total "none", so the check "per day at most the total" can't be the one that fires.
+    rows = _rows_with("Default maximum hours per day", 25)
+    rows = _rows_with("Default maximum hours total", "none", rows=rows)
+    sheet = _settings_sheet(rows)
 
     # Act
+    # (Act and Assert are combined, pytest.raises checks the exception while the call runs.)
 
     # Assert
-    pytest.skip("not written yet")
+    with pytest.raises(WorkbookError, match="Settings.*Default maximum hours per day.*24"):
+        read_settings(sheet)
 
 
 def test_default_total_limit_over_24_hours_per_day_raises_workbook_error():
     """A default total of more than 24 hours times the number of days is an error."""
     # Arrange
+    # GOOD_ROWS has 2 days, so at most 48 hours: 49 is just over.
+    rows = _rows_with("Default maximum hours total", 49)
+    sheet = _settings_sheet(rows)
 
     # Act
+    # (Act and Assert are combined, pytest.raises checks the exception while the call runs.)
 
     # Assert
-    pytest.skip("not written yet")
+    with pytest.raises(WorkbookError, match="Settings.*Default maximum hours total.*48"):
+        read_settings(sheet)
 
 
 def test_default_daily_limit_above_the_default_total_raises_workbook_error():
     """A default per day higher than the default total is an error naming both settings."""
     # Arrange
+    rows = _rows_with("Default maximum hours per day", 13)  # more than the total of 12
+    sheet = _settings_sheet(rows)
 
     # Act
+    # (Act and Assert are combined, pytest.raises checks the exception while the call runs.)
 
     # Assert
-    pytest.skip("not written yet")
+    match = "Default maximum hours per day.*Default maximum hours total"
+    with pytest.raises(WorkbookError, match=match):
+        read_settings(sheet)

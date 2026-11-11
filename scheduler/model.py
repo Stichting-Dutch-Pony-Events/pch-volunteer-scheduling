@@ -65,6 +65,9 @@ class Settings:
     min_break_minutes: int = 30
     # The convention days in order. The first one starts at block 0.
     days: tuple[str, ...] = ("Friday", "Saturday", "Sunday")
+    # The default maximum minutes worked, per day and in total
+    default_max_minutes_per_day: int | None = None
+    default_max_minutes_total: int | None = None
 
 
 @dataclass
