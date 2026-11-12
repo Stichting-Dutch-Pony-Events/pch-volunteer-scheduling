@@ -77,7 +77,9 @@ likes to write tests (and often code) themselves; Claude reviews and explains.
    time** (user, 2026-11-05; kept 2026-11-08 although a run now takes ~14 s): real data
    means the 2026 draft and any other real input, e.g. data from other conventions. The
    user wants to stay in control of those runs. The test suite and the test workbook
-   are fine.
+   are fine. **After every real-data run** (PCH or UKPC), run with `--debug-time` and add
+   the times per step to `ReferenceDocuments/RUN_TIMES.md` (not in git; user, 2026-11-12).
+   `ReferenceDocuments/time_runs.py` does several runs and averages each step.
 
 ## Privacy (important)
 
@@ -817,8 +819,16 @@ come after, the user can fix details by hand meanwhile):
         (tests unchanged, 349 green): both functions are short wrappers around
         `_hours_lines(problem, label, posts, volunteers, who, show_names)` ("All posts" =
         every post with demand, every volunteer, no names), helpers `_hours_line`,
-        `_minutes_can_work_on_day`, `_hours_text`. **Next: step 5, a real-data run
-        (permission!), then merge the branch into `develop`.**
+        `_minutes_can_work_on_day`, `_hours_text`. **Step 5:** PCH 2026 draft run
+        (2026-11-12, user's go): schedule found, 44.8 s (CP-SAT ~41 s; times in
+        RUN_TIMES.md). With a limit for every volunteer (defaults 8/16) CP-SAT took
+        37-62 s; with the defaults `none` ~12 s, steady. **Decided (user, 2026-11-12):
+        default hour limits are `none`** in the template, the PCH draft and the UKPC
+        workbook; the template's Meaning warns that a number there is very costly; limits
+        only for the few volunteers who need one. (The test workbook keeps 8/16: test 19
+        relies on them.) **Next:** the UKPC timing run, then merge the branch into
+        `develop`. Possible later: skip a limit that can never be reached (the volunteer
+        can't work that many blocks anyway), only useful if someone sets numbers again.
         **Status at the end of the morning of 2026-11-11 (continue here):** 3b committed
         (`cf0bfdf`, the accidentally committed template was taken out with an amend).
         The user chose to do **the reader refactor next** (the plan above:
