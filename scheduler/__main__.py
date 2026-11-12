@@ -9,6 +9,7 @@ import time
 from datetime import datetime
 from pathlib import Path
 
+from scheduler.checks import find_warnings
 from scheduler.helpers import set_debug_time
 from scheduler.output import write_output
 from scheduler.solver import NoScheduleFound, solve
@@ -16,7 +17,14 @@ from scheduler.workbook import WorkbookError, read_problem
 
 
 def main(arguments: list[str]) -> int:
-    """Read the input workbook, solve it and write the output. Returns the exit code.
+    """Read the input workbook, show warnings, solve it and write the output. Returns the
+    exit code.
+
+    Warnings (likely mistakes in the input, find_warnings) are printed here and the run
+    carries on: showing things to the user is the command line's job, so the core
+    functions (reading, checking, solving, writing) never print. The checks that stop a
+    run are different: they are part of solve() and raise a child of NoScheduleFound, which
+    travels up by itself to every caller of solve().
 
     0 = schedule written, 1 = something went wrong (a clear message is printed to stderr).
     Cheap checks come first, so a wrong output name doesn't wait for the solver: the output
@@ -90,6 +98,9 @@ def main(arguments: list[str]) -> int:
     try:
         _say(f"Reading {input_path}")
         problem = read_problem(path=input_path)
+        # Likely mistakes in the input: shown, but the run carries on.
+        for line in find_warnings(problem=problem):
+            _say(f"Warning: {line}")
         _say("Solving (this can take a few minutes)")
         solving_started = time.perf_counter()   # a stopwatch: only differences matter
         schedule = solve(problem=problem)

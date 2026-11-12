@@ -837,7 +837,7 @@ come after, the user can fix details by hand meanwhile):
         `_available_blocks_of_row` for read_volunteers), with the tests unchanged and
         green; then the 10 Volunteers stubs + test 19 (Testy Hooves 4 per day / none in
         the test workbook), then the pre-checks for maximum hours.
-- [ ] Warnings before solving (user, 2026-11-11; in 1.0, right after maximum hours):
+- [x] Warnings before solving (user, 2026-11-11; in 1.0, right after maximum hours):
       problems that don't stop a run but are probably a mistake in the input. First one:
       a volunteer who can never be scheduled (no block where a post they're qualified
       for is open while they're available = no variables), e.g. "Mock Mane can never be
@@ -857,7 +857,11 @@ come after, the user can fix details by hand meanwhile):
       (NotImplementedError), 6 test stubs in tests/solver/test_warnings.py, 2 in
       test_main.py (section "warnings before solving"; they will monkeypatch
       `command_line.find_warnings`, so `__main__.py` imports it by name). 349 green,
-      8 skipped.
+      8 skipped. Tests filled in by Claude (on request; the user's first drafts fixed),
+      checked against a trial. **Done (2026-11-12), implemented by Claude:**
+      `find_warnings` + helper `_can_ever_be_scheduled(volunteer, problem)` in checks.py;
+      `main` prints each line with `_say(f"Warning: {line}")` right after reading. 357
+      green. The test workbook gives no warnings.
 - [ ] Solver time limit (a setting), so a big run can't hang forever (large-data runs
       with minimum stretch 60 / break 30 took over 3 minutes in CP-SAT).
 - [ ] Compare a real PCH 2026 run with the hand-made 2026 schedule (see "First

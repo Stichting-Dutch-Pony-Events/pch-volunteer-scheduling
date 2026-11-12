@@ -325,4 +325,23 @@ def find_warnings(problem: Problem) -> list[str]:
     per volunteer, in the order of the volunteers. Empty list = nothing to warn about.
     The command line prints them (with "Warning: " in front) and carries on.
     """
-    raise NotImplementedError
+    debug_print("find_warnings: looking for likely mistakes in the input")
+
+    lines = []
+    for volunteer in problem.volunteers:
+        if not _can_ever_be_scheduled(volunteer=volunteer, problem=problem):
+            lines.append(f"{volunteer.name} can never be scheduled: no post they are "
+                         "qualified for is open while they are available")
+
+    return lines
+
+
+def _can_ever_be_scheduled(volunteer: Volunteer, problem: Problem) -> bool:
+    """True if at some block a post the volunteer is qualified for is open (has demand)
+    while they are available. That is exactly when the solver makes a variable for them.
+    """
+    for (post, block) in problem.demand:
+        if post in volunteer.skills and block in volunteer.available_blocks:
+            return True  # one such block is enough, no need to look further
+
+    return False
