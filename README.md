@@ -16,17 +16,58 @@ The puzzle itself is solved by [Google OR-Tools](https://developers.google.com/o
 
 ## Status
 
-Early development. Nothing runs yet.
+In development. The solver works on small made-up examples (in the tests), and the
+whole chain runs from the command line (input workbook in, schedule in Excel out);
+running it on real data is the next part.
+
+### Done
 
 - [x] Project structure
 - [x] Draft input workbook (made from the 2026 schedule, kept local)
-- [ ] Step 1: minimal solver with the basic hard rules (demand met, only qualified volunteers, no double booking)
-- [ ] Shift lengths (minimum 1 hour, preferably at most 2, never more than 3)
+- [x] Basic hard rules: every post gets exactly the people it needs, only qualified
+      volunteers, nobody in two places at once
+- [x] Work stretches (continuous work) between 1 and 3 hours, breaks of at least
+      30 minutes; the limits are settings
+- [x] Time across the whole weekend, including night shifts after midnight
+- [x] Availability: volunteers are only scheduled when they are there (whole days or
+      a time range)
+- [x] Reading the input workbook, with clear errors for typos
+- [x] Volunteers stay at their post during a work stretch (they only move on when
+      their post needs fewer people)
+- [x] Writing the schedule to Excel: a schedule per post with nicknames
+- [x] Running it from the command line
+
+### Roadmap to version 1.0
+
+Version 1.0 makes a schedule from the real input workbook that follows the main hard
+rules (meal breaks come later), including a maximum number of hours per volunteer, run
+from the command line. Details can then be fixed by hand.
+
+- [x] Faster: a run on the real data takes seconds instead of minutes
+- [x] A clear message when no schedule is possible, saying where it gets stuck
+- [x] A maximum number of hours per volunteer, per day and in total
+- [x] Warnings for likely mistakes in the input, e.g. a volunteer who can never be scheduled
+- [x] A time limit for the solver, so a big run can't hang
+- [x] First run on real data, compared with the hand-made 2026 schedule
+- [x] Small tidy-ups: a clear error for a damaged workbook, a few extra tests
+
+### After version 1.0
+
+- [ ] Maybe: shifts placed by hand are kept, e.g. to re-run after a change without
+      reshuffling everyone (to decide after the first real run)
+- [ ] Nicer schedules: shifts start and end on the hour or half hour, staying at one
+      post, preferring what people are good at, shifts of preferably at most 2 hours
 - [ ] Meal breaks
-- [ ] Event wishes (REALLY want / would like to attend)
-- [ ] Maximum hours and a fair spread of work
-- [ ] Reading the input workbook and the form CSV
-- [ ] Writing the schedule to Excel (overview, per post, per volunteer)
+- [ ] Maybe: check any schedule against the rules, also one changed by hand afterwards
+- [ ] Event wishes (REALLY want / would like to attend), read from the form answers
+- [ ] A fair spread of work over the volunteers
+- [ ] More output: a "no double booking" check tab, and individual schedules
+- [ ] Choose the times the schedule shows (e.g. 08:00-02:00), instead of only the open hours
+- [ ] A nicer command line: how long it took, progress while solving, a summary, more
+      options
+- [ ] All input errors shown at once, instead of stopping at the first one
+- [ ] Maybe: also read `.ods` files (LibreOffice / Nextcloud); for now save as `.xlsx`
+- [ ] A small program with a window: pick the input workbook, start a run, see errors
 
 ## How it works (planned)
 
@@ -37,14 +78,15 @@ Input workbook (.xlsx)  +  form answers (.csv)
         scheduler/model.py     plain data: volunteers, posts, demand, events, wishes
                   │
                   ▼
-        scheduler/solver.py    turns the rules into a CP-SAT model and solves it
+        scheduler/solver.py    builds a CP-SAT model and solves it
+        scheduler/rules.py     the rules, one function each
                   │
                   ▼
         Output workbook (.xlsx)  printable schedules
 ```
 
-The input workbook has these tabs: ReadMe, Settings, Meals, Volunteers, Posts, Skills,
-Events, Demand, Wishes and Fixed. The ReadMe tab inside the workbook explains each one.
+The input workbook has these tabs: ReadMe, Settings, Volunteers, Posts, Skills, Events,
+Demand, Wishes and Fixed. The ReadMe tab inside the workbook explains each one.
 Time is planned in 15-minute blocks; times after midnight belong to the convention day
 before (Saturday 01:00 is the Saturday night).
 
@@ -54,10 +96,23 @@ before (Saturday 01:00 is the Saturday night).
 pch-volunteer-scheduling/
 ├── ReferenceDocuments/      real data, NOT in git (see Privacy)
 ├── scheduler/
-│   ├── model.py             data classes
-│   └── solver.py            builds and solves the schedule
+│   ├── __main__.py          the command line (python -m scheduler ...)
+│   ├── errors.py            the error types
+│   ├── helpers.py           debug output (--debug-time)
+│   ├── model.py             data classes and time helpers
+│   ├── output.py            writes the output workbook
+│   ├── rules.py             the hard rules, one function each
+│   ├── solver.py            builds and solves the schedule
+│   └── workbook.py          reads the input workbook
+├── templates/               an empty input workbook to start from
 ├── tests/
-│   └── test_solver_basics.py
+│   ├── command_line/        tests of the command line
+│   ├── data/                small made-up input workbook for the tests
+│   ├── model/               tests of the data classes and time helpers
+│   ├── output/              tests of writing the output workbook
+│   ├── solver/              tests of the solver and its rules
+│   ├── workbook/            tests of reading the input workbook
+│   └── test_helpers.py
 ├── requirements.txt
 └── README.md
 ```
@@ -76,7 +131,7 @@ new behaviour, see them fail, then write just enough code to make them pass.
 
 ### Setup (Windows)
 
-Requires Python 3.10 or newer.
+Requires Python 3.14 (OR-Tools has no wheels for 3.15 yet).
 
 ```powershell
 cd C:\repos\pch-volunteer-scheduling
@@ -84,6 +139,19 @@ python -m venv .venv
 .venv\Scripts\activate
 pip install -r requirements.txt
 ```
+
+### Making a schedule
+
+```powershell
+python -m scheduler input.xlsx output.xlsx
+```
+
+Reads the input workbook, makes a schedule and writes it to `output.xlsx` (tab
+"Schedule": one column per post, one row per 15 minutes). If the output already
+exists you are asked before it is overwritten; add `--overwrite` to skip that
+question. The solver stops after 10 minutes; give it more (or less) time with e.g.
+`--time-limit 30` (in minutes). `python -m scheduler --help` shows the options. Keep real input and output
+outside the repository: they contain volunteer names.
 
 ### Running the tests
 
