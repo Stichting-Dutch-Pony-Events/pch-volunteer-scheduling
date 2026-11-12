@@ -9,6 +9,7 @@ tested with simple values instead of a workbook file.
 """
 from datetime import time
 from pathlib import Path
+import zipfile
 
 import openpyxl
 from openpyxl.worksheet.worksheet import Worksheet
@@ -52,14 +53,21 @@ def read_problem(path: str | Path) -> Problem:
     columns and the Demand columns name the same posts) and combines it all.
     Raises WorkbookError for the first problem it finds.
     """
-    # 1. The file: an .xlsx that exists.
+    # 1. The file: an .xlsx that exists and can be opened.
     path = Path(path)
     if path.suffix.lower() != ".xlsx":
         raise WorkbookError(f"{path.name}: the scheduler reads .xlsx files only. Save the "
                             f"workbook as Excel (.xlsx), e.g. File > Save As in LibreOffice.")
     if not path.exists():
         raise WorkbookError(f"{path.name}: file not found ({path}).")
-    workbook = openpyxl.load_workbook(path)
+
+    try:
+        workbook = openpyxl.load_workbook(path)
+    except zipfile.BadZipFile:
+        # An .xlsx is a zip file inside, so a damaged one fails as "not a zip file".
+        raise WorkbookError(f"{path.name}: not a readable .xlsx workbook (damaged, or another "
+                            "file type renamed to .xlsx). "
+                            "Save it again from Excel or LibreOffice.") from None
 
     # 2. The tabs: every required one, and nothing unknown.
     for tab in REQUIRED_TABS:
