@@ -161,84 +161,115 @@ def _not_enough_hours_at_post_lines(problem: Problem) -> list[str]:
     """
     debug_print("_not_enough_hours_at_post_lines: Checking before solving")
 
-    # Everything below is counted in minutes; only the text of a line shows hours.
-
-    # 1. How much work is needed per day per post.
-    demand = {}  # (day, post) -> minutes needed
-    for (post, block), needed in problem.demand.items():
-        day = day_of(block, problem.settings)
-
-        if (day, post) not in demand:
-            demand[(day, post)] = 0
-
-        demand[(day, post)] += needed * MINUTES_PER_BLOCK
-
-    # 2. The blocks of each day, made once (the same for every volunteer).
-    blocks_of_day = {}  # day -> set of blocks
-    for day in problem.settings.days:
-        start_block = block_of(day, "06:00", problem.settings)
-        blocks_of_day[day] = set(range(start_block, start_block + BLOCKS_PER_DAY))
-
-    # 3. How much work the qualified volunteers can do per post: per day, and over all days.
-    supply = {}  # (day, post) -> minutes the qualified volunteers can work that day
-    supply_volunteers = {}  # (day, post) -> names of those volunteers
-    supply_over_all_days = {}  # post -> minutes the qualified volunteers can work in total
-    supply_volunteers_over_all_days = {}  # post -> names of those volunteers
-    for volunteer in problem.volunteers:
-        minutes_over_all_days = 0
-        for day in problem.settings.days:
-            minutes_can_work = _minutes_can_work_on_day(volunteer, blocks_of_day[day])
-            if minutes_can_work == 0:
-                continue
-            minutes_over_all_days += minutes_can_work
-
-            for post in volunteer.skills:
-                if (day, post) not in supply:
-                    supply[(day, post)] = 0
-                    supply_volunteers[(day, post)] = []
-                supply[(day, post)] += minutes_can_work
-                supply_volunteers[(day, post)].append(volunteer.name)
-
-        # Over all days their total limit counts only once (each day above used it as a
-        # cap, so the sum of the days can be higher than the limit).
-        if volunteer.max_minutes_total is not None:
-            minutes_over_all_days = min(minutes_over_all_days, volunteer.max_minutes_total)
-        if minutes_over_all_days == 0:
-            continue
-
-        for post in volunteer.skills:
-            if post not in supply_over_all_days:
-                supply_over_all_days[post] = 0
-                supply_volunteers_over_all_days[post] = []
-            supply_over_all_days[post] += minutes_over_all_days
-            supply_volunteers_over_all_days[post].append(volunteer.name)
-
-    # 4. Compare per post per day.
     lines = []
-    for (day, post) in demand:
-        can_work = supply.get((day, post), 0)
-        if demand[(day, post)] > can_work:
-            names = supply_volunteers.get((day, post), [])
-            line = f"{post}, {day}: needs {_hours_text(demand[(day, post)])}, "
-            line += f"the qualified volunteers can work {_hours_text(can_work)} "
-            line += "(" + ", ".join(names) + ")"
-            lines.append(line)
-
-    # 5. Compare per post over the whole convention.
     for post in problem.posts:
-        total_demand = 0
-        for day in problem.settings.days:
-            total_demand += demand.get((day, post.name), 0)
+        # Only the volunteers qualified for this post count.
+        qualified = []
+        for volunteer in problem.volunteers:
+            if post.name in volunteer.skills:
+                qualified.append(volunteer)
 
-        can_work = supply_over_all_days.get(post.name, 0)
-        if total_demand > can_work:
-            names = supply_volunteers_over_all_days.get(post.name, [])
-            line = f"{post.name}, over all days: needs {_hours_text(total_demand)}, "
-            line += f"the qualified volunteers can work {_hours_text(can_work)} "
-            line += "(" + ", ".join(names) + ")"
-            lines.append(line)
+        lines += _hours_lines(problem=problem, label=post.name, posts={post.name},
+                              volunteers=qualified, who="the qualified volunteers",
+                              show_names=True)
 
     return lines
+
+
+def _not_enough_hours_in_total_lines(problem: Problem) -> list[str]:
+    """Like _not_enough_hours_at_post_lines, but for all posts together and all
+    volunteers: one line per day where the posts need more hours than everyone can work
+    that day, plus one line if they are short over the whole convention. Empty list = fine.
+    """
+    debug_print("_not_enough_hours_in_total_lines: Checking before solving")
+
+    # All posts that need someone at some time; every volunteer counts (no names in the
+    # line: that would list everybody).
+    all_posts = set()
+    for (post, block) in problem.demand:
+        all_posts.add(post)
+
+    return _hours_lines(problem=problem, label="All posts", posts=all_posts,
+                        volunteers=problem.volunteers, who="the volunteers",
+                        show_names=False)
+
+
+def _hours_lines(problem: Problem, label: str, posts: set[str], volunteers: list[Volunteer],
+                 who: str, show_names: bool) -> list[str]:
+    """The lines of both hours checks: compare the hours the given posts need with the
+    hours the given volunteers can work, per day and over all days.
+
+    label starts each line ("Tickets" or "All posts"), who names the volunteers in it
+    ("the qualified volunteers"), show_names adds their names in brackets. Everything is
+    counted in minutes; only the text of a line shows hours.
+    """
+    settings = problem.settings
+    lines = []
+
+    # 1. What each volunteer can work per day (the same for every day loop below).
+    minutes_per_day = {}  # (volunteer name, day) -> minutes they can work that day
+    for day in settings.days:
+        start_block = block_of(day, "06:00", settings)
+        blocks_of_day = set(range(start_block, start_block + BLOCKS_PER_DAY))
+        for volunteer in volunteers:
+            minutes_per_day[(volunteer.name, day)] = _minutes_can_work_on_day(volunteer,
+                                                                              blocks_of_day)
+
+    # 2. Per day: what the posts need against what the volunteers can work that day.
+    for day in settings.days:
+        needed = 0
+        for (post, block), people in problem.demand.items():
+            if post in posts and day_of(block, settings) == day:
+                needed += people * MINUTES_PER_BLOCK
+
+        can_work = 0
+        names = []
+        for volunteer in volunteers:
+            minutes = minutes_per_day[(volunteer.name, day)]
+            if minutes > 0:
+                can_work += minutes
+                names.append(volunteer.name)
+
+        if needed > can_work:
+            lines.append(_hours_line(f"{label}, {day}", needed, who, can_work, names,
+                                     show_names))
+
+    # 3. Over all days: the sum of a volunteer's days, but their total limit counts only
+    #    once (each day above used it as a cap, so the sum of the days can be higher).
+    needed = 0
+    for (post, block), people in problem.demand.items():
+        if post in posts:
+            needed += people * MINUTES_PER_BLOCK
+
+    can_work = 0
+    names = []
+    for volunteer in volunteers:
+        minutes = 0
+        for day in settings.days:
+            minutes += minutes_per_day[(volunteer.name, day)]
+        if volunteer.max_minutes_total is not None:
+            minutes = min(minutes, volunteer.max_minutes_total)
+        if minutes > 0:
+            can_work += minutes
+            names.append(volunteer.name)
+
+    if needed > can_work:
+        lines.append(_hours_line(f"{label}, over all days", needed, who, can_work, names,
+                                 show_names))
+
+    return lines
+
+
+def _hours_line(start: str, needed: int, who: str, can_work: int, names: list[str],
+                show_names: bool) -> str:
+    """One line of an hours check, e.g. "Tickets, Friday: needs 3 hours, the qualified
+    volunteers can work 2 hours (Mock Mane)". needed and can_work are in minutes.
+    """
+    line = f"{start}: needs {_hours_text(needed)}, {who} can work {_hours_text(can_work)}"
+    if show_names:
+        line += " (" + ", ".join(names) + ")"
+
+    return line
 
 
 def _minutes_can_work_on_day(volunteer: Volunteer, blocks_of_day: set[int]) -> int:
@@ -260,75 +291,6 @@ def _hours_text(minutes: int) -> str:
         return f"{minutes // 60} hours"
 
     return f"{minutes / 60:g} hours"
-
-
-def _not_enough_hours_in_total_lines(problem: Problem) -> list[str]:
-    """Like _not_enough_hours_at_post_lines, but for all posts together and all
-    volunteers: one line per day where the posts need more hours than everyone can work
-    that day, plus one line if they are short over the whole convention. Empty list = fine.
-    """
-    debug_print("_not_enough_hours_in_total_lines: Checking before solving")
-
-    # 1. How much work is needed per day.
-    demand = {}  # (day) -> minutes needed
-    for (post, block), needed in problem.demand.items():
-        day = day_of(block, problem.settings)
-
-        if day not in demand:
-            demand[day] = 0
-
-        demand[day] += needed * MINUTES_PER_BLOCK
-
-    # 2. The blocks of each day, made once (the same for every volunteer).
-    blocks_of_day = {}  # day -> set of blocks
-    for day in problem.settings.days:
-        start_block = block_of(day, "06:00", problem.settings)
-        blocks_of_day[day] = set(range(start_block, start_block + BLOCKS_PER_DAY))
-
-    # 3. How much work the qualified volunteers can do: per day, and over all days.
-    supply = {}  # day -> minutes the qualified volunteers can work that day
-    supply_over_all_days = 0  # minutes the qualified volunteers can work in total
-    for volunteer in problem.volunteers:
-        minutes_over_all_days = 0
-        for day in problem.settings.days:
-            minutes_can_work = _minutes_can_work_on_day(volunteer, blocks_of_day[day])
-            if minutes_can_work == 0:
-                continue
-            minutes_over_all_days += minutes_can_work
-
-            if day not in supply:
-                supply[day] = 0
-            supply[day] += minutes_can_work
-
-        # Over all days their total limit counts only once (each day above used it as a
-        # cap, so the sum of the days can be higher than the limit).
-        if volunteer.max_minutes_total is not None:
-            minutes_over_all_days = min(minutes_over_all_days, volunteer.max_minutes_total)
-        if minutes_over_all_days == 0:
-            continue
-
-        supply_over_all_days += minutes_over_all_days
-
-    # 4. Compare per day.
-    lines = []
-    for day in demand:
-        can_work = supply.get(day, 0)
-        if demand[day] > can_work:
-            line = f"All posts, {day}: needs {_hours_text(demand[day])}, "
-            line += f"the volunteers can work {_hours_text(can_work)}"
-            lines.append(line)
-
-    # 5. Compare per post over the whole convention.
-    total_demand = 0
-    for day in problem.settings.days:
-        total_demand += demand.get(day, 0)
-
-    if total_demand > supply_over_all_days:
-        line = f"All posts, over all days: needs {_hours_text(total_demand)}, "
-        line += f"the volunteers can work {_hours_text(supply_over_all_days)}"
-        lines.append(line)
-
-    return lines
 
 
 def _end_time(block_after_last: int, settings: Settings) -> str:

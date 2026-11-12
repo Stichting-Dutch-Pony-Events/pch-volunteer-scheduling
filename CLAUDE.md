@@ -812,6 +812,13 @@ come after, the user can fix details by hand meanwhile):
         Claude (2026-11-12, on request):** 7 red ("raises" and message tests), the guards
         green. Trial implementation in a scratch copy: all 349 green with the checks
         called; tests 9 and 10 each fail without their cap (availability / total per day).
+        **Step 4 done (2026-11-12):** both checks implemented by the user, called from
+        `check_problem` after checks 1 and 2 (committed `28c8a19`). Then merged by Claude
+        (tests unchanged, 349 green): both functions are short wrappers around
+        `_hours_lines(problem, label, posts, volunteers, who, show_names)` ("All posts" =
+        every post with demand, every volunteer, no names), helpers `_hours_line`,
+        `_minutes_can_work_on_day`, `_hours_text`. **Next: step 5, a real-data run
+        (permission!), then merge the branch into `develop`.**
         **Status at the end of the morning of 2026-11-11 (continue here):** 3b committed
         (`cf0bfdf`, the accidentally committed template was taken out with an amend).
         The user chose to do **the reader refactor next** (the plan above:
