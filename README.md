@@ -48,7 +48,7 @@ from the command line. Details can then be fixed by hand.
 - [x] A maximum number of hours per volunteer, per day and in total
 - [x] Warnings for likely mistakes in the input, e.g. a volunteer who can never be scheduled
 - [x] A time limit for the solver, so a big run can't hang
-- [ ] First run on real data, compared with the hand-made 2026 schedule
+- [x] First run on real data, compared with the hand-made 2026 schedule
 - [ ] Small tidy-ups: a clear error for a damaged workbook, a few extra tests
 
 ### After version 1.0

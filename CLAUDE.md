@@ -897,8 +897,15 @@ come after, the user can fix details by hand meanwhile):
       invalid-value test parametrized 0 / -5 / ten / 1.5). Code came first, so each was
       checked by breaking `__main__.py` in a scratch copy (no * 60, default 5, type=int,
       no advice, no except): the matching test goes red every time. 373 green.
-- [ ] Compare a real PCH 2026 run with the hand-made 2026 schedule (see "First
-      end-to-end run" above; the run works, the comparison isn't done).
+- [x] Compare a real PCH 2026 run with the hand-made 2026 schedule. **Done 2026-11-12**
+      (scratch script reading the .ods, totals in DATA_NOTES.md, per-person table in
+      ReferenceDocuments/COMPARISON_PCH2026.md). Hard rules hold and the demand is met
+      exactly; the solver's schedule is more fragmented (297 stretches of which 174 exactly
+      60 min, vs 219 hand-made, mostly 61-120 min), 29% of its stretches start on :15/:45,
+      28 post switches vs 1, fewer blocks at skill-3 posts (61% vs 69%). Hours spread was
+      similar in that run because every volunteer still had the 8/16 limits. Confirms the
+      soft-rule order after 1.0: longer/fewer stretches, :00/:30 starts, skill score, stay
+      at post as a weight, fair spread.
 - [x] Small: test 6 of the stay-at-post rule. **Dropped (user, 2026-11-11), stub removed:**
       the solved test workbook has no post switches at all (checked: 0 moves in 3 runs),
       so the test would check nothing; the 7 small solver tests already cover the rule.

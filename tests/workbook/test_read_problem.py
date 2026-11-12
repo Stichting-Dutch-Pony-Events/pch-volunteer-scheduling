@@ -154,6 +154,20 @@ def test_file_that_does_not_exist_raises_workbook_error(tmp_path):
         read_problem(path)
 
 
+def test_file_that_is_not_a_real_workbook_raises_workbook_error(tmp_path):
+    """A damaged file, or another file renamed to .xlsx, is an error naming the file."""
+    # Arrange
+    path = tmp_path / "input.xlsx"
+    path.write_bytes(b"this is not a workbook")
+
+    # Act
+    # (Act and Assert are combined, pytest.raises checks the exception while the call runs.)
+
+    # Assert
+    with pytest.raises(WorkbookError, match="input.xlsx"):
+        read_problem(path)
+
+
 @pytest.mark.parametrize("tab", ["Settings", "Volunteers", "Posts", "Skills", "Demand"])
 def test_missing_tab_raises_workbook_error(tmp_path, tab):
     """Each required tab must be there; a missing one is an error naming it."""
