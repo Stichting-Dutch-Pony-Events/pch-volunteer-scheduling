@@ -109,6 +109,34 @@ def test_break_shorter_than_the_minimum_raises_no_schedule_found():
         solve(problem)
 
 
+def test_break_across_the_day_boundary_is_at_least_the_minimum():
+    """A 15-minute break around 06:00 (Saturday night into Sunday) is still too short."""
+    # Arrange
+    # Saturday night 04:00-06:00 (calendar: early Sunday), then 15 minutes off at 06:00,
+    # then Sunday 06:15-08:15. Only Mock Mane can do it, so the break can't be avoided.
+    demand = {}
+    for block in range(block_of("Saturday", "04:00", RULES),
+                       block_of("Saturday", "05:45", RULES) + 1):   # blocks 184-191, 2 hours
+        demand[("Tickets", block)] = 1
+    for block in range(block_of("Sunday", "06:15", RULES),
+                       block_of("Sunday", "08:15", RULES)):         # blocks 193-200, 2 hours
+        demand[("Tickets", block)] = 1
+
+    problem = Problem(
+        volunteers=[Volunteer(name="Mock Mane", skills={"Tickets": 1},
+                              available_blocks=all_blocks(RULES))],
+        posts=[Post(name="Tickets")],
+        demand=demand,
+        settings=RULES)
+
+    # Act
+    # (Act and Assert are combined, pytest.raises checks the exception while the solve runs.)
+
+    # Assert
+    with pytest.raises(NoScheduleFound):
+        solve(problem)
+
+
 def test_break_of_exactly_the_minimum_is_allowed():
     """With a 30 min minimum break, a 30-minute break between two stretches is long enough."""
     # Arrange

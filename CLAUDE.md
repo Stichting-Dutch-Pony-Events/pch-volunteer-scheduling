@@ -910,10 +910,15 @@ come after, the user can fix details by hand meanwhile):
       the solved test workbook has no post switches at all (checked: 0 moves in 3 runs),
       so the test would check nothing; the 7 small solver tests already cover the rule.
       295 green, nothing skipped.
-- [ ] Small: a damaged file with an .xlsx name (zipfile.BadZipFile) becomes a clear
-      WorkbookError.
-- [ ] Small: optional guard test for a break across 06:00 (hello.py and test_hello.py
-      were removed on 2026-11-08)
+- [x] Small: a damaged file with an .xlsx name (zipfile.BadZipFile) becomes a clear
+      WorkbookError. Done 2026-11-12 (user): try/except around `load_workbook` in
+      read_problem step 1, test `test_file_that_is_not_a_real_workbook_raises_workbook_error`.
+- [x] Small: optional guard test for a break across 06:00. Done 2026-11-12 (Claude, on
+      request): `test_break_across_the_day_boundary_is_at_least_the_minimum` in
+      test_solver_work_stretches.py (Saturday 04:00-06:00, 15 min off, Sunday 06:15-08:15,
+      only Mock Mane -> NoScheduleFound). Green straight away; red in a scratch copy
+      without add_minimum_break_rule. 375 green. **All version 1.0 items are done**; next:
+      merge develop into main (PR), tag v1.0, then discuss one-off event shifts.
 
 **Version 1.0 = all of the above**: a schedule for real data that follows the hard rules
 (except meal breaks and fixed shifts; including maximum hours), run from the command

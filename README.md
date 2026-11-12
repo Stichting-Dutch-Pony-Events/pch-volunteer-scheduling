@@ -49,7 +49,7 @@ from the command line. Details can then be fixed by hand.
 - [x] Warnings for likely mistakes in the input, e.g. a volunteer who can never be scheduled
 - [x] A time limit for the solver, so a big run can't hang
 - [x] First run on real data, compared with the hand-made 2026 schedule
-- [ ] Small tidy-ups: a clear error for a damaged workbook, a few extra tests
+- [x] Small tidy-ups: a clear error for a damaged workbook, a few extra tests
 
 ### After version 1.0
 
