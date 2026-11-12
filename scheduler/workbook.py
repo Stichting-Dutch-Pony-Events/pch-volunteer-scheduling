@@ -38,7 +38,8 @@ KNOWN_SETTINGS = {"Workbook format version", "Time step", "Day boundary", "Days"
                   "Weight: shift longer than preferred", "Weight: unfair spread of hours"}
 
 REQUIRED_SETTINGS = {"Workbook format version", "Time step", "Day boundary", "Days",
-                     "Minimum work stretch", "Maximum work stretch", "Minimum break"}
+                     "Minimum work stretch", "Maximum work stretch", "Minimum break",
+                     "Default maximum hours per day", "Default maximum hours total"}
 
 
 def read_problem(path: str | Path) -> Problem:
@@ -71,17 +72,17 @@ def read_problem(path: str | Path) -> Problem:
 
     # 3. Each tab on its own. Settings first: the other readers need the days.
     settings = read_settings(workbook["Settings"])
-    availability = read_volunteers(workbook["Volunteers"], settings)
+    volunteers = read_volunteers(workbook["Volunteers"], settings)
     posts = read_posts(workbook["Posts"])
     skills = read_skills(workbook["Skills"])
     demand = read_demand(workbook["Demand"], settings)
 
     # 4. Across tabs: the same volunteers on Volunteers and Skills...
-    for nickname in availability:
+    for nickname in volunteers:
         if nickname not in skills:
             raise WorkbookError(f"Skills: no row for {nickname} (from the Volunteers tab).")
     for nickname in skills:
-        if nickname not in availability:
+        if nickname not in volunteers:
             raise WorkbookError(f"Skills: {nickname} is not on the Volunteers tab.")
 
     # ...and the same posts on Posts, Skills and Demand.
@@ -91,13 +92,14 @@ def read_problem(path: str | Path) -> Problem:
     _check_same_posts(workbook["Skills"], ["Nickname", "Team", "Notes"], post_names)
     _check_same_posts(workbook["Demand"], ["Day", "Time", "Notes"], post_names)
 
-    # 5. Combine: each volunteer with their skills and availability.
-    volunteers = []
-    for nickname, available_blocks in availability.items():
-        volunteers.append(Volunteer(name=nickname, skills=skills[nickname],
-                                    available_blocks=available_blocks))
+    # 5. Combine: each volunteer gets their skills (the dict keeps the order of the sheet).
+    for nickname, volunteer in volunteers.items():
+        volunteer.skills = skills[nickname]
 
-    return Problem(volunteers=volunteers, posts=posts, demand=demand, settings=settings)
+    return Problem(volunteers=list(volunteers.values()),
+                   posts=posts,
+                   demand=demand,
+                   settings=settings)
 
 
 def read_settings(sheet: Worksheet) -> Settings:
@@ -106,38 +108,88 @@ def read_settings(sheet: Worksheet) -> Settings:
     The order of the rows is free. Required: Workbook format version (must be
     WORKBOOK_FORMAT_VERSION), Time step (must be 15), Day boundary (must be 06:00), Days
     (comma separated, no duplicates), Minimum work stretch, Maximum work stretch and
-    Minimum break (whole numbers, in minutes). Settings the scheduler does not use yet
-    (meals, maximum hours, weights) are accepted and ignored. Raises WorkbookError for a
-    missing, empty, duplicate or unknown setting, or a value that is not allowed.
+    Minimum break (whole numbers, in minutes), Default maximum hours per day and total
+    (whole hours or "none"; at most 24 per day, 24 per day of the convention in total,
+    per day not more than the total). Settings the scheduler does not use yet (meals,
+    weights) are accepted and ignored. Raises WorkbookError for a missing, empty,
+    duplicate or unknown setting, or a value that is not allowed.
     """
     debug_print(f"read_settings: reading tab {sheet.title}")
-    # 1. Isolate the headers and their respective column numbers
+    # 1. Every setting as text, by name; then the names: nothing unknown, nothing missing.
+    unparsed_settings = _settings_by_name(sheet)
+    _check_setting_names(unparsed_settings)
+
+    # 2. The settings that only have one allowed value for now.
+    _check_fixed_settings(unparsed_settings)
+
+    # 3. The days, and the default hour limits (in minutes, None = no limit).
+    days = _days(unparsed_settings["Days"])
+
+    per_day_name = "Default maximum hours per day"
+    total_name = "Default maximum hours total"
+    try:
+        default_per_day, default_total = _hour_limits(
+            (per_day_name, unparsed_settings[per_day_name]),
+            (total_name, unparsed_settings[total_name]),
+            len(days))
+    except ValueError as error:
+        # Put the tab in front of the message from _hour_limits.
+        raise WorkbookError(f"Settings, {error}") from None
+
+    # 4. Turn it all into Settings.
+    return Settings(
+        min_stretch_minutes=_whole_number(unparsed_settings, "Minimum work stretch"),
+        max_stretch_minutes=_whole_number(unparsed_settings, "Maximum work stretch"),
+        min_break_minutes=_whole_number(unparsed_settings, "Minimum break"),
+        days=days,
+        default_max_minutes_per_day=default_per_day,
+        default_max_minutes_total=default_total)
+
+
+def _settings_by_name(sheet: Worksheet) -> dict[str, str]:
+    """Every setting on the Settings tab as {name: value}, both as text (through cell_text).
+
+    A row without a name is skipped. Raises WorkbookError for a missing Setting or Value
+    column, or a name that appears twice.
+    """
     columns = find_columns(sheet, ["Setting", "Value"])
 
-    # 2. Fetch all (unparsed) settings from the Settings sheet
-    unparsed_settings = dict()
-    for rownumber in range(2, sheet.max_row + 1):
-        setting_name = cell_text(sheet.cell(row=rownumber, column=columns["Setting"]).value)
+    unparsed_settings = {}
+    for row in range(2, sheet.max_row + 1):
+        setting_name = cell_text(sheet.cell(row=row, column=columns["Setting"]).value)
         if setting_name == "":
-            continue
+            continue  # an empty row: skip it
 
         if setting_name in unparsed_settings:
             raise WorkbookError(f"Settings: two settings with name {setting_name!r}.")
-        else:
-            unparsed_value = cell_text(sheet.cell(row=rownumber, column=columns["Value"]).value)
-            unparsed_settings[setting_name] = unparsed_value
+        unparsed_settings[setting_name] = cell_text(
+            sheet.cell(row=row, column=columns["Value"]).value)
 
-    # 3. Check for unknown settings
-    for key, value in unparsed_settings.items():
-        if key not in KNOWN_SETTINGS:
-            raise WorkbookError(f"Settings: unknown setting {key!r}")
+    return unparsed_settings
 
-    # 4. Check for presence of all required settings
+
+def _check_setting_names(unparsed_settings: dict[str, str]) -> None:
+    """Raise WorkbookError for an unknown setting, or a required one that is missing or empty.
+
+    Unknown = not in KNOWN_SETTINGS (catches typos); required = REQUIRED_SETTINGS.
+    """
+    for name in unparsed_settings:
+        if name not in KNOWN_SETTINGS:
+            raise WorkbookError(f"Settings: unknown setting {name!r}")
+
     for required_setting in REQUIRED_SETTINGS:
         if required_setting not in unparsed_settings:
             raise WorkbookError(f"Settings: Missing required setting {required_setting!r}")
+        if unparsed_settings[required_setting] == "":
+            raise WorkbookError(f"Settings: the required setting {required_setting!r} is empty.")
 
-    # 5. Check the required settings one by one and turn them into Settings
+
+def _check_fixed_settings(unparsed_settings: dict[str, str]) -> None:
+    """Raise WorkbookError if a setting with only one allowed value for now has another one.
+
+    Workbook format version must be WORKBOOK_FORMAT_VERSION, Time step MINUTES_PER_BLOCK
+    (15) and Day boundary DAY_STARTS_AT_HOUR (06:00).
+    """
     version = _whole_number(unparsed_settings, "Workbook format version")
     if version != WORKBOOK_FORMAT_VERSION:
         raise WorkbookError(f"Settings, 'Workbook format version': this workbook is version "
@@ -155,71 +207,134 @@ def read_settings(sheet: Worksheet) -> Settings:
         raise WorkbookError(f"Settings, 'Day boundary': the scheduler only supports "
                             f"{expected_day_boundary} for now, not {day_boundary}.")
 
-    # Days: "Friday, Saturday, Sunday" -> ["Friday", "Saturday", "Sunday"]
+
+def _days(text: str) -> tuple[str, ...]:
+    """The Days setting as a tuple: "Friday, Saturday, Sunday" -> ("Friday", "Saturday", ...).
+
+    Raises WorkbookError for a day that appears more than once.
+    """
     days = []
-    for day in unparsed_settings["Days"].split(","):
+    for day in text.split(","):
         day = day.strip()
         if day in days:
             raise WorkbookError(f"Settings, 'Days': {day!r} appears more than once.")
         days.append(day)
 
-    return Settings(
-        min_stretch_minutes=_whole_number(unparsed_settings, "Minimum work stretch"),
-        max_stretch_minutes=_whole_number(unparsed_settings, "Maximum work stretch"),
-        min_break_minutes=_whole_number(unparsed_settings, "Minimum break"),
-        days=tuple(days))  # a tuple, like the default in Settings
+    return tuple(days)  # a tuple, like the default in Settings
 
 
-def read_volunteers(sheet: Worksheet, settings: Settings) -> dict[str, set[int]]:
-    """The Volunteers tab as {nickname: available blocks}, in the order of the sheet.
+def read_volunteers(sheet: Worksheet, settings: Settings) -> dict[str, Volunteer]:
+    """The Volunteers tab as {nickname: Volunteer}, in the order of the sheet.
 
-    Reads the Nickname column and one availability column per day in settings.days (a
-    missing day column is an error); other columns are ignored. Each day's cell goes
-    through parse_availability and the days are combined. A completely empty row is
-    skipped. Raises WorkbookError (naming row, volunteer and day where possible) for a
-    missing column, a nickname used twice, a row with availability but no nickname, an
-    invalid availability, or a volunteer who is not available on any day.
+    Reads the Nickname column, one availability column per day in settings.days and the
+    columns Max hours per day and Max hours total (a missing column is an error). Each
+    day's cell goes through parse_availability and the days are combined. An hour limit
+    is whole hours or "none" (no limit); an empty cell gets the default from the
+    settings. Skills stay empty here: read_problem adds them from the Skills tab. A
+    completely empty row is skipped. Raises WorkbookError (naming row, volunteer and day
+    or column where possible) for a missing column, a nickname used twice, a row with
+    values but no nickname, an invalid availability or hour limit, a volunteer who is not
+    available on any day, or a written per day limit above the written total.
     """
     debug_print(f"read_volunteers: reading tab {sheet.title}")
-    # 1. The Nickname column and one column per convention day.
-    columns = find_columns(sheet, ["Nickname"] + list(settings.days))
+    # 1. The Nickname column, one column per convention day and the two hour limit columns.
+    limit_columns = ["Max hours per day", "Max hours total"]
+    columns = find_columns(sheet, ["Nickname"] + list(settings.days) + limit_columns)
 
     volunteers = {}
     for row in range(2, sheet.max_row + 1):
         nickname = cell_text(sheet.cell(row=row, column=columns["Nickname"]).value)
 
-        # 2. The availability cells of this row, per day: {"Friday": "yes", ...}
+        # 2. The cells of this row: availability per day {"Friday": "yes", ...} and the
+        #    hour limits {"Max hours per day": "8", ...}
         availability = {}
         for day in settings.days:
             availability[day] = cell_text(sheet.cell(row=row, column=columns[day]).value)
+        hour_limits = {}
+        for name in limit_columns:
+            hour_limits[name] = cell_text(sheet.cell(row=row, column=columns[name]).value)
 
         # 3. A row without nickname is only fine when it is completely empty.
         if nickname == "":
             for day in settings.days:
                 if availability[day] != "":
                     raise WorkbookError(f"Volunteers, row {row}: availability but no nickname.")
+            for name in limit_columns:
+                if hour_limits[name] != "":
+                    raise WorkbookError(f"Volunteers, row {row}: {name} but no nickname.")
             continue  # an empty row: skip it
 
         if nickname in volunteers:
             raise WorkbookError(f"Volunteers, row {row}: the nickname {nickname!r} is used "
                                 f"more than once.")
 
-        # 4. All days together; | combines two sets.
-        blocks = set()
-        for day in settings.days:
-            try:
-                blocks = blocks | parse_availability(availability[day], day, settings)
-            except ValueError as error:
-                # Put row, volunteer and day in front of the message from parse_availability.
-                raise WorkbookError(f"Volunteers, row {row} ({nickname}), {day}: {error}") from None
+        # 4. The blocks they are available, and their hour limits.
+        blocks = _available_blocks_of_row(row, nickname, availability, settings)
+        max_minutes_per_day, max_minutes_total = _hour_limits_of_row(row, nickname,
+                                                                     hour_limits, settings)
 
-        if len(blocks) == 0:
-            raise WorkbookError(f"Volunteers, row {row}: {nickname} is not available on any day. "
-                                f"Remove the row if they are not coming.")
-
-        volunteers[nickname] = blocks
+        # Skills are on another tab: read_problem fills them in.
+        volunteers[nickname] = Volunteer(name=nickname,
+                                         skills={},
+                                         available_blocks=blocks,
+                                         max_minutes_per_day=max_minutes_per_day,
+                                         max_minutes_total=max_minutes_total)
 
     return volunteers
+
+
+def _available_blocks_of_row(row: int, nickname: str, availability: dict[str, str],
+                             settings: Settings) -> set[int]:
+    """All blocks one volunteer is available, from their cells {day: text} on Volunteers.
+
+    Each day's text goes through parse_availability; the days are combined. Raises
+    WorkbookError naming row, volunteer and day for an invalid availability, and for a
+    volunteer who is not available on any day. row and nickname are for the messages.
+    """
+    blocks = set()
+    for day in settings.days:
+        try:
+            # | combines two sets.
+            blocks = blocks | parse_availability(availability[day], day, settings)
+        except ValueError as error:
+            # Put row, volunteer and day in front of the message from parse_availability.
+            raise WorkbookError(f"Volunteers, row {row} ({nickname}), {day}: {error}") from None
+
+    if len(blocks) == 0:
+        raise WorkbookError(f"Volunteers, row {row}: {nickname} is not available on any day. "
+                            f"Remove the row if they are not coming.")
+
+    return blocks
+
+
+def _hour_limits_of_row(row: int, nickname: str, hour_limits: dict[str, str],
+                        settings: Settings) -> tuple[int | None, int | None]:
+    """One volunteer's (per day, total) hour limits in minutes, None = no limit.
+
+    hour_limits holds their cells {"Max hours per day": text, "Max hours total": text}.
+    A written cell goes through _hour_limits (whole hours or "none"; the two are only
+    compared when both are written as a number); an empty cell gets the default from the
+    settings. Raises WorkbookError naming row and volunteer. row and nickname are for the
+    messages.
+    """
+    per_day_text = hour_limits["Max hours per day"]
+    total_text = hour_limits["Max hours total"]
+    try:
+        max_minutes_per_day, max_minutes_total = _hour_limits(
+            ("Max hours per day", per_day_text),
+            ("Max hours total", total_text),
+            len(settings.days))
+    except ValueError as error:
+        # Put tab, row and volunteer in front of the message from _hour_limits.
+        raise WorkbookError(f"Volunteers, row {row} ({nickname}), {error}") from None
+
+    # An empty cell gets the default from the settings (_hour_limits gave None for it).
+    if per_day_text == "":
+        max_minutes_per_day = settings.default_max_minutes_per_day
+    if total_text == "":
+        max_minutes_total = settings.default_max_minutes_total
+
+    return max_minutes_per_day, max_minutes_total
 
 
 def read_posts(sheet: Worksheet) -> list[Post]:
@@ -425,6 +540,65 @@ def _whole_number(settings: dict[str, str], name: str) -> int:
         # from None: show only our clear message, not the ValueError behind it
         raise WorkbookError(f"Settings, {name!r}: {settings[name]!r} is not a whole "
                             f"number.") from None
+
+
+def _hour_limits(per_day: tuple[str, str], total: tuple[str, str],
+                 number_of_days: int) -> tuple[int | None, int | None]:
+    """The hour limits per day and in total of one Settings or Volunteers row, in minutes.
+
+    per_day and total are (name, text): the setting or column name for the messages, and
+    the cell text (already through cell_text). Each text goes through _hour_limit, with at
+    most 24 hours per day and in total at most 24 hours for each day of the convention.
+    An empty text gives None: read_volunteers then fills in the default, read_settings
+    never lets an empty value get here. Per day may not be more than the total, but only
+    when both are a number. Raises ValueError naming the setting or column; the reader
+    puts the tab (and row) in front of the message.
+    """
+    per_day_name, per_day_text = per_day   # unpack the (name, text) pairs
+    total_name, total_text = total
+
+    per_day_minutes = None
+    if per_day_text != "":
+        per_day_minutes = _hour_limit(per_day_name, per_day_text, 24)
+
+    total_minutes = None
+    if total_text != "":
+        total_minutes = _hour_limit(total_name, total_text, 24 * number_of_days)
+
+    # Only compare two numbers: an empty text or "none" (both None here) is never compared.
+    if per_day_minutes is not None and total_minutes is not None:
+        if per_day_minutes > total_minutes:
+            raise ValueError(f"{per_day_name} ({per_day_minutes // 60}) is more than "
+                             f"{total_name} ({total_minutes // 60}).")
+
+    return per_day_minutes, total_minutes
+
+
+def _hour_limit(name: str, text: str, max_hours: int) -> int | None:
+    """One hour limit cell (already through cell_text) as minutes.
+
+    Whole hours from 1 up to max_hours (24 for a day, 24 times the number of days for the
+    total) give that many hours in minutes; "none" (case ignored) = no limit, None.
+    Anything else raises ValueError starting with name (the setting or column); the
+    reader puts the tab (and row) in front. An empty text is handled by _hour_limits.
+    """
+    if text.lower() == "none":
+        return None
+
+    try:
+        hours = int(text)
+    except ValueError:
+        # from None: show only our clear message, not the ValueError behind it
+        raise ValueError(f"{name}: {text!r} is not a whole number of hours "
+                         f"(or \"none\" for no limit).") from None
+
+    if hours < 1:
+        raise ValueError(f"{name}: {hours} hours is not allowed: at least 1 "
+                         f"(or \"none\" for no limit).")
+    if hours > max_hours:
+        raise ValueError(f"{name}: {hours} is more than the maximum of {max_hours} hours.")
+
+    return hours * 60  # hours -> minutes
 
 
 def cell_text(value: str | int | float | time | None) -> str:

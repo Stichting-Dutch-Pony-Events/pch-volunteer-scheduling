@@ -2,8 +2,8 @@
 
 WorkbookError: a mistake in the input workbook (a typo, a missing column, ...).
 NoScheduleFound: the input is fine, but no schedule can meet all the hard rules. Its
-children NotEnoughQualified and NotEnoughVolunteers say where, when a check before
-solving finds a clear cause.
+children NotEnoughQualified, NotEnoughVolunteers and NotEnoughHours say where, when a
+check before solving finds a clear cause.
 
 The other modules import them from here; workbook.py and solver.py also make them
 available under their old place, so `from scheduler.solver import NoScheduleFound` works.
@@ -36,4 +36,13 @@ class NotEnoughVolunteers(NoScheduleFound):
     """At some time all posts together need more people than there are volunteers available.
 
     The message lists every such time with the numbers needed and available.
+    """
+
+
+class NotEnoughHours(NoScheduleFound):
+    """A post, or all posts together, need more hours than the volunteers can work.
+
+    Per convention day or over the whole convention; what a volunteer can work is capped
+    by their availability and their hour limits. The message says which kind it is and
+    gives the hours needed and the hours the volunteers can work.
     """

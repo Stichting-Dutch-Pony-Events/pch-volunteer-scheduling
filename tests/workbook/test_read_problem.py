@@ -16,9 +16,11 @@ TEST_WORKBOOK = Path(__file__).parent.parent / "data" / "test_input.xlsx"
 GOOD_PROBLEM = Problem(
     volunteers=[
         Volunteer(name="Mock Mane", skills={"Tickets": 3},
-                  available_blocks=set(range(0, 96))),        # all of Friday
+                  available_blocks=set(range(0, 96)),         # all of Friday
+                  max_minutes_per_day=480, max_minutes_total=960),   # the defaults
         Volunteer(name="Testy Hooves", skills={"Tickets": 1, "Infobooth": 3},
-                  available_blocks=set(range(112, 128))),     # Saturday 10:00-14:00
+                  available_blocks=set(range(112, 128)),      # Saturday 10:00-14:00
+                  max_minutes_per_day=480, max_minutes_total=960),
     ],
     posts=[Post(name="Tickets"), Post(name="Infobooth")],
     demand={("Tickets", 32): 1, ("Tickets", 33): 1,           # Friday 14:00-15:00
@@ -26,7 +28,8 @@ GOOD_PROBLEM = Problem(
             ("Infobooth", 112): 1, ("Infobooth", 113): 1,     # Saturday 10:00-11:00
             ("Infobooth", 114): 1, ("Infobooth", 115): 1},
     settings=Settings(min_stretch_minutes=60, max_stretch_minutes=180,
-                      min_break_minutes=30, days=("Friday", "Saturday")))
+                      min_break_minutes=30, days=("Friday", "Saturday"),
+                      default_max_minutes_per_day=480, default_max_minutes_total=960))
 
 
 def _add_sheet(workbook: Workbook, title: str, rows: list[tuple]) -> None:
@@ -48,10 +51,12 @@ def _good_workbook() -> Workbook:
         ("Days", "Friday, Saturday"),
         ("Minimum work stretch", 60),
         ("Maximum work stretch", 180),
-        ("Minimum break", 30)])
+        ("Minimum break", 30),
+        ("Default maximum hours per day", 8),
+        ("Default maximum hours total", 16)])
     _add_sheet(workbook, "Volunteers", [
-        ("Nickname", "Team", "Friday", "Saturday"),
-        ("Mock Mane", "Ticketing", "yes", "no"),
+        ("Nickname", "Team", "Friday", "Saturday", "Max hours per day", "Max hours total"),
+        ("Mock Mane", "Ticketing", "yes", "no"),        # empty limits: the defaults
         ("Testy Hooves", "Infobooth", "no", "10:00-14:00")])
     _add_sheet(workbook, "Posts", [
         ("Post",),
@@ -280,3 +285,21 @@ def test_the_test_workbook_gives_a_schedule():
 
     # Assert
     assert len(schedule.assignments) > 0
+
+
+def test_read_problem_gives_each_volunteer_their_hour_limits():
+    """In the test workbook, Testy Hooves has their own limits (4 per day, none in total)."""
+    # Arrange
+    # (Nothing to arrange: the test workbook is TEST_WORKBOOK.)
+
+    # Act
+    problem = read_problem(TEST_WORKBOOK)
+
+    # Assert
+    volunteers = {}
+    for volunteer in problem.volunteers:
+        volunteers[volunteer.name] = volunteer
+    assert volunteers["Testy Hooves"].max_minutes_per_day == 240    # 4 hours
+    assert volunteers["Testy Hooves"].max_minutes_total is None     # "none" = no limit
+    assert volunteers["Mock Mane"].max_minutes_per_day == 480       # empty: the defaults
+    assert volunteers["Mock Mane"].max_minutes_total == 960         # (8 and 16 hours)

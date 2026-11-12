@@ -77,7 +77,9 @@ likes to write tests (and often code) themselves; Claude reviews and explains.
    time** (user, 2026-11-05; kept 2026-11-08 although a run now takes ~14 s): real data
    means the 2026 draft and any other real input, e.g. data from other conventions. The
    user wants to stay in control of those runs. The test suite and the test workbook
-   are fine.
+   are fine. **After every real-data run** (PCH or UKPC), run with `--debug-time` and add
+   the times per step to `ReferenceDocuments/RUN_TIMES.md` (not in git; user, 2026-11-12).
+   `ReferenceDocuments/time_runs.py` does several runs and averages each step.
 
 ## Privacy (important)
 
@@ -125,7 +127,11 @@ Fictional nicknames for tests and examples (never use real nicknames):
 - **workbook.py layout** (agreed 2026-11-02): imports, constants and `WorkbookError` at
   the top, then `read_problem` (the table of contents), then the tab readers in the
   order it calls them, then the shared helpers. (Function order doesn't matter to
-  Python: a function only has to exist when it is called.)
+  Python: a function only has to exist when it is called.) A helper used by only one
+  reader sits right after that reader (agreed 2026-11-11). **Splitting workbook.py**
+  (one module per tab in `scheduler/reading/`, shared helpers in e.g. `cells.py`): not
+  yet (~530 lines); do it with option B or when Events/Wishes are added, whichever
+  comes first (Claude's advice, 2026-11-11).
 - **pytest** for tests. Version 1.0 runs from the command line; later a small program
   with a window (see the roadmap).
 
@@ -715,6 +721,133 @@ come after, the user can fix details by hand meanwhile):
         removed below the header (draft and test workbook; conditional formatting kept).
         Backups `..._before_diagonal_headers.xlsx` and
         `..._before_white_background.xlsx`; cell contents checked identical, 295 green.
+      - **Tests written by Claude (2026-11-11; the user had wanted only stubs):**
+        test_model.py `test_volunteer_has_no_hour_limits_unless_given`;
+        tests/solver/test_solver_maximum_hours.py with 10 tests (daily: beyond raises,
+        up to is fine, each day separately, night counts to its convention day; total:
+        beyond raises, up to is fine; no limit; own limit per volunteer; together with
+        the maximum stretch (user's idea): 8 h Tickets, Mock Mane max 1 h -> raises,
+        max 2 h -> found with Mock Mane <= 2 h). Stubs `add_maximum_hours_per_day_rule`
+        and `add_maximum_hours_total_rule` in rules.py, not yet called from solve().
+        10 red, 1 green (the no-limit test). Trial in a scratch copy: with the rules all
+        306 green; without them exactly the 5 forced tests and `..._can_still_be_met`
+        fail. **Steps 1-2 done (2026-11-11, user implemented, Claude tidied comments):**
+        the two Volunteer fields, both rules (per day via `block_of(day, "06:00")` +
+        `BLOCKS_PER_DAY`; total over all days; `if not variables: continue`), two lines
+        in solve(). 306 green. **Next: step 3, the reader.**
+      - **Step 3 design (agreed 2026-11-11):** one reader per tab stays (user):
+        `read_volunteers` returns `dict[str, Volunteer]` (available blocks + both limits,
+        `skills={}`; `read_problem` fills in the skills). New Settings fields
+        `default_max_minutes_per_day` / `default_max_minutes_total` (default None). Both
+        Settings rows required; Settings and Volunteers cells: whole hours >= 1, or
+        `none` (case/spaces ignored) = no limit; per day <= 24, total <= 24 * days; per
+        day <= total only when both are written as numbers (Settings: the two defaults;
+        Volunteers: the same row). Empty Volunteers cell = the Settings default.
+        Shared helper `_hour_limit(text, max_hours) -> int | None` (stub, ValueError;
+        tested via the readers). Stubs written by Claude: 8 tests (13 cases) in
+        test_read_settings.py, 10 tests (16 cases) in test_read_volunteers.py (section
+        comments "Availability" / "Hour limits"), 1 in test_read_problem.py (needs
+        Testy Hooves with 4 per day / none total in tests/data/test_input.xlsx).
+        306 green, 30 skipped. The existing read_volunteers tests are left as they are
+        on purpose: the user wants to see them fail after the refactor, then fix them.
+        **Order (user):** 3a Settings first (fill in the 8 settings tests, implement,
+        green), then 3b read_volunteers + read_problem (refactor, fix old tests, the
+        10 + 1 new tests).
+        **3a done (2026-11-11):** user wrote the settings tests (the separate "missing"
+        test merged into `test_missing_setting_raises_workbook_error`; GOOD_ROWS 6/12;
+        `_rows_with`/`_rows_without` take optional base rows); Claude implemented
+        `_hour_limit(text, max_hours)` (ValueError, "none" -> None, int(), 1..max,
+        hours * 60) and the part in `read_settings` (WorkbookError with the setting in
+        front; per day <= total only when both numbers). Settings fields default None.
+        test_read_problem's in-memory workbook got the two rows (8/16). 319 green,
+        17 skipped; both real workbooks still read. **Next: 3b.**
+        **Then (agreed 2026-11-11, after 3b): refactor the readers**, tests stay as they
+        are: `read_settings` becomes a table of contents with `_settings_by_name(sheet)`,
+        `_check_fixed_settings(...)`, `_days(text)`; `read_volunteers` gets
+        `_available_blocks_of_row(...)`; and one shared helper
+        `_hour_limits(per_day: (name, text), total: (name, text), number_of_days) ->
+        (int | None, int | None)` (ValueError naming the setting/column, per day <= total
+        only when both are numbers, empty -> None so read_volunteers fills in the
+        default); the readers only put "Settings, " / "Volunteers, row N (nickname), " in
+        front. Order reversed by the user (they were halfway through read_volunteers).
+        **3b, code done (2026-11-11; user implemented, Claude fixed):** read_volunteers
+        returns `dict[str, Volunteer]` (skills={}), empty limit cell = the settings
+        default, errors "Volunteers, row N (nickname), Max hours per day: ...", per day
+        <= total only when both cells are written, a row with only limits but no nickname
+        is an error; read_problem fills in `volunteer.skills`. Old tests adapted (HEADER
+        with the two columns, compare `.available_blocks`; test_read_problem's in-memory
+        workbook + GOOD_PROBLEM 480/960). 319 green, 17 skipped (the 10 + 1 new stubs).
+        **Next:** the user fills in the 10 Volunteers stubs + test 19, then the refactor.
+        **Refactor part 1 done (2026-11-11, Claude):** `_hour_limits` in workbook.py,
+        used by both readers (messages now "Settings, <setting>: ..." and "Volunteers, row
+        N (nickname), <column>: ..."); read_settings step 4 also rejects an empty required
+        setting (else an empty default limit would silently mean "no limit"). 319 green,
+        17 skipped. Still to do: `_settings_by_name`, `_check_fixed_settings`, `_days`,
+        `_available_blocks_of_row`. Then `_hour_limit(name, text, max_hours)` names the
+        setting/column itself (no re-raise in `_hour_limits`, user's choice).
+        **Tests filled in by Claude (2026-11-11, on request):** the 10 Volunteers tests
+        (RULES defaults 360/720) and test 19 (test workbook: Testy Hooves 4 per day / none
+        total). 336 green, nothing skipped. Code came first, so each was checked by hand
+        in a scratch copy: break one line, the matching test goes red.
+        **Reader refactor done (2026-11-11, Claude, tests unchanged, 336 green):**
+        read_settings is a table of contents over `_settings_by_name`,
+        `_check_setting_names`, `_check_fixed_settings`, `_days` and `_hour_limits`;
+        read_volunteers uses `_available_blocks_of_row` and `_hour_limits_of_row`. Helpers
+        used by one reader sit right after it.
+      - **Step 4 design (agreed 2026-11-11):** one `NotEnoughHours(NoScheduleFound)`
+        (the message says which kind). In checks.py `_not_enough_hours_at_post_lines` (per
+        post: a line per short day, plus one for the whole convention) and
+        `_not_enough_hours_in_total_lines` (all posts together, same), run after checks 1
+        and 2 and per post before in total. What a volunteer can work: on a day the
+        lowest of their available hours that day, limit per day and limit total; over the
+        convention the lowest of limit total and the sum of their days (None drops out).
+        Stubs written by Claude: the error class, both helpers (NotImplementedError, not
+        yet called from check_problem), 12 test stubs in test_checks.py ("Hours"
+        section); the subclass test is now `test_every_check_error_is_a_kind_of_...` with
+        NotEnoughHours added. 337 green, 12 skipped. The user starts with tests 1, 2, 5, 6.
+        **Message lines (user):** "{post}, {day}: ..." for one day and "{post}, over all
+        days: ..." for the whole convention (the rest of the line, e.g. "needs 4 hours, the
+        qualified volunteers can work 2 hours (Mock Mane)", still to settle in test 11).
+        Test 1 written by the user (2 hours on Friday + 2 on Saturday, Mock Mane max 2 h
+        total: only "over all days" is short). All posts together: "All posts, {day}: ..."
+        and "All posts, over all days: ...". **Tests 1-4 by the user, 5-12 filled in by
+        Claude (2026-11-12, on request):** 7 red ("raises" and message tests), the guards
+        green. Trial implementation in a scratch copy: all 349 green with the checks
+        called; tests 9 and 10 each fail without their cap (availability / total per day).
+        **Step 4 done (2026-11-12):** both checks implemented by the user, called from
+        `check_problem` after checks 1 and 2 (committed `28c8a19`). Then merged by Claude
+        (tests unchanged, 349 green): both functions are short wrappers around
+        `_hours_lines(problem, label, posts, volunteers, who, show_names)` ("All posts" =
+        every post with demand, every volunteer, no names), helpers `_hours_line`,
+        `_minutes_can_work_on_day`, `_hours_text`. **Step 5:** PCH 2026 draft run
+        (2026-11-12, user's go): schedule found, 44.8 s (CP-SAT ~41 s; times in
+        RUN_TIMES.md). With a limit for every volunteer (defaults 8/16) CP-SAT took
+        37-62 s; with the defaults `none` ~12 s, steady. **Decided (user, 2026-11-12):
+        default hour limits are `none`** in the template, the PCH draft and the UKPC
+        workbook; the template's Meaning warns that a number there is very costly; limits
+        only for the few volunteers who need one. (The test workbook keeps 8/16: test 19
+        relies on them.) **Next:** the UKPC timing run, then merge the branch into
+        `develop`. Possible later: skip a limit that can never be reached (the volunteer
+        can't work that many blocks anyway), only useful if someone sets numbers again.
+        **Status at the end of the morning of 2026-11-11 (continue here):** 3b committed
+        (`cf0bfdf`, the accidentally committed template was taken out with an amend).
+        The user chose to do **the reader refactor next** (the plan above:
+        `_hour_limits` shared by read_settings and read_volunteers, split read_settings
+        into `_settings_by_name` / `_check_fixed_settings` / `_days`, and
+        `_available_blocks_of_row` for read_volunteers), with the tests unchanged and
+        green; then the 10 Volunteers stubs + test 19 (Testy Hooves 4 per day / none in
+        the test workbook), then the pre-checks for maximum hours.
+- [ ] Warnings before solving (user, 2026-11-11; in 1.0, right after maximum hours):
+      problems that don't stop a run but are probably a mistake in the input. First one:
+      a volunteer who can never be scheduled (no block where a post they're qualified
+      for is open while they're available = no variables), e.g. "Mock Mane can never be
+      scheduled: no post they are qualified for is open while they are available".
+      Proposed design: `find_warnings(problem) -> list[str]` in checks.py (plain list,
+      not Python's `warnings` module, not an exception); the command line calls it before
+      solving and prints each line with "Warning: " in front, then carries on; solve()
+      stays silent. Possible later warnings with the same mechanism: a post that is
+      never open, a volunteer available for less than the minimum stretch, after the
+      run who got no shift at all (see the CLI summary idea).
 - [ ] Solver time limit (a setting), so a big run can't hang forever (large-data runs
       with minimum stretch 60 / break 30 took over 3 minutes in CP-SAT).
 - [ ] Compare a real PCH 2026 run with the hand-made 2026 schedule (see "First
@@ -742,6 +875,15 @@ After the minimal viable scheduler:
       so no test churn). The reader skips the Fixed tab until then.
 - [ ] Output: a "No double check" tab (like the old one: events, wishes, one column
       per volunteer grouped by team) for small changes by hand without the tool.
+- [ ] Possible feature (not for 1.0, agreed 2026-11-11): `check_schedule(problem,
+      schedule)` re-checks every hard rule on a finished schedule in plain Python (no
+      CP-SAT) and lists the violations. Upsides: an independent second implementation
+      catches bugs in the rules themselves (CP-SAT follows the rules as written, not as
+      meant); checks all combinations on real runs, not only the tested ones; and checks
+      schedules that did not come from solve(): hand corrections after a run (the
+      automatic version of "No double check"), old hand-made schedules (e.g. 2026), later
+      fixed shifts. Cost: every rule written twice; checking hand edits needs a reader
+      for the output workbook.
 - [ ] Output: an individual schedules tab (per volunteer their shifts; the old
       "Individual Schedules" tab is from the 2025 layout and does not match 2026).
       **Use the post colours** from the Colour column on Posts (user, 2026-11-11; the

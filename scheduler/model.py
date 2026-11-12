@@ -41,6 +41,10 @@ class Volunteer:
     # The blocks this volunteer can work (empty = never). For the whole weekend use
     # all_blocks(settings).
     available_blocks: set[int]
+    # The most this volunteer may work per convention day and over the whole convention,
+    # in minutes (None = no limit). The workbook gives whole hours.
+    max_minutes_per_day: int | None = None
+    max_minutes_total: int | None = None
 
 
 @dataclass
@@ -53,7 +57,7 @@ class Post:
 # accept Settings() as the default value in Problem below.
 @dataclass(frozen=True)
 class Settings:
-    """Limits and options for one scheduling run (later read from the Settings tab)."""
+    """Limits and options for one scheduling run, read from the Settings tab."""
     # A work stretch is continuous work, also across posts.
     min_stretch_minutes: int = 60
     max_stretch_minutes: int = 180
@@ -61,6 +65,11 @@ class Settings:
     min_break_minutes: int = 30
     # The convention days in order. The first one starts at block 0.
     days: tuple[str, ...] = ("Friday", "Saturday", "Sunday")
+    # The default hour limits in minutes (None = no limit), for volunteers who have no
+    # limit of their own on the Volunteers tab. Only the reader uses these: the solver
+    # looks at the limits on each Volunteer.
+    default_max_minutes_per_day: int | None = None
+    default_max_minutes_total: int | None = None
 
 
 @dataclass
