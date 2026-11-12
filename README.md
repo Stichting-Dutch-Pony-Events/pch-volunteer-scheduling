@@ -47,7 +47,7 @@ from the command line. Details can then be fixed by hand.
 - [x] A clear message when no schedule is possible, saying where it gets stuck
 - [x] A maximum number of hours per volunteer, per day and in total
 - [x] Warnings for likely mistakes in the input, e.g. a volunteer who can never be scheduled
-- [ ] A time limit for the solver, so a big run can't hang
+- [x] A time limit for the solver, so a big run can't hang
 - [ ] First run on real data, compared with the hand-made 2026 schedule
 - [ ] Small tidy-ups: a clear error for a damaged workbook, a few extra tests
 
@@ -149,7 +149,8 @@ python -m scheduler input.xlsx output.xlsx
 Reads the input workbook, makes a schedule and writes it to `output.xlsx` (tab
 "Schedule": one column per post, one row per 15 minutes). If the output already
 exists you are asked before it is overwritten; add `--overwrite` to skip that
-question. `python -m scheduler --help` shows the options. Keep real input and output
+question. The solver stops after 10 minutes; give it more (or less) time with e.g.
+`--time-limit 30` (in minutes). `python -m scheduler --help` shows the options. Keep real input and output
 outside the repository: they contain volunteer names.
 
 ### Running the tests

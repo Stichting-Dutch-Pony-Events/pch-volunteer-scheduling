@@ -1,4 +1,5 @@
 """The command line: python -m scheduler input.xlsx output.xlsx [--overwrite] [--debug-time]
+[--time-limit MINUTES]
 
 Python runs this file when you type "python -m scheduler". All the work happens in main(),
 which takes the arguments as a list, so the tests can call it directly without a terminal.
@@ -10,10 +11,14 @@ from datetime import datetime
 from pathlib import Path
 
 from scheduler.checks import find_warnings
+from scheduler.errors import TimeLimitReached
 from scheduler.helpers import set_debug_time
 from scheduler.output import write_output
 from scheduler.solver import NoScheduleFound, solve
 from scheduler.workbook import WorkbookError, read_problem
+
+# Without --time-limit, the solver stops after this many minutes.
+DEFAULT_TIME_LIMIT_MINUTES = 10
 
 
 def main(arguments: list[str]) -> int:
@@ -44,6 +49,10 @@ def main(arguments: list[str]) -> int:
                         help="replace an existing output file without asking")
     parser.add_argument("--debug-time", action="store_true",
                         help="print timing details while running")
+    parser.add_argument("--time-limit", type=_positive_whole_number,
+                        default=DEFAULT_TIME_LIMIT_MINUTES, metavar="MINUTES",
+                        help="stop the solver after this many minutes "
+                             f"(default: {DEFAULT_TIME_LIMIT_MINUTES})")
 
     # Then let argparse read the words. On missing or unknown arguments it prints the
     # usage and stops the program itself (SystemExit, code 2), so we never get further.
@@ -103,7 +112,7 @@ def main(arguments: list[str]) -> int:
             _say(f"Warning: {line}")
         _say("Solving (this can take a few minutes)")
         solving_started = time.perf_counter()   # a stopwatch: only differences matter
-        schedule = solve(problem=problem)
+        schedule = solve(problem=problem, time_limit_seconds=options.time_limit * 60)
         solving_seconds = time.perf_counter() - solving_started
         _say(f"Solved, this took {format_duration(solving_seconds)}")
         _say(f"Writing {output_path}")
@@ -114,6 +123,11 @@ def main(arguments: list[str]) -> int:
         return 1
     except NoScheduleFound as error:
         print(f"No schedule possible: {error}", file=sys.stderr)
+        return 1
+    except TimeLimitReached as error:
+        # Not "no schedule possible": one may exist, the solver just needs more time.
+        print(f"{error} Try again with a longer limit, e.g. --time-limit "
+              f"{options.time_limit * 2}.", file=sys.stderr)
         return 1
     except PermissionError:
         print(f"Cannot write {output_path}: is it open in Excel? Close it and try again.",
@@ -145,6 +159,17 @@ def _say(message: str) -> None:
     """
     now = datetime.now().strftime("%H:%M:%S")
     print(f"[{now}] {message}", flush=True)
+
+
+def _positive_whole_number(text: str) -> int:
+    """Turn the text after --time-limit into a whole number of at least 1, for argparse."""
+    try:
+        number = int(text)
+    except ValueError:
+        raise argparse.ArgumentTypeError(f"{text!r} is not a whole number") from None
+    if number < 1:
+        raise argparse.ArgumentTypeError(f"{number} is not at least 1")
+    return number
 
 
 if __name__ == "__main__":

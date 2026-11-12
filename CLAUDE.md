@@ -862,7 +862,7 @@ come after, the user can fix details by hand meanwhile):
       `find_warnings` + helper `_can_ever_be_scheduled(volunteer, problem)` in checks.py;
       `main` prints each line with `_say(f"Warning: {line}")` right after reading. 357
       green. The test workbook gives no warnings.
-- [ ] Solver time limit, so a big run can't hang forever (large-data runs
+- [x] Solver time limit, so a big run can't hang forever (large-data runs
       with minimum stretch 60 / break 30 took over 3 minutes in CP-SAT).
       **Decided (user, 2026-11-12), on `develop`:** on the **command line**, not in the
       workbook (it is about the run, not the convention): `--time-limit MINUTES`, whole
@@ -887,6 +887,16 @@ come after, the user can fix details by hand meanwhile):
       357 green, 12 skipped. `test_no_schedule_possible_prints_a_message` has a
       `fake_solve(problem)`: left as it is on purpose, it goes red once `main` passes
       `time_limit_seconds` (user sees it fail, then fixes it).
+      **Implemented (2026-11-12, user; Claude fixed the review points):** `make_solver`,
+      `raise_if_no_schedule` (message "No schedule found within the time limit of 10
+      minutes; one may still exist."), `solve(problem, time_limit_seconds=None)`;
+      `--time-limit MINUTES` with `_positive_whole_number` as argparse type and
+      `DEFAULT_TIME_LIMIT_MINUTES = 10`; `except TimeLimitReached` suggests twice the
+      limit (user's idea). **Done (2026-11-12):** the 4 command-line tests filled in by
+      Claude (helper `_remember_time_limit` = fake solve that remembers the limit; the
+      invalid-value test parametrized 0 / -5 / ten / 1.5). Code came first, so each was
+      checked by breaking `__main__.py` in a scratch copy (no * 60, default 5, type=int,
+      no advice, no except): the matching test goes red every time. 373 green.
 - [ ] Compare a real PCH 2026 run with the hand-made 2026 schedule (see "First
       end-to-end run" above; the run works, the comparison isn't done).
 - [x] Small: test 6 of the stay-at-post rule. **Dropped (user, 2026-11-11), stub removed:**

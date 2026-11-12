@@ -9,6 +9,7 @@ import pytest
 
 import scheduler.__main__ as command_line
 from scheduler import helpers
+from scheduler.errors import TimeLimitReached
 from scheduler.model import Problem
 from scheduler.solver import NoScheduleFound
 
@@ -299,44 +300,82 @@ def test_run_carries_on_after_a_warning(tmp_path, monkeypatch):
 
 # --- time limit ---
 
+def _remember_time_limit(monkeypatch: pytest.MonkeyPatch) -> dict[str, int | None]:
+    """Replace solve with a fake that remembers the time limit it got, then stops the run.
+
+    Returns the dict the fake fills in, so the test can look at it after main() is done.
+    """
+    received = {}
+
+    def fake_solve(problem, time_limit_seconds):
+        received["time_limit_seconds"] = time_limit_seconds
+        raise NoScheduleFound("stop here")   # no need to really solve and write
+    monkeypatch.setattr(command_line, "solve", fake_solve)
+    return received
+
+
 def test_time_limit_flag_is_passed_to_solve_in_seconds(tmp_path, monkeypatch):
     """--time-limit 20 (minutes) reaches solve() as 1200 seconds."""
     # Arrange
+    received = _remember_time_limit(monkeypatch)
+    output = tmp_path / "output.xlsx"
 
     # Act
+    command_line.main([str(TEST_WORKBOOK), str(output), "--time-limit", "20"])
 
     # Assert
-    pytest.skip("not written yet")
+    assert received["time_limit_seconds"] == 1200
 
 
 def test_without_time_limit_flag_solve_gets_ten_minutes(tmp_path, monkeypatch):
     """Without --time-limit, solve() gets the default of 10 minutes (600 seconds)."""
     # Arrange
+    received = _remember_time_limit(monkeypatch)
+    output = tmp_path / "output.xlsx"
 
     # Act
+    command_line.main([str(TEST_WORKBOOK), str(output)])
 
     # Assert
-    pytest.skip("not written yet")
+    assert received["time_limit_seconds"] == 600
 
 
-def test_time_limit_that_is_not_a_positive_whole_number_stops_with_a_usage_message():
+@pytest.mark.parametrize("minutes", ["0", "-5", "ten", "1.5"],
+                         ids=["zero", "negative", "not a number", "not whole"])
+def test_time_limit_that_is_not_a_positive_whole_number_stops_with_a_usage_message(
+        tmp_path, monkeypatch, minutes):
     """A time limit of 0, below 0, not a number or not whole stops with exit code 2."""
     # Arrange
+    monkeypatch.setattr(command_line, "solve", _fail_if_called)
+    output = tmp_path / "output.xlsx"
 
     # Act
+    # (Act and Assert are combined, pytest.raises checks the exception while the call runs.)
 
     # Assert
-    pytest.skip("not written yet")
+    # argparse doesn't return: it prints the usage and raises SystemExit itself.
+    with pytest.raises(SystemExit) as stop:
+        command_line.main([str(TEST_WORKBOOK), str(output), "--time-limit", minutes])
+    assert stop.value.code == 2
 
 
 def test_time_limit_reached_prints_a_clear_message(tmp_path, monkeypatch, capsys):
     """When the time limit is reached, the program says so, suggests --time-limit, exit 1."""
     # Arrange
+    # A real timeout is hard to make in a test, so solve pretends.
+    def fake_solve(problem, time_limit_seconds):
+        raise TimeLimitReached("No schedule found within the time limit of 10 minutes.")
+    monkeypatch.setattr(command_line, "solve", fake_solve)
+    output = tmp_path / "output.xlsx"
 
     # Act
+    result = command_line.main([str(TEST_WORKBOOK), str(output)])
 
     # Assert
-    pytest.skip("not written yet")
+    printed = capsys.readouterr().err
+    assert result == 1
+    assert "10 minutes" in printed
+    assert "--time-limit" in printed
 
 
 # --- debug output ---
@@ -432,7 +471,7 @@ def test_typo_in_the_workbook_prints_the_workbook_error(tmp_path, capsys):
 def test_no_schedule_possible_prints_a_message(tmp_path, monkeypatch, capsys):
     """When the solver finds no schedule, the program says so with exit code 1."""
     # Arrange
-    def fake_solve(problem):
+    def fake_solve(problem, time_limit_seconds):
         raise NoScheduleFound("no schedule follows all the rules")
     monkeypatch.setattr(command_line, "solve", fake_solve)
 
