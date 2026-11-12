@@ -297,6 +297,48 @@ def test_run_carries_on_after_a_warning(tmp_path, monkeypatch):
     assert output.exists()
 
 
+# --- time limit ---
+
+def test_time_limit_flag_is_passed_to_solve_in_seconds(tmp_path, monkeypatch):
+    """--time-limit 20 (minutes) reaches solve() as 1200 seconds."""
+    # Arrange
+
+    # Act
+
+    # Assert
+    pytest.skip("not written yet")
+
+
+def test_without_time_limit_flag_solve_gets_ten_minutes(tmp_path, monkeypatch):
+    """Without --time-limit, solve() gets the default of 10 minutes (600 seconds)."""
+    # Arrange
+
+    # Act
+
+    # Assert
+    pytest.skip("not written yet")
+
+
+def test_time_limit_that_is_not_a_positive_whole_number_stops_with_a_usage_message():
+    """A time limit of 0, below 0, not a number or not whole stops with exit code 2."""
+    # Arrange
+
+    # Act
+
+    # Assert
+    pytest.skip("not written yet")
+
+
+def test_time_limit_reached_prints_a_clear_message(tmp_path, monkeypatch, capsys):
+    """When the time limit is reached, the program says so, suggests --time-limit, exit 1."""
+    # Arrange
+
+    # Act
+
+    # Assert
+    pytest.skip("not written yet")
+
+
 # --- debug output ---
 
 def test_debug_time_flag_switches_debug_printing_on(tmp_path, monkeypatch):

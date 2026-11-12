@@ -4,6 +4,7 @@ WorkbookError: a mistake in the input workbook (a typo, a missing column, ...).
 NoScheduleFound: the input is fine, but no schedule can meet all the hard rules. Its
 children NotEnoughQualified, NotEnoughVolunteers and NotEnoughHours say where, when a
 check before solving finds a clear cause.
+TimeLimitReached: the solver found no schedule within the time limit (one may still exist).
 
 The other modules import them from here; workbook.py and solver.py also make them
 available under their old place, so `from scheduler.solver import NoScheduleFound` works.
@@ -45,4 +46,12 @@ class NotEnoughHours(NoScheduleFound):
     Per convention day or over the whole convention; what a volunteer can work is capped
     by their availability and their hour limits. The message says which kind it is and
     gives the hours needed and the hours the volunteers can work.
+    """
+
+
+class TimeLimitReached(Exception):
+    """CP-SAT found no schedule within the time limit.
+
+    Not a child of NoScheduleFound on purpose: after a timeout a schedule may still exist,
+    the solver just didn't find one in time. The message names the limit.
     """

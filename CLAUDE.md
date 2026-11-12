@@ -862,8 +862,31 @@ come after, the user can fix details by hand meanwhile):
       `find_warnings` + helper `_can_ever_be_scheduled(volunteer, problem)` in checks.py;
       `main` prints each line with `_say(f"Warning: {line}")` right after reading. 357
       green. The test workbook gives no warnings.
-- [ ] Solver time limit (a setting), so a big run can't hang forever (large-data runs
+- [ ] Solver time limit, so a big run can't hang forever (large-data runs
       with minimum stretch 60 / break 30 took over 3 minutes in CP-SAT).
+      **Decided (user, 2026-11-12), on `develop`:** on the **command line**, not in the
+      workbook (it is about the run, not the convention): `--time-limit MINUTES`, whole
+      minutes >= 1 (else argparse usage error, exit 2), **default 10 minutes**, no "no
+      limit" option (give a big number). `solve(problem, time_limit_seconds: int | None =
+      None)` (None = no limit, so the solver tests stay as they are); in solver.py
+      `_make_solver(time_limit_seconds)` sets `max_time_in_seconds`,
+      `_raise_if_no_schedule(status, time_limit_seconds)`: INFEASIBLE -> NoScheduleFound,
+      UNKNOWN -> new **`TimeLimitReached(Exception)`** in errors.py (separate class, not a
+      child of NoScheduleFound: after a timeout a schedule may still exist). The command
+      line catches it with its own message suggesting a longer --time-limit, exit 1.
+      Minutes on the command line, seconds from solve() inward (CP-SAT's unit; `main`
+      converts once). The solver's message only says what happened ("within the time
+      limit of 10 minutes; one may still exist"), the command line adds the advice.
+      **Renamed (user chose option A, 2026-11-12): `make_solver` and
+      `raise_if_no_schedule` are public**, following the agreed rule (tested directly =
+      public, no underscore); a real timeout can't be made reliably in a test.
+      **Stubs written by Claude (2026-11-12):** `TimeLimitReached` (real class, at the end
+      of errors.py), `make_solver` and `raise_if_no_schedule` in solver.py
+      (NotImplementedError, not yet used by `solve`); 8 test stubs in
+      tests/solver/test_solver_time_limit.py, 4 in test_main.py (section "time limit").
+      357 green, 12 skipped. `test_no_schedule_possible_prints_a_message` has a
+      `fake_solve(problem)`: left as it is on purpose, it goes red once `main` passes
+      `time_limit_seconds` (user sees it fail, then fixes it).
 - [ ] Compare a real PCH 2026 run with the hand-made 2026 schedule (see "First
       end-to-end run" above; the run works, the comparison isn't done).
 - [x] Small: test 6 of the stay-at-post rule. **Dropped (user, 2026-11-11), stub removed:**

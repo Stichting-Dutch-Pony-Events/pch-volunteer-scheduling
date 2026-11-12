@@ -64,3 +64,22 @@ def _solve_and_read_schedule(model: cp_model.CpModel, works: rules.Works) -> Sch
         if solver.value(var) == 1:
             assignments.add(key)
     return Schedule(assignments=assignments)
+
+
+def make_solver(time_limit_seconds: int | None) -> cp_model.CpSolver:
+    """A CP-SAT solver that stops after time_limit_seconds (None = no limit).
+
+    A building block of solve(); public because it is tested on its own.
+    """
+    raise NotImplementedError
+
+
+def raise_if_no_schedule(status: int, time_limit_seconds: int | None) -> None:
+    """Raise if CP-SAT's status means it found no schedule; do nothing if it found one.
+
+    INFEASIBLE (proven impossible) raises NoScheduleFound; UNKNOWN (stopped by the time
+    limit before finding anything) raises TimeLimitReached, whose message names the limit.
+    OPTIMAL and FEASIBLE mean a schedule was found. A building block of solve(); public
+    because it is tested on its own (a real timeout can't be made reliably in a test).
+    """
+    raise NotImplementedError
