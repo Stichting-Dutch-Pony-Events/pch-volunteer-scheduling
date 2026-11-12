@@ -125,7 +125,11 @@ Fictional nicknames for tests and examples (never use real nicknames):
 - **workbook.py layout** (agreed 2026-11-02): imports, constants and `WorkbookError` at
   the top, then `read_problem` (the table of contents), then the tab readers in the
   order it calls them, then the shared helpers. (Function order doesn't matter to
-  Python: a function only has to exist when it is called.)
+  Python: a function only has to exist when it is called.) A helper used by only one
+  reader sits right after that reader (agreed 2026-11-11). **Splitting workbook.py**
+  (one module per tab in `scheduler/reading/`, shared helpers in e.g. `cells.py`): not
+  yet (~530 lines); do it with option B or when Events/Wishes are added, whichever
+  comes first (Claude's advice, 2026-11-11).
 - **pytest** for tests. Version 1.0 runs from the command line; later a small program
   with a window (see the roadmap).
 
@@ -787,8 +791,27 @@ come after, the user can fix details by hand meanwhile):
         read_settings is a table of contents over `_settings_by_name`,
         `_check_setting_names`, `_check_fixed_settings`, `_days` and `_hour_limits`;
         read_volunteers uses `_available_blocks_of_row` and `_hour_limits_of_row`. Helpers
-        used by one reader sit right after it. **Next: step 4, the maximum-hours
-        pre-checks.**
+        used by one reader sit right after it.
+      - **Step 4 design (agreed 2026-11-11):** one `NotEnoughHours(NoScheduleFound)`
+        (the message says which kind). In checks.py `_not_enough_hours_at_post_lines` (per
+        post: a line per short day, plus one for the whole convention) and
+        `_not_enough_hours_in_total_lines` (all posts together, same), run after checks 1
+        and 2 and per post before in total. What a volunteer can work: on a day the
+        lowest of their available hours that day, limit per day and limit total; over the
+        convention the lowest of limit total and the sum of their days (None drops out).
+        Stubs written by Claude: the error class, both helpers (NotImplementedError, not
+        yet called from check_problem), 12 test stubs in test_checks.py ("Hours"
+        section); the subclass test is now `test_every_check_error_is_a_kind_of_...` with
+        NotEnoughHours added. 337 green, 12 skipped. The user starts with tests 1, 2, 5, 6.
+        **Message lines (user):** "{post}, {day}: ..." for one day and "{post}, over all
+        days: ..." for the whole convention (the rest of the line, e.g. "needs 4 hours, the
+        qualified volunteers can work 2 hours (Mock Mane)", still to settle in test 11).
+        Test 1 written by the user (2 hours on Friday + 2 on Saturday, Mock Mane max 2 h
+        total: only "over all days" is short). All posts together: "All posts, {day}: ..."
+        and "All posts, over all days: ...". **Tests 1-4 by the user, 5-12 filled in by
+        Claude (2026-11-12, on request):** 7 red ("raises" and message tests), the guards
+        green. Trial implementation in a scratch copy: all 349 green with the checks
+        called; tests 9 and 10 each fail without their cap (availability / total per day).
         **Status at the end of the morning of 2026-11-11 (continue here):** 3b committed
         (`cf0bfdf`, the accidentally committed template was taken out with an amend).
         The user chose to do **the reader refactor next** (the plan above:
