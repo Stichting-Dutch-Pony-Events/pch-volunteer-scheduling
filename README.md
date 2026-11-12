@@ -45,7 +45,7 @@ from the command line. Details can then be fixed by hand.
 
 - [x] Faster: a run on the real data takes seconds instead of minutes
 - [x] A clear message when no schedule is possible, saying where it gets stuck
-- [ ] A maximum number of hours per volunteer, per day and in total
+- [x] A maximum number of hours per volunteer, per day and in total
 - [ ] Warnings for likely mistakes in the input, e.g. a volunteer who can never be scheduled
 - [ ] A time limit for the solver, so a big run can't hang
 - [ ] First run on real data, compared with the hand-made 2026 schedule

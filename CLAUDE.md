@@ -691,7 +691,7 @@ come after, the user can fix details by hand meanwhile):
           stretch with one qualified person): hard to check exactly, left to CP-SAT.
         - Later features: a fixed shift that is impossible (not qualified/available),
           meal breaks.
-- [ ] Maximum hours as a **hard rule** (**next**; moved into 1.0, user 2026-11-08; add
+- [x] Maximum hours as a **hard rule** (done 2026-11-12; moved into 1.0, user 2026-11-08; add
       the maximum-hours pre-checks with it, see "Possible further checks" above): per day and in
       total, defaults from the Settings rows "Default maximum hours per day" (8) / "total"
       (16), per volunteer from the Volunteers columns "Max hours per day" / "Max hours
