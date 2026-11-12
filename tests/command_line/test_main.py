@@ -9,6 +9,7 @@ import pytest
 
 import scheduler.__main__ as command_line
 from scheduler import helpers
+from scheduler.model import Problem
 from scheduler.solver import NoScheduleFound
 
 
@@ -256,6 +257,44 @@ def test_no_question_when_the_output_does_not_exist_yet(tmp_path, monkeypatch):
 
     # Assert
     assert result == 0
+
+
+# --- warnings before solving ---
+
+def _one_warning(problem: Problem) -> list[str]:
+    """Stands in for find_warnings: always one warning, whatever the workbook says."""
+    return ["Mock Mane can never be scheduled"]
+
+
+def test_warnings_are_printed_before_solving(tmp_path, monkeypatch, capsys):
+    """Each warning is printed with "Warning: " in front, before the program starts solving."""
+    # Arrange
+    # Every volunteer in the test workbook can be scheduled, so find_warnings pretends.
+    monkeypatch.setattr(command_line, "find_warnings", _one_warning)
+    output = tmp_path / "output.xlsx"
+
+    # Act
+    command_line.main([str(TEST_WORKBOOK), str(output)])
+
+    # Assert
+    printed = capsys.readouterr().out
+    warning = printed.index("Warning: Mock Mane can never be scheduled")
+    solving = printed.index("Solving")
+    assert warning < solving
+
+
+def test_run_carries_on_after_a_warning(tmp_path, monkeypatch):
+    """A warning does not stop the run: the schedule is still written, exit code 0."""
+    # Arrange
+    monkeypatch.setattr(command_line, "find_warnings", _one_warning)
+    output = tmp_path / "output.xlsx"
+
+    # Act
+    result = command_line.main([str(TEST_WORKBOOK), str(output)])
+
+    # Assert
+    assert result == 0
+    assert output.exists()
 
 
 # --- debug output ---

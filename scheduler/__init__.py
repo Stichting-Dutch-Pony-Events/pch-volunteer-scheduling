@@ -4,7 +4,8 @@ Where to find what, in the order a run goes through them:
 
     __main__.py   the command line (python -m scheduler input.xlsx output.xlsx): main()
     workbook.py   reads the input workbook into a Problem: read_problem() and a reader per tab
-    checks.py     quick checks before solving, with clear messages: check_problem()
+    checks.py     quick checks before solving, with clear messages: check_problem(); and
+                  warnings about likely mistakes in the input: find_warnings()
     solver.py     builds the CP-SAT model and solves it: solve()
     rules.py      the hard rules, one add_<name>_rule() function each
     output.py     writes the schedule workbook: write_output() and create_<name>_sheet()

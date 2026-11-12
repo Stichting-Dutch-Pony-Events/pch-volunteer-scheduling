@@ -6,6 +6,9 @@ it still finds no schedule, the cause is the combination of rules (plain NoSched
 
 All problems of one kind are reported at once: the message is a list, at most
 MAX_LINES lines, then "and N more".
+
+find_warnings (at the bottom) is different: it finds things that don't stop a run but
+are probably a mistake in the input, and only returns them as lines of text.
 """
 from scheduler.errors import NotEnoughQualified, NotEnoughVolunteers, NotEnoughHours
 from scheduler.model import Problem, runs_of_consecutive_blocks, time_of, day_of, block_of
@@ -309,3 +312,17 @@ def _end_time(block_after_last: int, settings: Settings) -> str:
         _, end = time_of(block=block_after_last, settings=settings)
 
     return end
+
+
+# --- Warnings: probably a mistake in the input, but no reason to stop ---
+
+def find_warnings(problem: Problem) -> list[str]:
+    """Lines about things in the input that are probably a mistake but don't stop a run.
+
+    For now one kind: a volunteer who can never be scheduled, because no post they are
+    qualified for is open while they are available, e.g. "Mock Mane can never be
+    scheduled: no post they are qualified for is open while they are available". One line
+    per volunteer, in the order of the volunteers. Empty list = nothing to warn about.
+    The command line prints them (with "Warning: " in front) and carries on.
+    """
+    raise NotImplementedError

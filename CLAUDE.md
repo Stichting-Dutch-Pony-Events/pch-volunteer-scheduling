@@ -149,7 +149,7 @@ tests/                test_helpers.py; data/test_input.xlsx (made-up workbook)
 tests/model/          test_model.py, test_time_blocks.py (tests of model.py)
 tests/solver/         test_solver_availability.py, test_solver_basics.py,
                       test_solver_work_stretches.py, test_solver_stay_at_post.py,
-                      test_checks.py
+                      test_checks.py, test_solver_maximum_hours.py, test_warnings.py
 tests/output/         test_assign_slots.py, test_write_helpers.py,
                       test_create_schedule_sheet.py, test_write_output.py (tests of
                       writing the output workbook)
@@ -848,6 +848,16 @@ come after, the user can fix details by hand meanwhile):
       stays silent. Possible later warnings with the same mechanism: a post that is
       never open, a volunteer available for less than the minimum stretch, after the
       run who got no shift at all (see the CLI summary idea).
+      **Agreed (user, 2026-11-12), on `develop`:** design as proposed, but the warnings go
+      to **stdout** via `_say` ("[14:03:12] Warning: ..."; every stdout line starts with
+      the time, see test_progress_messages_start_with_the_time), printed after reading and
+      before solving. "Can never be scheduled" = no (post, block) in the demand with a
+      post they are qualified for and a block where they are available (= no solver
+      variables). **Stubs written by Claude:** `find_warnings` in checks.py
+      (NotImplementedError), 6 test stubs in tests/solver/test_warnings.py, 2 in
+      test_main.py (section "warnings before solving"; they will monkeypatch
+      `command_line.find_warnings`, so `__main__.py` imports it by name). 349 green,
+      8 skipped.
 - [ ] Solver time limit (a setting), so a big run can't hang forever (large-data runs
       with minimum stretch 60 / break 30 took over 3 minutes in CP-SAT).
 - [ ] Compare a real PCH 2026 run with the hand-made 2026 schedule (see "First
@@ -983,7 +993,8 @@ After the minimal viable scheduler:
       in the schedule).
 - [ ] Maybe: Question vetting, Manestage clean and Sardine duty by the same person
 - [ ] **Think about one-off event shifts (user, 2026-11-08; Claude: remind the user once
-      the large-data test runs are done).** Big conventions have many "posts" that are
+      the large-data test runs are done).** Reminded 2026-11-12; user: discuss it right
+      after the 1.0 release. Big conventions have many "posts" that are
       really a single event (open once, for one hour, one person). As separate posts they
       make the Posts/Skills/Demand tabs very wide. Ideas to discuss: an "Event assistance"
       post with the event name as a note, posts with a group and a shared skill, or a
