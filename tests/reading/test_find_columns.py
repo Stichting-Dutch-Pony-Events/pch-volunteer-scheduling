@@ -1,7 +1,8 @@
 import openpyxl
 import pytest
 
-from scheduler.workbook import WorkbookError, find_columns
+from scheduler.errors import WorkbookError
+from scheduler.reading.cells import find_columns
 
 
 def test_columns_are_found_by_their_header():

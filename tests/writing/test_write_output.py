@@ -6,7 +6,7 @@ import pytest
 from scheduler.model import Post, Problem, Schedule, Settings
 from scheduler.writing.output import write_output
 from scheduler.solving.solver import solve
-from scheduler.workbook import read_problem
+from scheduler.reading.workbook import read_problem
 
 
 TEST_WORKBOOK = Path(__file__).parent.parent / "data" / "test_input.xlsx"

@@ -6,7 +6,8 @@ from openpyxl.workbook.workbook import Workbook
 
 from scheduler.model import Post, Problem, Settings, Volunteer
 from scheduler.solving.solver import solve
-from scheduler.workbook import WorkbookError, read_problem
+from scheduler.errors import WorkbookError
+from scheduler.reading.workbook import read_problem
 
 
 # The made-up workbook in tests/data, used by the end-to-end tests.

@@ -2,7 +2,7 @@ from datetime import time
 
 import pytest
 
-from scheduler.workbook import cell_text
+from scheduler.reading.cells import cell_text
 
 
 def test_empty_cell_gives_empty_text():

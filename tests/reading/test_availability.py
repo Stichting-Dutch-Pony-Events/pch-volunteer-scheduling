@@ -1,7 +1,7 @@
 import pytest
 
 from scheduler.model import Settings
-from scheduler.workbook import parse_availability
+from scheduler.reading.cells import parse_availability
 
 
 # The blocks depend on the days, so the tests pass them explicitly instead of relying on

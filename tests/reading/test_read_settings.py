@@ -5,7 +5,8 @@ import pytest
 from openpyxl.worksheet.worksheet import Worksheet
 
 from scheduler.model import Settings
-from scheduler.workbook import WorkbookError, read_settings
+from scheduler.errors import WorkbookError
+from scheduler.reading.settings import read_settings
 
 
 HEADER = ("Setting", "Value", "Unit", "Meaning")

@@ -12,10 +12,10 @@ from pathlib import Path
 
 from scheduler.solving.checks import find_warnings
 from scheduler.solving.solver import NoScheduleFound, solve
-from scheduler.errors import TimeLimitReached
+from scheduler.errors import TimeLimitReached, WorkbookError
 from scheduler.helpers import set_debug_time
 from scheduler.writing.output import write_output
-from scheduler.workbook import WorkbookError, read_problem
+from scheduler.reading.workbook import read_problem
 
 # Without --time-limit, the solver stops after this many minutes.
 DEFAULT_TIME_LIMIT_MINUTES = 10

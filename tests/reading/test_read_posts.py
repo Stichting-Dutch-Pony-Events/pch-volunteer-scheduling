@@ -3,7 +3,8 @@ import pytest
 from openpyxl.worksheet.worksheet import Worksheet
 
 from scheduler.model import Post
-from scheduler.workbook import WorkbookError, read_posts
+from scheduler.errors import WorkbookError
+from scheduler.reading.posts import read_posts
 
 
 # Like the real Posts tab: Group, Colour and Notes are there but not read yet.

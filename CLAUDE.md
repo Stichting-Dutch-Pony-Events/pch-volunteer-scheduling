@@ -926,7 +926,13 @@ come after, the user can fix details by hand meanwhile):
 up to date with `main`):
 1. Split the code into subpackages (option B: `reading/`, `solving/`, `writing/`
    mirroring the tests; rules.py into hard and soft rules; workbook.py one module per
-   tab). A pure refactor, tests stay green.
+   tab). A pure refactor, tests stay green. Branch `feature/subpackages`. Done:
+   writing/ (output.py + schedule_sheet.py), solving/ (solver, checks, variables,
+   hard_rules), reading/ (workbook.py with read_problem, one module per tab, cells.py;
+   `_post_columns` -> `find_post_columns`, `_hour_limits` -> `parse_hour_limits`, to
+   avoid clashing with local variables). Left: step 4, remove the error re-exports from
+   solver.py / reading/workbook.py (import errors from scheduler.errors everywhere),
+   update the layout in CLAUDE.md and the README project structure.
 2. Soft rules: the first objective (start/end on :00/:30, stay at one post as a weight,
    avoid short stretches, prefer higher skill scores, prefer stretches of at most
    120 min), then fair spread of hours (relative to availability). In small steps: the

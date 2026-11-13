@@ -3,7 +3,8 @@ import pytest
 from openpyxl.worksheet.worksheet import Worksheet
 
 from scheduler.model import Settings
-from scheduler.workbook import WorkbookError, read_volunteers
+from scheduler.errors import WorkbookError
+from scheduler.reading.volunteers import read_volunteers
 
 
 # The blocks depend on the days, so the tests pass them explicitly instead of relying on

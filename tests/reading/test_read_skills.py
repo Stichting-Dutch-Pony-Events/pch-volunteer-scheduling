@@ -2,7 +2,8 @@ import openpyxl
 import pytest
 from openpyxl.worksheet.worksheet import Worksheet
 
-from scheduler.workbook import WorkbookError, read_skills
+from scheduler.errors import WorkbookError
+from scheduler.reading.skills import read_skills
 
 
 # Like the Skills tab of the test workbook: Team is there but not a post.
