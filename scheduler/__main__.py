@@ -13,7 +13,7 @@ from pathlib import Path
 from scheduler.checks import find_warnings
 from scheduler.errors import TimeLimitReached
 from scheduler.helpers import set_debug_time
-from scheduler.output import write_output
+from scheduler.writing.output import write_output
 from scheduler.solver import NoScheduleFound, solve
 from scheduler.workbook import WorkbookError, read_problem
 

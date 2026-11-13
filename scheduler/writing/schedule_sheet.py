@@ -1,36 +1,12 @@
-"""Writes the schedule to an output workbook (.xlsx).
+"""The tab "Schedule" of the output workbook: one row per block, one column per post slot.
 
-Layout of this file (like workbook.py): write_output first (the table of contents), then
-one create_<name>_sheet function per tab, then the helpers they use. The helpers are
-plain functions without openpyxl, so they can be tested without writing a file.
+create_schedule_sheet first, then the helpers it uses. The helpers are plain functions
+without openpyxl, so they can be tested without writing a file.
 """
-from pathlib import Path
-
 from openpyxl import Workbook
 
 from scheduler.helpers import debug_print
 from scheduler.model import Problem, Schedule, BLOCKS_PER_DAY, time_of
-
-
-def write_output(problem: Problem, schedule: Schedule, path: str | Path) -> None:
-    """Write the schedule to a new .xlsx workbook at path, overwriting an existing file.
-
-    The table of contents of the output: a new workbook, one create_<name>_sheet call per
-    tab (now only "Schedule"), then save. A path that does not end in .xlsx is a ValueError.
-    """
-    # 1. Only .xlsx for now (like read_problem); other file types maybe later.
-    if Path(path).suffix.lower() != ".xlsx":
-        raise ValueError(f"Cannot write {path}: the output must be an .xlsx file.")
-
-    # 2. A new workbook starts with an empty tab called "Sheet"; we don't need it.
-    workbook = Workbook()
-    workbook.remove(workbook.active)
-
-    # 3. One line per tab. Later tabs (e.g. "No double check") are added here.
-    create_schedule_sheet(workbook, problem, schedule)
-
-    # 4. Save. An existing file at path is overwritten without asking.
-    workbook.save(path)
 
 
 def create_schedule_sheet(workbook: Workbook, problem: Problem, schedule: Schedule) -> None:

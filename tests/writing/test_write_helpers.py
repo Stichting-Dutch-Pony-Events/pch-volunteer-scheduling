@@ -1,7 +1,7 @@
 import pytest
 
 from scheduler.model import Post, Problem, Settings
-from scheduler.output import column_header, rows_to_show, slot_columns
+from scheduler.writing.schedule_sheet import column_header, rows_to_show, slot_columns
 
 
 RULES = Settings(min_stretch_minutes=60, max_stretch_minutes=180, min_break_minutes=30,

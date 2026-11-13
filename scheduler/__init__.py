@@ -8,7 +8,7 @@ Where to find what, in the order a run goes through them:
                   warnings about likely mistakes in the input: find_warnings()
     solver.py     builds the CP-SAT model and solves it: solve()
     rules.py      the hard rules, one add_<name>_rule() function each
-    output.py     writes the schedule workbook: write_output() and create_<name>_sheet()
+    writing/      writes the output workbook: output.py (write_output), schedule_sheet.py
 
 Used by all of them:
 

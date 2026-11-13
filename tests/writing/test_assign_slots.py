@@ -1,5 +1,5 @@
 from scheduler.model import Schedule
-from scheduler.output import assign_slots
+from scheduler.writing.schedule_sheet import assign_slots
 
 
 def _works(name: str, post: str, first_block: int, block_after_last: int) -> set[tuple]:
