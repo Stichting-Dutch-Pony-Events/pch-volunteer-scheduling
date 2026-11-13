@@ -146,7 +146,7 @@ def block_of(day: str, time: str, settings: Settings) -> int:
     return day_number * BLOCKS_PER_DAY + minutes_since_day_start // MINUTES_PER_BLOCK
 
 
-def time_of(block: int, settings: Settings) -> tuple[str, str]:
+def day_and_time_of(block: int, settings: Settings) -> tuple[str, str]:
     """The convention day and start time of a block, e.g. 172 -> ("Saturday", "01:00")."""
     day = day_of(block, settings)   # also checks that the block is within the convention days
 

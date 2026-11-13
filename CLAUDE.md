@@ -105,33 +105,55 @@ Fictional nicknames for tests and examples (never use real nicknames):
 
 - **OR-Tools CP-SAT** as solver: hard rules are constraints, soft rules are weighted
   penalties in the objective.
-- **Solver layout:** `solve()` in solver.py stays a short table of contents (create
-  variables, call the rules, run CP-SAT, read the schedule). Each hard rule is a function
-  `add_<name>_rule(model, problem, works)` in `scheduler/rules.py` with a docstring
-  stating the rule in plain words; adding a rule = one new function in rules.py + one
-  line in `solve()`. Helpers used only inside rules.py start with `_`. Prefer plain
-  loops over comprehensions (the user finds loops easier to read). Maybe split into
-  hard/soft rule files later, once there are soft rules.
+- **Package layout (since 1.1, option B):** three subpackages that mirror the tests:
+  `scheduler/reading/`, `scheduler/solving/`, `scheduler/writing/`; shared by all at the
+  top: model.py, errors.py, debug.py, `__main__.py`. Each subpackage's `__init__.py`
+  has only a docstring with a map of its modules (no re-exports); imports always use the
+  full path (`from scheduler.reading.workbook import read_problem`). **Errors are always
+  imported from `scheduler.errors`.** Keep the maps in `scheduler/__init__.py` and the
+  subpackages up to date when a module is added.
+- **Underscores:** a function used only inside its own module starts with `_`; a
+  function used by other modules, or tested directly, has none.
+- **Import lines (agreed 2026-11-13):** three groups separated by a blank line: standard
+  library, third party (openpyxl, ortools, pytest), then `scheduler`. Within a group,
+  `import x` lines first, then `from x import ...` lines, each alphabetical by module path
+  (so `scheduler.debug`, `scheduler.errors`, `scheduler.model`, `scheduler.reading...`,
+  `scheduler.solving...`, `scheduler.writing...`). One line per module, never the same
+  module twice; names in the order CONSTANTS, Classes, functions, each alphabetical; a
+  long line wraps in parentheses aligned after the `(`. No aliases (`import ... as`) and
+  no `import *`; the one exception is `import scheduler.__main__ as command_line` in
+  test_main.py. Import names, not modules; the exception is a table-of-contents function
+  that imports modules so the calls read as a list (`hard_rules.add_demand_rule(...)` in
+  solve()). This is isort's default order (`order_by_type`, line length 100), so VS Code's
+  "Organize Imports" would give the same result if isort is configured for 100 characters.
+- **Solver layout:** `solve()` in solving/solver.py stays a short table of contents
+  (check the problem, create variables, call the rules, run CP-SAT, read the schedule).
+  Each hard rule is a function `add_<name>_rule(model, problem, works)` in
+  `scheduler/solving/hard_rules.py` with a docstring stating the rule in plain words;
+  adding a rule = one new function there + one line in `solve()`. Soft rules will go in
+  `solving/soft_rules.py`. Prefer plain loops over comprehensions (the user finds loops
+  easier to read).
 - **Decided: no Rule base class for now** (plain functions with the same arguments are
   enough). Revisit later: the user may want to switch rules on/off from the workbook,
   and soft rules need weights. Focus first on a minimal viable scheduler, then expand.
-- **Type alias `Works`** in rules.py: `dict[tuple[str, str, int], cp_model.IntVar]`, the
-  solver's yes/no variables keyed by (volunteer_name, post, block). Lives in rules.py
-  (solver.py imports rules, so the other way round would be circular); solver.py uses
-  `rules.Works`. Rules return `-> None`.
-- **Shared helpers:** `_variables_of` in rules.py collects a volunteer's variables in a
-  block range (used by every per-volunteer rule). `runs_of_consecutive_blocks` in
-  model.py (public, tested in test_model.py) is used by `Schedule.work_stretches_of`
-  and `_short_pieces`.
+- **solving/variables.py:** the type alias `Works`
+  (`dict[tuple[str, str, int], cp_model.IntVar]`, the solver's yes/no variables keyed by
+  (volunteer_name, post, block)), `create_variables`, and the helpers the rules use to
+  find variables again: `variables_by_volunteer_and_block` (a lookup made once per
+  rule), `variables_of` (a volunteer's variables in a block range), `blocks_of_convention`
+  (first to last block with demand; not to be confused with `all_blocks` in model.py =
+  every block of every day, or with the Events tab).
+  Rules return `-> None`. `runs_of_consecutive_blocks` in model.py (public, tested in
+  test_model.py) is used by `Schedule.work_stretches_of` and `_short_pieces`.
 - **openpyxl** for reading/writing `.xlsx`. No pandas for now.
-- **workbook.py layout** (agreed 2026-11-02): imports, constants and `WorkbookError` at
-  the top, then `read_problem` (the table of contents), then the tab readers in the
-  order it calls them, then the shared helpers. (Function order doesn't matter to
-  Python: a function only has to exist when it is called.) A helper used by only one
-  reader sits right after that reader (agreed 2026-11-11). **Splitting workbook.py**
-  (one module per tab in `scheduler/reading/`, shared helpers in e.g. `cells.py`): not
-  yet (~530 lines); do it with option B or when Events/Wishes are added, whichever
-  comes first (Claude's advice, 2026-11-11).
+- **reading/ layout** (split in 1.1): `workbook.py` has `read_problem` (the table of
+  contents: file, tabs, one reader per tab, checks across tabs); one module per tab
+  (settings, volunteers, posts, skills, demand), each with its reader first and then the
+  helpers only it uses; `cells.py` has the helpers several readers share (`cell_text`,
+  `find_columns`, `find_post_columns`, `parse_availability`, `parse_hour_limits`). A
+  new tab (Events, Wishes, Fixed) gets its own module. **writing/** is the same:
+  `output.py` has `write_output` (the table of contents), one module per output tab
+  (`schedule_sheet.py`; later e.g. `individual_sheet.py`).
 - **pytest** for tests. Version 1.0 runs from the command line; later a small program
   with a window (see the roadmap).
 
@@ -139,24 +161,30 @@ Fictional nicknames for tests and examples (never use real nicknames):
 
 ```
 ReferenceDocuments/   (not in git) real data, DATA_NOTES.md, draft input workbook
-scheduler/            model.py (data classes), solver.py, rules.py (hard rules),
-                      workbook.py (reads the input workbook), output.py (writes the
-                      output workbook), __main__.py (the command line, run with
-                      `python -m scheduler`), helpers.py (debug_print), errors.py
-                      (WorkbookError, NoScheduleFound and its children), checks.py
-                      (checks before solving: check_problem)
-tests/                test_helpers.py; data/test_input.xlsx (made-up workbook)
+scheduler/            __main__.py (the command line, run with `python -m scheduler`),
+                      model.py (data classes, time helpers), errors.py (WorkbookError,
+                      NoScheduleFound and its children, TimeLimitReached), debug.py
+                      (the --debug-time switch and debug_print)
+scheduler/reading/    workbook.py (read_problem), settings.py, volunteers.py, posts.py,
+                      skills.py, demand.py (one reader per tab), cells.py (shared helpers)
+scheduler/solving/    solver.py (solve, make_cp_sat_solver, raise_if_no_schedule), checks.py
+                      (check_problem, find_warnings), variables.py (Works,
+                      create_variables, lookup helpers), hard_rules.py (add_<name>_rule)
+scheduler/writing/    output.py (write_output), schedule_sheet.py (the Schedule tab and
+                      its helpers)
+tests/                test_debug.py; data/test_input.xlsx (made-up workbook)
 tests/model/          test_model.py, test_time_blocks.py (tests of model.py)
-tests/solver/         test_solver_availability.py, test_solver_basics.py,
-                      test_solver_work_stretches.py, test_solver_stay_at_post.py,
-                      test_checks.py, test_solver_maximum_hours.py, test_warnings.py
-tests/output/         test_assign_slots.py, test_write_helpers.py,
-                      test_create_schedule_sheet.py, test_write_output.py (tests of
-                      writing the output workbook)
-tests/workbook/       test_celltext.py, test_availability.py, test_find_columns.py,
+tests/reading/        test_celltext.py, test_availability.py, test_find_columns.py,
                       test_read_settings.py, test_read_volunteers.py,
                       test_read_posts.py, test_read_skills.py, test_read_demand.py,
                       test_read_problem.py (one test file per reader part)
+tests/solving/        test_solver_availability.py, test_solver_basics.py,
+                      test_solver_work_stretches.py, test_solver_stay_at_post.py,
+                      test_checks.py, test_solver_maximum_hours.py, test_warnings.py,
+                      test_solver_time_limit.py
+tests/writing/        test_assign_slots.py, test_write_helpers.py,
+                      test_create_schedule_sheet.py, test_write_output.py (tests of
+                      writing the output workbook)
 tests/command_line/   test_main.py (tests of the command line)
 templates/            VolunteerInput_template.xlsx: empty input workbook (all tabs and
                       headers, Settings with example values from PonyCon Holland 2026,
@@ -926,7 +954,30 @@ come after, the user can fix details by hand meanwhile):
 up to date with `main`):
 1. Split the code into subpackages (option B: `reading/`, `solving/`, `writing/`
    mirroring the tests; rules.py into hard and soft rules; workbook.py one module per
-   tab). A pure refactor, tests stay green.
+   tab). A pure refactor, tests stay green. Branch `feature/subpackages`. Done:
+   writing/ (output.py + schedule_sheet.py), solving/ (solver, checks, variables,
+   hard_rules), reading/ (workbook.py with read_problem, one module per tab, cells.py;
+   `_post_columns` -> `find_post_columns`, `_hour_limits` -> `parse_hour_limits`, to
+   avoid clashing with local variables). Step 4 done: errors imported from
+   scheduler.errors everywhere, layout updated here and in the README.
+   **Step 5 done (2026-11-13):** function names reviewed. Renamed (old names still appear
+   in the roadmap history above): `time_of` -> `day_and_time_of` (it returns both),
+   `blocks_of_event` -> `blocks_of_convention` ("event" is reserved for the Events tab),
+   `_check_fixed_settings` -> `_check_settings_with_one_allowed_value` ("Fixed" is a tab),
+   `make_solver` -> `make_cp_sat_solver`; in checks.py `_hours_lines` / `_hours_line` /
+   `_hours_text` -> `_hours_shortage_lines` / `_format_hours_line` /
+   `_minutes_as_hours_text`, `_message` -> `_message_from_lines`; in reading/
+   `_settings_by_name` -> `_unparsed_settings`, `_hour_limit` -> `_parse_hour_limit`,
+   `_days` -> `_parse_days`, `_whole_number` -> `_whole_number_setting`. Left as they are
+   (user, 2026-11-13): `Works`, `VariablesByVolunteerAndBlock`, `cell_text`. Variable
+   names inside functions: another time.
+   **Step 6 (user, 2026-11-13):** a strategy to keep the import lines of our own modules
+   tidy (order, grouping), and whether to use aliases (`import ... as`). 6a done
+   (2026-11-13): `helpers.py` renamed to `debug.py` (it only holds the --debug-time switch
+   and debug_print; "helpers" was vague), tests/test_helpers.py to test_debug.py. 6b done
+   (2026-11-13): the rule is in the Technology section ("Import lines") and, short, in the
+   README under Code style; every import block in scheduler/ and tests/ was rewritten to
+   it by a scratch script (tests unchanged otherwise).
 2. Soft rules: the first objective (start/end on :00/:30, stay at one post as a weight,
    avoid short stretches, prefer higher skill scores, prefer stretches of at most
    120 min), then fair spread of hours (relative to availability). In small steps: the
@@ -1044,7 +1095,8 @@ After the minimal viable scheduler:
       (e.g. a list of every typo in the workbook; fits the window program later).
 - [ ] Time step and day boundary configurable (e.g. 30 min blocks, another boundary).
       Not only the reader: `MINUTES_PER_BLOCK`, `BLOCKS_PER_DAY` and `DAY_STARTS_AT_HOUR`
-      move from model.py constants into `Settings`, used by `block_of`/`time_of`/rules.
+      move from model.py constants into `Settings`, used by `block_of`/`day_and_time_of`/
+      rules.
       Raise the workbook format version if the Settings rows change.
 - [ ] Maybe: also read `.ods` (Nextcloud / LibreOffice). openpyxl can't; options: a
       second front-end with e.g. `odfpy` giving the same cell values (the tab readers

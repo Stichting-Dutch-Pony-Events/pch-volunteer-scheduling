@@ -55,7 +55,7 @@ from the command line. Details can then be fixed by hand.
 
 Version 1.1 makes the schedule nicer and easier to read.
 
-- [ ] Tidy the code into smaller parts (reading, solving, writing)
+- [x] Tidy the code into smaller parts (reading, solving, writing)
 - [ ] Nicer schedules: shifts start and end on the hour or half hour, staying at one
       post, preferring what people are good at, shifts of preferably at most 2 hours,
       and a fair spread of work over the volunteers
@@ -76,20 +76,23 @@ Version 1.1 makes the schedule nicer and easier to read.
 - [ ] Maybe: also read `.ods` files (LibreOffice / Nextcloud); for now save as `.xlsx`
 - [ ] A small program with a window: pick the input workbook, start a run, see errors
 
-## How it works (planned)
+## How it works
 
 ```
-Input workbook (.xlsx)  +  form answers (.csv)
+Input workbook (.xlsx)  (later also the form answers, .csv)
                   │
                   ▼
-        scheduler/model.py     plain data: volunteers, posts, demand, events, wishes
+        scheduler/reading/     reads each tab, checks for typos
                   │
                   ▼
-        scheduler/solver.py    builds a CP-SAT model and solves it
-        scheduler/rules.py     the rules, one function each
+        scheduler/model.py     plain data: volunteers, posts, demand, settings
                   │
                   ▼
-        Output workbook (.xlsx)  printable schedules
+        scheduler/solving/     checks the input, builds a CP-SAT model with the
+                               rules (one function each) and solves it
+                  │
+                  ▼
+        scheduler/writing/     writes the output workbook (.xlsx)
 ```
 
 The input workbook has these tabs: ReadMe, Settings, Volunteers, Posts, Skills, Events,
@@ -105,21 +108,20 @@ pch-volunteer-scheduling/
 ├── scheduler/
 │   ├── __main__.py          the command line (python -m scheduler ...)
 │   ├── errors.py            the error types
-│   ├── helpers.py           debug output (--debug-time)
+│   ├── debug.py             debug output (--debug-time)
 │   ├── model.py             data classes and time helpers
-│   ├── output.py            writes the output workbook
-│   ├── rules.py             the hard rules, one function each
-│   ├── solver.py            builds and solves the schedule
-│   └── workbook.py          reads the input workbook
+│   ├── reading/             reads the input workbook, one module per tab
+│   ├── solving/             checks the input, the rules, builds and solves the schedule
+│   └── writing/             writes the output workbook, one module per tab
 ├── templates/               an empty input workbook to start from
 ├── tests/
 │   ├── command_line/        tests of the command line
 │   ├── data/                small made-up input workbook for the tests
 │   ├── model/               tests of the data classes and time helpers
-│   ├── output/              tests of writing the output workbook
-│   ├── solver/              tests of the solver and its rules
-│   ├── workbook/            tests of reading the input workbook
-│   └── test_helpers.py
+│   ├── reading/             tests of reading the input workbook
+│   ├── solving/             tests of the solver and its rules
+│   ├── writing/             tests of writing the output workbook
+│   └── test_debug.py
 ├── requirements.txt
 └── README.md
 ```
@@ -135,6 +137,16 @@ The tests only use small, made-up examples.
 
 This project is built test-first: for every step we first write tests that describe the
 new behaviour, see them fail, then write just enough code to make them pass.
+
+### Code style
+
+Python 3.14, type hints on every function, lines of at most 100 characters (checked with
+`python -m pycodestyle --max-line-length=100 scheduler tests`), plain loops rather than
+clever one-liners. Imports come in three groups separated by a blank line: standard
+library, third party (openpyxl, ortools, pytest), then `scheduler`. Within a group,
+`import x` lines come first, then `from x import ...` lines, both alphabetical by module;
+one line per module (wrapped in parentheses when long); no aliases, no `import *`. The
+error types are always imported from `scheduler.errors`.
 
 ### Setup (Windows)
 

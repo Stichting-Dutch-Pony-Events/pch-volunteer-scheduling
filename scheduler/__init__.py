@@ -3,17 +3,17 @@
 Where to find what, in the order a run goes through them:
 
     __main__.py   the command line (python -m scheduler input.xlsx output.xlsx): main()
-    workbook.py   reads the input workbook into a Problem: read_problem() and a reader per tab
-    checks.py     quick checks before solving, with clear messages: check_problem(); and
-                  warnings about likely mistakes in the input: find_warnings()
-    solver.py     builds the CP-SAT model and solves it: solve()
-    rules.py      the hard rules, one add_<name>_rule() function each
-    output.py     writes the schedule workbook: write_output() and create_<name>_sheet()
+    reading/      reads the input workbook into a Problem: workbook.py (read_problem), one
+                  module per tab, cells.py (helpers shared by the readers)
+    solving/      checks the problem, builds the CP-SAT model and solves it: solver.py
+                  (solve), checks.py (check_problem, find_warnings), variables.py,
+                  hard_rules.py
+    writing/      writes the output workbook: output.py (write_output), schedule_sheet.py
 
 Used by all of them:
 
     model.py      the data (Volunteer, Post, Settings, Problem, Schedule) and the time
-                  helpers (block_of, time_of, day_of, all_blocks)
+                  helpers (block_of, day_and_time_of, day_of, all_blocks)
     errors.py     the error types (WorkbookError, NoScheduleFound and its children)
-    helpers.py    debug_print() for --debug-time
+    debug.py      the --debug-time switch (set_debug_time) and debug_print()
 """
