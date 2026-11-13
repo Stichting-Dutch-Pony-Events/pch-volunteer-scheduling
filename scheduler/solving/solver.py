@@ -3,7 +3,7 @@ from ortools.sat.python import cp_model
 from scheduler.errors import NoScheduleFound, TimeLimitReached
 from scheduler.helpers import debug_print
 from scheduler.model import Schedule, Problem
-from scheduler import checks, rules
+from scheduler.solving import checks, hard_rules, variables
 
 
 def solve(problem: Problem, time_limit_seconds: int | None = None) -> Schedule:
@@ -17,41 +17,22 @@ def solve(problem: Problem, time_limit_seconds: int | None = None) -> Schedule:
 
     # Build the model
     model = cp_model.CpModel()
-    works = _create_variables(model, problem)
+    works = variables.create_variables(model, problem)
 
-    # Hard rules (see rules.py)
-    rules.add_demand_rule(model, problem, works)
-    rules.add_no_double_booking_rule(model, problem, works)
-    rules.add_minimum_stretch_rule(model, problem, works)
-    rules.add_maximum_stretch_rule(model, problem, works)
-    rules.add_minimum_break_rule(model, problem, works)
-    rules.add_stay_at_post_rule(model, problem, works)
-    rules.add_maximum_hours_per_day_rule(model, problem, works)
-    rules.add_maximum_hours_total_rule(model, problem, works)
+    # Hard rules (see hard_rules.py)
+    hard_rules.add_demand_rule(model, problem, works)
+    hard_rules.add_no_double_booking_rule(model, problem, works)
+    hard_rules.add_minimum_stretch_rule(model, problem, works)
+    hard_rules.add_maximum_stretch_rule(model, problem, works)
+    hard_rules.add_minimum_break_rule(model, problem, works)
+    hard_rules.add_stay_at_post_rule(model, problem, works)
+    hard_rules.add_maximum_hours_per_day_rule(model, problem, works)
+    hard_rules.add_maximum_hours_total_rule(model, problem, works)
 
     return _solve_and_read_schedule(model, works, time_limit_seconds)
 
 
-def _create_variables(model: cp_model.CpModel, problem: Problem) -> rules.Works:
-    """One yes/no variable per (volunteer, post, block) that could happen.
-
-    Only for open blocks (in demand), only if the volunteer has a skill score for that
-    post and is available in that block. 1 = the volunteer works there in that block, 0 = not.
-    Returns a dict: (volunteer_name, post, block) -> variable (see rules.Works).
-    """
-    debug_print("_create_variables: creating the yes/no variables")
-    works: rules.Works = {}
-    for (post, block) in problem.demand:
-        for volunteer in problem.volunteers:
-            if post in volunteer.skills and block in volunteer.available_blocks:
-                key = (volunteer.name, post, block)
-                # The label is only for debugging; we find variables again via the key.
-                label = f"{volunteer.name} at {post} in block {block}"
-                works[key] = model.new_bool_var(label)
-    return works
-
-
-def _solve_and_read_schedule(model: cp_model.CpModel, works: rules.Works,
+def _solve_and_read_schedule(model: cp_model.CpModel, works: variables.Works,
                              time_limit_seconds: int | None = None) -> Schedule:
     """Run the solver and turn every variable set to 1 into an assignment."""
     # The gap between this line and the next output is CP-SAT's own search time.

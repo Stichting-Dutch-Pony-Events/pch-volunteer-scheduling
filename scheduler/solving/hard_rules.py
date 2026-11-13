@@ -1,22 +1,16 @@
 """Hard rules for the schedule, one function per rule.
 
 Each add_..._rule function adds its constraints to the CP-SAT model. They all take the
-same arguments: the model, the problem, and the works variables made in solver.py
-(see Works below).
+same arguments: the model, the problem, and the works variables made by
+create_variables (see Works in variables.py, which also has the helpers to find them).
 """
 from ortools.sat.python import cp_model
 
 from scheduler.helpers import debug_print
 from scheduler.model import Problem, runs_of_consecutive_blocks, block_of
 from scheduler.model import MINUTES_PER_BLOCK, BLOCKS_PER_DAY
-
-# The solver's yes/no variables: (volunteer_name, post, block) -> variable.
-# Defined here rather than in solver.py, because solver.py imports this file (the other
-# way round would be a circular import).
-Works = dict[tuple[str, str, int], cp_model.IntVar]
-
-# The same variables grouped per (volunteer_name, block): see _variables_by_volunteer_and_block.
-VariablesByVolunteerAndBlock = dict[tuple[str, int], list[cp_model.IntVar]]
+from scheduler.solving.variables import Works, variables_by_volunteer_and_block
+from scheduler.solving.variables import variables_of, blocks_of_event
 
 
 def add_demand_rule(model: cp_model.CpModel, problem: Problem, works: Works) -> None:
@@ -38,12 +32,12 @@ def add_demand_rule(model: cp_model.CpModel, problem: Problem, works: Works) -> 
 def add_no_double_booking_rule(model: cp_model.CpModel, problem: Problem, works: Works) -> None:
     """Hard rule: no volunteer works more than one post in the same block."""
     debug_print("add_no_double_booking_rule: adding the rule")
-    lookup = _variables_by_volunteer_and_block(works)
+    lookup = variables_by_volunteer_and_block(works)
 
-    for block in _blocks_of_event(problem):
+    for block in blocks_of_event(problem):
         for volunteer in problem.volunteers:
             # Collect the variables of every post this volunteer could work in this block.
-            posts_here = _variables_of(lookup, volunteer.name, block, block + 1)
+            posts_here = variables_of(lookup, volunteer.name, block, block + 1)
 
             # Only needed when there are two or more options; 0 or 1 can never clash.
             if len(posts_here) > 1:
@@ -54,13 +48,13 @@ def add_maximum_stretch_rule(model: cp_model.CpModel, problem: Problem, works: W
     """Hard rule: no volunteer works longer than the maximum number of blocks in a row."""
     debug_print("add_maximum_stretch_rule: adding the rule")
     max_number_of_blocks = problem.settings.max_stretch_minutes // MINUTES_PER_BLOCK
-    lookup = _variables_by_volunteer_and_block(works)
+    lookup = variables_by_volunteer_and_block(works)
 
     for volunteer in problem.volunteers:
-        for window_start in _blocks_of_event(problem):
+        for window_start in blocks_of_event(problem):
             # Collect this volunteer's variables (any post) inside the moving window.
-            posts_in_window = _variables_of(lookup, volunteer.name, window_start,
-                                            window_start + max_number_of_blocks + 1)
+            posts_in_window = variables_of(lookup, volunteer.name, window_start,
+                                           window_start + max_number_of_blocks + 1)
 
             model.add(sum(posts_in_window) <= max_number_of_blocks)
 
@@ -71,19 +65,19 @@ def add_minimum_break_rule(model: cp_model.CpModel, problem: Problem, works: Wor
     min_break_blocks = problem.settings.min_break_minutes // MINUTES_PER_BLOCK
     if min_break_blocks <= 1:
         return
-    lookup = _variables_by_volunteer_and_block(works)
+    lookup = variables_by_volunteer_and_block(works)
 
     for volunteer in problem.volunteers:
-        for block in _blocks_of_event(problem):
+        for block in blocks_of_event(problem):
             for gap_length in range(1, min_break_blocks):
                 # We look at a gap in blocks block + 1 .. block_after_gap - 1.
                 block_after_gap = block + gap_length + 1
 
                 # This volunteer's variables in three groups by block number:
                 # the block before the gap, the gap itself, and the block after it.
-                first = _variables_of(lookup, volunteer.name, block, block + 1)
-                middle = _variables_of(lookup, volunteer.name, block + 1, block_after_gap)
-                last = _variables_of(lookup, volunteer.name, block_after_gap, block_after_gap + 1)
+                first = variables_of(lookup, volunteer.name, block, block + 1)
+                middle = variables_of(lookup, volunteer.name, block + 1, block_after_gap)
+                last = variables_of(lookup, volunteer.name, block_after_gap, block_after_gap + 1)
 
                 # The pattern "work, gap_length blocks free, work" can only happen if
                 # the volunteer could work both before and after the gap.
@@ -104,10 +98,10 @@ def add_minimum_stretch_rule(model: cp_model.CpModel, problem: Problem, works: W
         return
 
     short_pieces = _short_pieces(problem)  # worked out once, used for every volunteer
-    lookup = _variables_by_volunteer_and_block(works)
+    lookup = variables_by_volunteer_and_block(works)
 
     for volunteer in problem.volunteers:
-        for block in _blocks_of_event(problem):
+        for block in blocks_of_event(problem):
             for run_length in range(1, min_stretch_blocks):
                 # We look at a run of work in blocks block .. block_after_run - 1.
                 block_after_run = block + run_length
@@ -116,15 +110,15 @@ def add_minimum_stretch_rule(model: cp_model.CpModel, problem: Problem, works: W
                 # never happen, so there is no need for a rule.
                 can_work_whole_run = True
                 for run_block in range(block, block_after_run):
-                    if not _variables_of(lookup, volunteer.name, run_block, run_block + 1):
+                    if not variables_of(lookup, volunteer.name, run_block, run_block + 1):
                         can_work_whole_run = False
                 if not can_work_whole_run:
                     continue
 
-                before = _variables_of(lookup, volunteer.name, block - 1, block)
-                run = _variables_of(lookup, volunteer.name, block, block_after_run)
-                after = _variables_of(lookup, volunteer.name, block_after_run,
-                                      block_after_run + 1)
+                before = variables_of(lookup, volunteer.name, block - 1, block)
+                run = variables_of(lookup, volunteer.name, block, block_after_run)
+                after = variables_of(lookup, volunteer.name, block_after_run,
+                                     block_after_run + 1)
 
                 # Exception: if this run is exactly a short piece of demand at some post,
                 # an "escape" variable may switch the rule off, but only if the volunteer
@@ -234,7 +228,7 @@ def add_maximum_hours_per_day_rule(model: cp_model.CpModel, problem: Problem,
     """
     debug_print("add_maximum_hours_per_day_rule: adding the rule")
 
-    lookup = _variables_by_volunteer_and_block(works)
+    lookup = variables_by_volunteer_and_block(works)
     for volunteer in problem.volunteers:
         if volunteer.max_minutes_per_day is None:
             continue
@@ -244,7 +238,7 @@ def add_maximum_hours_per_day_rule(model: cp_model.CpModel, problem: Problem,
             start_block = block_of(day, "06:00", problem.settings)
             block_after_last = start_block + BLOCKS_PER_DAY
 
-            variables = _variables_of(lookup, volunteer.name, start_block, block_after_last)
+            variables = variables_of(lookup, volunteer.name, start_block, block_after_last)
             if not variables:
                 continue  # can't work that day (not available, or no demand): nothing to limit
 
@@ -260,7 +254,7 @@ def add_maximum_hours_total_rule(model: cp_model.CpModel, problem: Problem,
     """
     debug_print("add_maximum_hours_total_rule: adding the rule")
 
-    lookup = _variables_by_volunteer_and_block(works)
+    lookup = variables_by_volunteer_and_block(works)
     for volunteer in problem.volunteers:
         if volunteer.max_minutes_total is None:
             continue
@@ -269,62 +263,12 @@ def add_maximum_hours_total_rule(model: cp_model.CpModel, problem: Problem,
         start_block = 0
         block_after_last = start_block + BLOCKS_PER_DAY * len(problem.settings.days)
 
-        variables = _variables_of(lookup, volunteer.name, start_block, block_after_last)
+        variables = variables_of(lookup, volunteer.name, start_block, block_after_last)
         if not variables:
             continue  # can't work at all (no demand they qualify for): nothing to limit
 
         # Each variable is one block of MINUTES_PER_BLOCK minutes, so compare in blocks.
         model.add(sum(variables) <= volunteer.max_minutes_total // MINUTES_PER_BLOCK)
-
-
-def _blocks_in_demand(problem: Problem) -> set[int]:
-    """Every block that appears in the demand, each only once."""
-    blocks = set()
-    for (post, block) in problem.demand:
-        blocks.add(block)
-    return blocks
-
-
-def _blocks_of_event(problem: Problem) -> range:
-    """All blocks from the first to the last block in the demand, in order.
-
-    This spans the whole event, across days and nights: night blocks without demand
-    have no variables, so the rules simply skip them. Returns an empty range when there
-    is no demand, so loops over it simply don't run.
-    """
-    blocks = _blocks_in_demand(problem)
-    if len(blocks) == 0:
-        return range(0)
-    return range(min(blocks), max(blocks) + 1)
-
-
-def _variables_by_volunteer_and_block(works: Works) -> VariablesByVolunteerAndBlock:
-    """The works variables grouped per volunteer and block: {(name, block): [variables]}.
-
-    One list per block a volunteer could work, with one variable per post they could
-    do then. Made once per rule, so _variables_of can look blocks up directly instead of
-    searching all of works on every call (that was what made building the model slow).
-    """
-    lookup = {}
-    for (volunteer_name, post, block), var in works.items():
-        if (volunteer_name, block) not in lookup:
-            lookup[(volunteer_name, block)] = []
-        lookup[(volunteer_name, block)].append(var)
-    return lookup
-
-
-def _variables_of(lookup: VariablesByVolunteerAndBlock, volunteer_name: str, first_block: int,
-                  block_after_last: int) -> list[cp_model.IntVar]:
-    """This volunteer's variables (at any post) in blocks first_block up to block_after_last.
-
-    Uses the same convention as range(): block_after_last itself is not included.
-    lookup comes from _variables_by_volunteer_and_block.
-    """
-    variables = []
-    for block in range(first_block, block_after_last):
-        # .get with an empty list: no variables when the volunteer can't work this block.
-        variables.extend(lookup.get((volunteer_name, block), []))
-    return variables
 
 
 def _short_pieces(problem: Problem) -> set[tuple[str, int, int]]:

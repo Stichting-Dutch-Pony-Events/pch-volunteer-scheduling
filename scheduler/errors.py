@@ -6,8 +6,8 @@ children NotEnoughQualified, NotEnoughVolunteers and NotEnoughHours say where, w
 check before solving finds a clear cause.
 TimeLimitReached: the solver found no schedule within the time limit (one may still exist).
 
-The other modules import them from here; workbook.py and solver.py also make them
-available under their old place, so `from scheduler.solver import NoScheduleFound` works.
+The other modules import them from here; workbook.py and solving/solver.py also make them
+available there, so `from scheduler.solving.solver import NoScheduleFound` works.
 """
 
 

@@ -1,7 +1,7 @@
 import pytest
 
 from scheduler.model import Volunteer, Post, Problem, Settings, all_blocks, block_of
-from scheduler.solver import solve, NoScheduleFound
+from scheduler.solving.solver import solve, NoScheduleFound
 
 
 # The tests below pass the stretch and break limits explicitly (in blocks: 4, 12 and 2)

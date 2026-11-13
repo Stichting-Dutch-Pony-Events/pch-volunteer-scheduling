@@ -1,11 +1,11 @@
 import pytest
 
-from scheduler import checks
-from scheduler.checks import check_problem
+from scheduler.solving import checks
+from scheduler.solving.checks import check_problem
 from scheduler.errors import NoScheduleFound, NotEnoughHours, NotEnoughQualified
 from scheduler.errors import NotEnoughVolunteers
 from scheduler.model import Volunteer, Post, Problem, Settings, all_blocks, block_of
-from scheduler.solver import solve
+from scheduler.solving.solver import solve
 
 
 RULES = Settings(min_stretch_minutes=60, max_stretch_minutes=180, min_break_minutes=30,

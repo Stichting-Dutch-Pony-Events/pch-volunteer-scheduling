@@ -5,7 +5,7 @@ import pytest
 
 from scheduler.model import Post, Problem, Schedule, Settings
 from scheduler.writing.output import write_output
-from scheduler.solver import solve
+from scheduler.solving.solver import solve
 from scheduler.workbook import read_problem
 
 

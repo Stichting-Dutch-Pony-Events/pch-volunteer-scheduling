@@ -30,4 +30,3 @@ def write_output(problem: Problem, schedule: Schedule, path: str | Path) -> None
 
     # 4. Save. An existing file at path is overwritten without asking.
     workbook.save(path)
-    

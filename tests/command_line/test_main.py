@@ -11,7 +11,7 @@ import scheduler.__main__ as command_line
 from scheduler import helpers
 from scheduler.errors import TimeLimitReached
 from scheduler.model import Problem
-from scheduler.solver import NoScheduleFound
+from scheduler.solving.solver import NoScheduleFound
 
 
 TEST_WORKBOOK = Path(__file__).parent.parent / "data" / "test_input.xlsx"
@@ -448,7 +448,7 @@ def test_debug_time_flag_prints_debug_lines_for_the_variables_and_cp_sat(
         if line.startswith("DEBUG ["):
             debug_lines.append(line)
     debug_text = "\n".join(debug_lines)
-    assert "_create_variables" in debug_text
+    assert "create_variables" in debug_text
     assert "running CP-SAT" in debug_text
 
 

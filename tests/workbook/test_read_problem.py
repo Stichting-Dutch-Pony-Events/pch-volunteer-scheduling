@@ -5,7 +5,7 @@ import pytest
 from openpyxl.workbook.workbook import Workbook
 
 from scheduler.model import Post, Problem, Settings, Volunteer
-from scheduler.solver import solve
+from scheduler.solving.solver import solve
 from scheduler.workbook import WorkbookError, read_problem
 
 

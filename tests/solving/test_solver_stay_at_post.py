@@ -1,7 +1,7 @@
 import pytest
 
 from scheduler.model import Volunteer, Post, Problem, Settings, all_blocks
-from scheduler.solver import solve, NoScheduleFound
+from scheduler.solving.solver import solve, NoScheduleFound
 
 
 # The scenarios below fit these limits (in blocks: 4, 12 and 2), so they pass them (and

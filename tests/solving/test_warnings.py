@@ -1,4 +1,4 @@
-from scheduler.checks import find_warnings
+from scheduler.solving.checks import find_warnings
 from scheduler.model import Volunteer, Post, Problem, Settings, all_blocks
 
 
