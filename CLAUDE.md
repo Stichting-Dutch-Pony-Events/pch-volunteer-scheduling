@@ -917,8 +917,30 @@ come after, the user can fix details by hand meanwhile):
       request): `test_break_across_the_day_boundary_is_at_least_the_minimum` in
       test_solver_work_stretches.py (Saturday 04:00-06:00, 15 min off, Sunday 06:15-08:15,
       only Mock Mane -> NoScheduleFound). Green straight away; red in a scratch copy
-      without add_minimum_break_rule. 375 green. **All version 1.0 items are done**; next:
-      merge develop into main (PR), tag v1.0, then discuss one-off event shifts.
+      without add_minimum_break_rule. 375 green. **All version 1.0 items are done.**
+
+**Version 1.0 released (2026-11-12):** PR #4 (develop -> main) merged, merge commit
+`9abd584` tagged `V1.0` (capital V; on GitHub too).
+
+**Version 1.1 (agreed with the user, 2026-11-13), in this order** (first bring `develop`
+up to date with `main`):
+1. Split the code into subpackages (option B: `reading/`, `solving/`, `writing/`
+   mirroring the tests; rules.py into hard and soft rules; workbook.py one module per
+   tab). A pure refactor, tests stay green.
+2. Soft rules: the first objective (start/end on :00/:30, stay at one post as a weight,
+   avoid short stretches, prefer higher skill scores, prefer stretches of at most
+   120 min), then fair spread of hours (relative to availability). In small steps: the
+   objective machinery with one rule first, then one rule per step, each followed by a
+   real-data run (with permission) to see the effect and the run time. To decide on the
+   way: with an objective CP-SAT searches until the time limit, so the default limit /
+   "good enough" needs thought.
+3. Nicer command line: progress while solving (solution callback), a summary after the
+   run, `--verbose` (CP-SAT log), maybe more from the wish list.
+4. Output: individual schedules tab (user: very much needed for usability, the
+   Schedule tab is hard to read). Independent of the solver, so it can move forward if
+   needed.
+Not in 1.1: one-off event shifts (user wants to discuss it with another volunteer lead
+first), meal breaks, event wishes and the rest of the list below.
 
 **Version 1.0 = all of the above**: a schedule for real data that follows the hard rules
 (except meal breaks and fixed shifts; including maximum hours), run from the command
@@ -1042,8 +1064,9 @@ After the minimal viable scheduler:
       in the schedule).
 - [ ] Maybe: Question vetting, Manestage clean and Sardine duty by the same person
 - [ ] **Think about one-off event shifts (user, 2026-11-08; Claude: remind the user once
-      the large-data test runs are done).** Reminded 2026-11-12; user: discuss it right
-      after the 1.0 release. Big conventions have many "posts" that are
+      the large-data test runs are done).** Reminded 2026-11-12. **Postponed (user,
+      2026-11-13):** the user wants to discuss it with another volunteer lead first; not
+      in 1.1. Big conventions have many "posts" that are
       really a single event (open once, for one hour, one person). As separate posts they
       make the Posts/Skills/Demand tabs very wide. Ideas to discuss: an "Event assistance"
       post with the event name as a note, posts with a group and a shared skill, or a

@@ -16,9 +16,9 @@ The puzzle itself is solved by [Google OR-Tools](https://developers.google.com/o
 
 ## Status
 
-In development. The solver works on small made-up examples (in the tests), and the
-whole chain runs from the command line (input workbook in, schedule in Excel out);
-running it on real data is the next part.
+Version 1.0 is done: it makes a schedule from the real input workbook that follows the
+hard rules, run from the command line (input workbook in, schedule in Excel out).
+Version 1.1 is in development.
 
 ### Done
 
@@ -51,20 +51,27 @@ from the command line. Details can then be fixed by hand.
 - [x] First run on real data, compared with the hand-made 2026 schedule
 - [x] Small tidy-ups: a clear error for a damaged workbook, a few extra tests
 
-### After version 1.0
+### Roadmap to version 1.1
+
+Version 1.1 makes the schedule nicer and easier to read.
+
+- [ ] Tidy the code into smaller parts (reading, solving, writing)
+- [ ] Nicer schedules: shifts start and end on the hour or half hour, staying at one
+      post, preferring what people are good at, shifts of preferably at most 2 hours,
+      and a fair spread of work over the volunteers
+- [ ] A nicer command line: progress while solving, a summary after the run
+- [ ] Individual schedules in the output: per volunteer their shifts
+
+### Later
 
 - [ ] Maybe: shifts placed by hand are kept, e.g. to re-run after a change without
       reshuffling everyone (to decide after the first real run)
-- [ ] Nicer schedules: shifts start and end on the hour or half hour, staying at one
-      post, preferring what people are good at, shifts of preferably at most 2 hours
 - [ ] Meal breaks
 - [ ] Maybe: check any schedule against the rules, also one changed by hand afterwards
 - [ ] Event wishes (REALLY want / would like to attend), read from the form answers
-- [ ] A fair spread of work over the volunteers
-- [ ] More output: a "no double booking" check tab, and individual schedules
+- [ ] More output: a "no double booking" check tab
 - [ ] Choose the times the schedule shows (e.g. 08:00-02:00), instead of only the open hours
-- [ ] A nicer command line: how long it took, progress while solving, a summary, more
-      options
+- [ ] More command line options
 - [ ] All input errors shown at once, instead of stopping at the first one
 - [ ] Maybe: also read `.ods` files (LibreOffice / Nextcloud); for now save as `.xlsx`
 - [ ] A small program with a window: pick the input workbook, start a run, see errors
