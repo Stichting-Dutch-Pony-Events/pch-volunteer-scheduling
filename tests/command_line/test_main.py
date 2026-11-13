@@ -9,9 +9,8 @@ import pytest
 
 import scheduler.__main__ as command_line
 from scheduler import helpers
-from scheduler.errors import TimeLimitReached
+from scheduler.errors import NoScheduleFound, TimeLimitReached
 from scheduler.model import Problem
-from scheduler.solving.solver import NoScheduleFound
 
 
 TEST_WORKBOOK = Path(__file__).parent.parent / "data" / "test_input.xlsx"

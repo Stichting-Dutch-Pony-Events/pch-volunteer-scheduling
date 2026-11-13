@@ -2,7 +2,8 @@ import pytest
 
 from scheduler.model import (Volunteer, Post, Problem, Settings, block_of, all_blocks,
                              MINUTES_PER_BLOCK)
-from scheduler.solving.solver import solve, NoScheduleFound
+from scheduler.errors import NoScheduleFound
+from scheduler.solving.solver import solve
 
 
 # Most tests below are built around these exact limits (in blocks: 4, 12 and 2), so they

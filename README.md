@@ -55,7 +55,7 @@ from the command line. Details can then be fixed by hand.
 
 Version 1.1 makes the schedule nicer and easier to read.
 
-- [ ] Tidy the code into smaller parts (reading, solving, writing)
+- [x] Tidy the code into smaller parts (reading, solving, writing)
 - [ ] Nicer schedules: shifts start and end on the hour or half hour, staying at one
       post, preferring what people are good at, shifts of preferably at most 2 hours,
       and a fair spread of work over the volunteers
@@ -76,20 +76,23 @@ Version 1.1 makes the schedule nicer and easier to read.
 - [ ] Maybe: also read `.ods` files (LibreOffice / Nextcloud); for now save as `.xlsx`
 - [ ] A small program with a window: pick the input workbook, start a run, see errors
 
-## How it works (planned)
+## How it works
 
 ```
-Input workbook (.xlsx)  +  form answers (.csv)
+Input workbook (.xlsx)  (later also the form answers, .csv)
                   │
                   ▼
-        scheduler/model.py     plain data: volunteers, posts, demand, events, wishes
+        scheduler/reading/     reads each tab, checks for typos
                   │
                   ▼
-        scheduler/solver.py    builds a CP-SAT model and solves it
-        scheduler/rules.py     the rules, one function each
+        scheduler/model.py     plain data: volunteers, posts, demand, settings
                   │
                   ▼
-        Output workbook (.xlsx)  printable schedules
+        scheduler/solving/     checks the input, builds a CP-SAT model with the
+                               rules (one function each) and solves it
+                  │
+                  ▼
+        scheduler/writing/     writes the output workbook (.xlsx)
 ```
 
 The input workbook has these tabs: ReadMe, Settings, Volunteers, Posts, Skills, Events,
@@ -107,18 +110,17 @@ pch-volunteer-scheduling/
 │   ├── errors.py            the error types
 │   ├── helpers.py           debug output (--debug-time)
 │   ├── model.py             data classes and time helpers
-│   ├── output.py            writes the output workbook
-│   ├── rules.py             the hard rules, one function each
-│   ├── solver.py            builds and solves the schedule
-│   └── workbook.py          reads the input workbook
+│   ├── reading/             reads the input workbook, one module per tab
+│   ├── solving/             checks the input, the rules, builds and solves the schedule
+│   └── writing/             writes the output workbook, one module per tab
 ├── templates/               an empty input workbook to start from
 ├── tests/
 │   ├── command_line/        tests of the command line
 │   ├── data/                small made-up input workbook for the tests
 │   ├── model/               tests of the data classes and time helpers
-│   ├── output/              tests of writing the output workbook
-│   ├── solver/              tests of the solver and its rules
-│   ├── workbook/            tests of reading the input workbook
+│   ├── reading/             tests of reading the input workbook
+│   ├── solving/             tests of the solver and its rules
+│   ├── writing/             tests of writing the output workbook
 │   └── test_helpers.py
 ├── requirements.txt
 └── README.md

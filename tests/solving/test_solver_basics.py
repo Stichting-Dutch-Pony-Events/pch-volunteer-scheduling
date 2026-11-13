@@ -1,7 +1,8 @@
 import pytest
 
 from scheduler.model import Volunteer, Post, Problem, Schedule, Settings, all_blocks
-from scheduler.solving.solver import solve, NoScheduleFound
+from scheduler.errors import NoScheduleFound
+from scheduler.solving.solver import solve
 
 
 # Passed explicitly instead of relying on the defaults in model.py: the stretch rules also

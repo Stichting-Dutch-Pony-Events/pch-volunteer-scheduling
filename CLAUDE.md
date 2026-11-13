@@ -105,33 +105,41 @@ Fictional nicknames for tests and examples (never use real nicknames):
 
 - **OR-Tools CP-SAT** as solver: hard rules are constraints, soft rules are weighted
   penalties in the objective.
-- **Solver layout:** `solve()` in solver.py stays a short table of contents (create
-  variables, call the rules, run CP-SAT, read the schedule). Each hard rule is a function
-  `add_<name>_rule(model, problem, works)` in `scheduler/rules.py` with a docstring
-  stating the rule in plain words; adding a rule = one new function in rules.py + one
-  line in `solve()`. Helpers used only inside rules.py start with `_`. Prefer plain
-  loops over comprehensions (the user finds loops easier to read). Maybe split into
-  hard/soft rule files later, once there are soft rules.
+- **Package layout (since 1.1, option B):** three subpackages that mirror the tests:
+  `scheduler/reading/`, `scheduler/solving/`, `scheduler/writing/`; shared by all at the
+  top: model.py, errors.py, helpers.py, `__main__.py`. Each subpackage's `__init__.py`
+  has only a docstring with a map of its modules (no re-exports); imports always use the
+  full path (`from scheduler.reading.workbook import read_problem`). **Errors are always
+  imported from `scheduler.errors`.** Keep the maps in `scheduler/__init__.py` and the
+  subpackages up to date when a module is added.
+- **Underscores:** a function used only inside its own module starts with `_`; a
+  function used by other modules, or tested directly, has none.
+- **Solver layout:** `solve()` in solving/solver.py stays a short table of contents
+  (check the problem, create variables, call the rules, run CP-SAT, read the schedule).
+  Each hard rule is a function `add_<name>_rule(model, problem, works)` in
+  `scheduler/solving/hard_rules.py` with a docstring stating the rule in plain words;
+  adding a rule = one new function there + one line in `solve()`. Soft rules will go in
+  `solving/soft_rules.py`. Prefer plain loops over comprehensions (the user finds loops
+  easier to read).
 - **Decided: no Rule base class for now** (plain functions with the same arguments are
   enough). Revisit later: the user may want to switch rules on/off from the workbook,
   and soft rules need weights. Focus first on a minimal viable scheduler, then expand.
-- **Type alias `Works`** in rules.py: `dict[tuple[str, str, int], cp_model.IntVar]`, the
-  solver's yes/no variables keyed by (volunteer_name, post, block). Lives in rules.py
-  (solver.py imports rules, so the other way round would be circular); solver.py uses
-  `rules.Works`. Rules return `-> None`.
-- **Shared helpers:** `_variables_of` in rules.py collects a volunteer's variables in a
-  block range (used by every per-volunteer rule). `runs_of_consecutive_blocks` in
-  model.py (public, tested in test_model.py) is used by `Schedule.work_stretches_of`
-  and `_short_pieces`.
+- **solving/variables.py:** the type alias `Works`
+  (`dict[tuple[str, str, int], cp_model.IntVar]`, the solver's yes/no variables keyed by
+  (volunteer_name, post, block)), `create_variables`, and the helpers the rules use to
+  find variables again: `variables_by_volunteer_and_block` (a lookup made once per
+  rule), `variables_of` (a volunteer's variables in a block range), `blocks_of_event`.
+  Rules return `-> None`. `runs_of_consecutive_blocks` in model.py (public, tested in
+  test_model.py) is used by `Schedule.work_stretches_of` and `_short_pieces`.
 - **openpyxl** for reading/writing `.xlsx`. No pandas for now.
-- **workbook.py layout** (agreed 2026-11-02): imports, constants and `WorkbookError` at
-  the top, then `read_problem` (the table of contents), then the tab readers in the
-  order it calls them, then the shared helpers. (Function order doesn't matter to
-  Python: a function only has to exist when it is called.) A helper used by only one
-  reader sits right after that reader (agreed 2026-11-11). **Splitting workbook.py**
-  (one module per tab in `scheduler/reading/`, shared helpers in e.g. `cells.py`): not
-  yet (~530 lines); do it with option B or when Events/Wishes are added, whichever
-  comes first (Claude's advice, 2026-11-11).
+- **reading/ layout** (split in 1.1): `workbook.py` has `read_problem` (the table of
+  contents: file, tabs, one reader per tab, checks across tabs); one module per tab
+  (settings, volunteers, posts, skills, demand), each with its reader first and then the
+  helpers only it uses; `cells.py` has the helpers several readers share (`cell_text`,
+  `find_columns`, `find_post_columns`, `parse_availability`, `parse_hour_limits`). A
+  new tab (Events, Wishes, Fixed) gets its own module. **writing/** is the same:
+  `output.py` has `write_output` (the table of contents), one module per output tab
+  (`schedule_sheet.py`; later e.g. `individual_sheet.py`).
 - **pytest** for tests. Version 1.0 runs from the command line; later a small program
   with a window (see the roadmap).
 
@@ -139,24 +147,30 @@ Fictional nicknames for tests and examples (never use real nicknames):
 
 ```
 ReferenceDocuments/   (not in git) real data, DATA_NOTES.md, draft input workbook
-scheduler/            model.py (data classes), solver.py, rules.py (hard rules),
-                      workbook.py (reads the input workbook), output.py (writes the
-                      output workbook), __main__.py (the command line, run with
-                      `python -m scheduler`), helpers.py (debug_print), errors.py
-                      (WorkbookError, NoScheduleFound and its children), checks.py
-                      (checks before solving: check_problem)
+scheduler/            __main__.py (the command line, run with `python -m scheduler`),
+                      model.py (data classes, time helpers), errors.py (WorkbookError,
+                      NoScheduleFound and its children, TimeLimitReached), helpers.py
+                      (debug_print)
+scheduler/reading/    workbook.py (read_problem), settings.py, volunteers.py, posts.py,
+                      skills.py, demand.py (one reader per tab), cells.py (shared helpers)
+scheduler/solving/    solver.py (solve, make_solver, raise_if_no_schedule), checks.py
+                      (check_problem, find_warnings), variables.py (Works,
+                      create_variables, lookup helpers), hard_rules.py (add_<name>_rule)
+scheduler/writing/    output.py (write_output), schedule_sheet.py (the Schedule tab and
+                      its helpers)
 tests/                test_helpers.py; data/test_input.xlsx (made-up workbook)
 tests/model/          test_model.py, test_time_blocks.py (tests of model.py)
-tests/solver/         test_solver_availability.py, test_solver_basics.py,
-                      test_solver_work_stretches.py, test_solver_stay_at_post.py,
-                      test_checks.py, test_solver_maximum_hours.py, test_warnings.py
-tests/output/         test_assign_slots.py, test_write_helpers.py,
-                      test_create_schedule_sheet.py, test_write_output.py (tests of
-                      writing the output workbook)
-tests/workbook/       test_celltext.py, test_availability.py, test_find_columns.py,
+tests/reading/        test_celltext.py, test_availability.py, test_find_columns.py,
                       test_read_settings.py, test_read_volunteers.py,
                       test_read_posts.py, test_read_skills.py, test_read_demand.py,
                       test_read_problem.py (one test file per reader part)
+tests/solving/        test_solver_availability.py, test_solver_basics.py,
+                      test_solver_work_stretches.py, test_solver_stay_at_post.py,
+                      test_checks.py, test_solver_maximum_hours.py, test_warnings.py,
+                      test_solver_time_limit.py
+tests/writing/        test_assign_slots.py, test_write_helpers.py,
+                      test_create_schedule_sheet.py, test_write_output.py (tests of
+                      writing the output workbook)
 tests/command_line/   test_main.py (tests of the command line)
 templates/            VolunteerInput_template.xlsx: empty input workbook (all tabs and
                       headers, Settings with example values from PonyCon Holland 2026,
@@ -930,9 +944,10 @@ up to date with `main`):
    writing/ (output.py + schedule_sheet.py), solving/ (solver, checks, variables,
    hard_rules), reading/ (workbook.py with read_problem, one module per tab, cells.py;
    `_post_columns` -> `find_post_columns`, `_hour_limits` -> `parse_hour_limits`, to
-   avoid clashing with local variables). Left: step 4, remove the error re-exports from
-   solver.py / reading/workbook.py (import errors from scheduler.errors everywhere),
-   update the layout in CLAUDE.md and the README project structure.
+   avoid clashing with local variables). Step 4 done: errors imported from
+   scheduler.errors everywhere, layout updated here and in the README.
+   **Step 5 (user, 2026-11-13):** go over the names of all functions, public and
+   private, looking for confusing names and names that are too much alike.
 2. Soft rules: the first objective (start/end on :00/:30, stay at one post as a weight,
    avoid short stretches, prefer higher skill scores, prefer stretches of at most
    120 min), then fair spread of hours (relative to availability). In small steps: the

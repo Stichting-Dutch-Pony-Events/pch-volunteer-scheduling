@@ -1,7 +1,8 @@
 import pytest
 
 from scheduler.model import Volunteer, Post, Problem, Settings, block_of, all_blocks
-from scheduler.solving.solver import solve, NoScheduleFound
+from scheduler.errors import NoScheduleFound
+from scheduler.solving.solver import solve
 
 
 # The stretch and break rules also apply here, and block_of depends on the days, so the
