@@ -7,10 +7,10 @@ create_variables (see Works in variables.py, which also has the helpers to find 
 from ortools.sat.python import cp_model
 
 from scheduler.debug import debug_print
-from scheduler.model import Problem, runs_of_consecutive_blocks, block_of
-from scheduler.model import MINUTES_PER_BLOCK, BLOCKS_PER_DAY
-from scheduler.solving.variables import Works, variables_by_volunteer_and_block
-from scheduler.solving.variables import variables_of, blocks_of_convention
+from scheduler.model import (BLOCKS_PER_DAY, MINUTES_PER_BLOCK, Problem, block_of,
+                             runs_of_consecutive_blocks)
+from scheduler.solving.variables import (Works, blocks_of_convention,
+                                         variables_by_volunteer_and_block, variables_of)
 
 
 def add_demand_rule(model: cp_model.CpModel, problem: Problem, works: Works) -> None:

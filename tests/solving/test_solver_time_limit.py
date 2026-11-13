@@ -2,8 +2,8 @@ import pytest
 from ortools.sat.python import cp_model
 
 from scheduler.errors import NoScheduleFound, TimeLimitReached
-from scheduler.model import Volunteer, Post, Problem, Settings, all_blocks
-from scheduler.solving.solver import solve, make_cp_sat_solver, raise_if_no_schedule
+from scheduler.model import Post, Problem, Settings, Volunteer, all_blocks
+from scheduler.solving.solver import make_cp_sat_solver, raise_if_no_schedule, solve
 
 
 RULES = Settings(min_stretch_minutes=60, max_stretch_minutes=180, min_break_minutes=30,

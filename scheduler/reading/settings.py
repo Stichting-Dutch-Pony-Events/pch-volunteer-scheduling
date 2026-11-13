@@ -1,9 +1,9 @@
 """Reads the Settings tab: read_settings, then the helpers only it uses."""
 from openpyxl.worksheet.worksheet import Worksheet
 
-from scheduler.errors import WorkbookError
 from scheduler.debug import debug_print
-from scheduler.model import Settings, MINUTES_PER_BLOCK, DAY_STARTS_AT_HOUR
+from scheduler.errors import WorkbookError
+from scheduler.model import DAY_STARTS_AT_HOUR, MINUTES_PER_BLOCK, Settings
 from scheduler.reading.cells import cell_text, find_columns, parse_hour_limits
 
 # The layout of the input workbook this scheduler reads (the "Workbook format version"

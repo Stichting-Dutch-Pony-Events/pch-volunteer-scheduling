@@ -1,5 +1,5 @@
+from scheduler.model import Post, Problem, Settings, Volunteer, all_blocks
 from scheduler.solving.checks import find_warnings
-from scheduler.model import Volunteer, Post, Problem, Settings, all_blocks
 
 
 RULES = Settings(min_stretch_minutes=60, max_stretch_minutes=180, min_break_minutes=30,

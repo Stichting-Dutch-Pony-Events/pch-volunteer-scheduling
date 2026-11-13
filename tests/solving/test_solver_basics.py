@@ -1,7 +1,7 @@
 import pytest
 
-from scheduler.model import Volunteer, Post, Problem, Schedule, Settings, all_blocks
 from scheduler.errors import NoScheduleFound
+from scheduler.model import Post, Problem, Schedule, Settings, Volunteer, all_blocks
 from scheduler.solving.solver import solve
 
 

@@ -2,8 +2,8 @@ import openpyxl
 import pytest
 from openpyxl.worksheet.worksheet import Worksheet
 
-from scheduler.model import Settings
 from scheduler.errors import WorkbookError
+from scheduler.model import Settings
 from scheduler.reading.volunteers import read_volunteers
 
 

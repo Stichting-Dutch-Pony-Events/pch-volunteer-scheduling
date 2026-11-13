@@ -1,10 +1,10 @@
 import pytest
 
+from scheduler.errors import (NoScheduleFound, NotEnoughHours, NotEnoughQualified,
+                              NotEnoughVolunteers)
+from scheduler.model import Post, Problem, Settings, Volunteer, all_blocks, block_of
 from scheduler.solving import checks
 from scheduler.solving.checks import check_problem
-from scheduler.errors import NoScheduleFound, NotEnoughHours, NotEnoughQualified
-from scheduler.errors import NotEnoughVolunteers
-from scheduler.model import Volunteer, Post, Problem, Settings, all_blocks, block_of
 from scheduler.solving.solver import solve
 
 

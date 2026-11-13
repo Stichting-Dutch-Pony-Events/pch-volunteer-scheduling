@@ -114,6 +114,18 @@ Fictional nicknames for tests and examples (never use real nicknames):
   subpackages up to date when a module is added.
 - **Underscores:** a function used only inside its own module starts with `_`; a
   function used by other modules, or tested directly, has none.
+- **Import lines (agreed 2026-11-13):** three groups separated by a blank line: standard
+  library, third party (openpyxl, ortools, pytest), then `scheduler`. Within a group,
+  `import x` lines first, then `from x import ...` lines, each alphabetical by module path
+  (so `scheduler.debug`, `scheduler.errors`, `scheduler.model`, `scheduler.reading...`,
+  `scheduler.solving...`, `scheduler.writing...`). One line per module, never the same
+  module twice; names in the order CONSTANTS, Classes, functions, each alphabetical; a
+  long line wraps in parentheses aligned after the `(`. No aliases (`import ... as`) and
+  no `import *`; the one exception is `import scheduler.__main__ as command_line` in
+  test_main.py. Import names, not modules; the exception is a table-of-contents function
+  that imports modules so the calls read as a list (`hard_rules.add_demand_rule(...)` in
+  solve()). This is isort's default order (`order_by_type`, line length 100), so VS Code's
+  "Organize Imports" would give the same result if isort is configured for 100 characters.
 - **Solver layout:** `solve()` in solving/solver.py stays a short table of contents
   (check the problem, create variables, call the rules, run CP-SAT, read the schedule).
   Each hard rule is a function `add_<name>_rule(model, problem, works)` in
@@ -962,7 +974,10 @@ up to date with `main`):
    **Step 6 (user, 2026-11-13):** a strategy to keep the import lines of our own modules
    tidy (order, grouping), and whether to use aliases (`import ... as`). 6a done
    (2026-11-13): `helpers.py` renamed to `debug.py` (it only holds the --debug-time switch
-   and debug_print; "helpers" was vague), tests/test_helpers.py to test_debug.py.
+   and debug_print; "helpers" was vague), tests/test_helpers.py to test_debug.py. 6b done
+   (2026-11-13): the rule is in the Technology section ("Import lines") and, short, in the
+   README under Code style; every import block in scheduler/ and tests/ was rewritten to
+   it by a scratch script (tests unchanged otherwise).
 2. Soft rules: the first objective (start/end on :00/:30, stay at one post as a weight,
    avoid short stretches, prefer higher skill scores, prefer stretches of at most
    120 min), then fair spread of hours (relative to availability). In small steps: the

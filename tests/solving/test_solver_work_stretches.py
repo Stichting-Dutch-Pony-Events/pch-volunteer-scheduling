@@ -1,8 +1,8 @@
 import pytest
 
-from scheduler.model import (Volunteer, Post, Problem, Settings, block_of, all_blocks,
-                             MINUTES_PER_BLOCK)
 from scheduler.errors import NoScheduleFound
+from scheduler.model import (MINUTES_PER_BLOCK, Post, Problem, Settings, Volunteer, all_blocks,
+                             block_of)
 from scheduler.solving.solver import solve
 
 

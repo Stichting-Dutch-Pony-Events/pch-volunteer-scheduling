@@ -11,7 +11,7 @@ from datetime import time
 from openpyxl.worksheet.worksheet import Worksheet
 
 from scheduler.errors import WorkbookError
-from scheduler.model import Settings, block_of, BLOCKS_PER_DAY
+from scheduler.model import BLOCKS_PER_DAY, Settings, block_of
 
 
 def cell_text(value: str | int | float | time | None) -> str:

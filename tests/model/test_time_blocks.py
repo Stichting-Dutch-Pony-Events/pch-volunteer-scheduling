@@ -1,6 +1,6 @@
 import pytest
 
-from scheduler.model import Settings, block_of, day_and_time_of, day_of, all_blocks
+from scheduler.model import Settings, all_blocks, block_of, day_and_time_of, day_of
 
 
 def test_first_day_at_six_is_block_0():

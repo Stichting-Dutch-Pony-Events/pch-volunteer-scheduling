@@ -1,11 +1,10 @@
 """Reads the Volunteers tab: read_volunteers, then the helpers only it uses."""
 from openpyxl.worksheet.worksheet import Worksheet
 
-from scheduler.errors import WorkbookError
 from scheduler.debug import debug_print
+from scheduler.errors import WorkbookError
 from scheduler.model import Settings, Volunteer
-from scheduler.reading.cells import cell_text, find_columns, parse_availability
-from scheduler.reading.cells import parse_hour_limits
+from scheduler.reading.cells import cell_text, find_columns, parse_availability, parse_hour_limits
 
 
 def read_volunteers(sheet: Worksheet, settings: Settings) -> dict[str, Volunteer]:

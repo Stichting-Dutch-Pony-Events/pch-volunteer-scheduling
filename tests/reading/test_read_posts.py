@@ -2,8 +2,8 @@ import openpyxl
 import pytest
 from openpyxl.worksheet.worksheet import Worksheet
 
-from scheduler.model import Post
 from scheduler.errors import WorkbookError
+from scheduler.model import Post
 from scheduler.reading.posts import read_posts
 
 

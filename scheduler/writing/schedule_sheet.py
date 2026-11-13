@@ -6,7 +6,7 @@ without openpyxl, so they can be tested without writing a file.
 from openpyxl import Workbook
 
 from scheduler.debug import debug_print
-from scheduler.model import Problem, Schedule, BLOCKS_PER_DAY, day_and_time_of
+from scheduler.model import BLOCKS_PER_DAY, Problem, Schedule, day_and_time_of
 
 
 def create_schedule_sheet(workbook: Workbook, problem: Problem, schedule: Schedule) -> None:

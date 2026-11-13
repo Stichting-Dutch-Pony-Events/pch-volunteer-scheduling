@@ -10,11 +10,10 @@ MAX_LINES lines, then "and N more".
 find_warnings (at the bottom) is different: it finds things that don't stop a run but
 are probably a mistake in the input, and only returns them as lines of text.
 """
-from scheduler.errors import NotEnoughQualified, NotEnoughVolunteers, NotEnoughHours
-from scheduler.model import Problem, runs_of_consecutive_blocks, day_and_time_of, day_of, block_of
-from scheduler.model import Volunteer
-from scheduler.model import Settings, BLOCKS_PER_DAY, MINUTES_PER_BLOCK
 from scheduler.debug import debug_print
+from scheduler.errors import NotEnoughHours, NotEnoughQualified, NotEnoughVolunteers
+from scheduler.model import (BLOCKS_PER_DAY, MINUTES_PER_BLOCK, Problem, Settings, Volunteer,
+                             block_of, day_and_time_of, day_of, runs_of_consecutive_blocks)
 
 # At most this many problem lines in one message; the rest is counted ("and 12 more").
 MAX_LINES = 10

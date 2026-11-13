@@ -3,8 +3,8 @@
 read_problem is the table of contents: it checks the file and the tabs, calls one
 reader per tab (each in its own module in this folder) and checks across tabs.
 """
-from pathlib import Path
 import zipfile
+from pathlib import Path
 
 import openpyxl
 from openpyxl.worksheet.worksheet import Worksheet

@@ -138,6 +138,16 @@ The tests only use small, made-up examples.
 This project is built test-first: for every step we first write tests that describe the
 new behaviour, see them fail, then write just enough code to make them pass.
 
+### Code style
+
+Python 3.14, type hints on every function, lines of at most 100 characters (checked with
+`python -m pycodestyle --max-line-length=100 scheduler tests`), plain loops rather than
+clever one-liners. Imports come in three groups separated by a blank line: standard
+library, third party (openpyxl, ortools, pytest), then `scheduler`. Within a group,
+`import x` lines come first, then `from x import ...` lines, both alphabetical by module;
+one line per module (wrapped in parentheses when long); no aliases, no `import *`. The
+error types are always imported from `scheduler.errors`.
+
 ### Setup (Windows)
 
 Requires Python 3.14 (OR-Tools has no wheels for 3.15 yet).
