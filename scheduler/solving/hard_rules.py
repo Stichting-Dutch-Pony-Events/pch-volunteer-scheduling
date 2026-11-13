@@ -10,7 +10,7 @@ from scheduler.helpers import debug_print
 from scheduler.model import Problem, runs_of_consecutive_blocks, block_of
 from scheduler.model import MINUTES_PER_BLOCK, BLOCKS_PER_DAY
 from scheduler.solving.variables import Works, variables_by_volunteer_and_block
-from scheduler.solving.variables import variables_of, blocks_of_event
+from scheduler.solving.variables import variables_of, blocks_of_convention
 
 
 def add_demand_rule(model: cp_model.CpModel, problem: Problem, works: Works) -> None:
@@ -34,7 +34,7 @@ def add_no_double_booking_rule(model: cp_model.CpModel, problem: Problem, works:
     debug_print("add_no_double_booking_rule: adding the rule")
     lookup = variables_by_volunteer_and_block(works)
 
-    for block in blocks_of_event(problem):
+    for block in blocks_of_convention(problem):
         for volunteer in problem.volunteers:
             # Collect the variables of every post this volunteer could work in this block.
             posts_here = variables_of(lookup, volunteer.name, block, block + 1)
@@ -51,7 +51,7 @@ def add_maximum_stretch_rule(model: cp_model.CpModel, problem: Problem, works: W
     lookup = variables_by_volunteer_and_block(works)
 
     for volunteer in problem.volunteers:
-        for window_start in blocks_of_event(problem):
+        for window_start in blocks_of_convention(problem):
             # Collect this volunteer's variables (any post) inside the moving window.
             posts_in_window = variables_of(lookup, volunteer.name, window_start,
                                            window_start + max_number_of_blocks + 1)
@@ -68,7 +68,7 @@ def add_minimum_break_rule(model: cp_model.CpModel, problem: Problem, works: Wor
     lookup = variables_by_volunteer_and_block(works)
 
     for volunteer in problem.volunteers:
-        for block in blocks_of_event(problem):
+        for block in blocks_of_convention(problem):
             for gap_length in range(1, min_break_blocks):
                 # We look at a gap in blocks block + 1 .. block_after_gap - 1.
                 block_after_gap = block + gap_length + 1
@@ -101,7 +101,7 @@ def add_minimum_stretch_rule(model: cp_model.CpModel, problem: Problem, works: W
     lookup = variables_by_volunteer_and_block(works)
 
     for volunteer in problem.volunteers:
-        for block in blocks_of_event(problem):
+        for block in blocks_of_convention(problem):
             for run_length in range(1, min_stretch_blocks):
                 # We look at a run of work in blocks block .. block_after_run - 1.
                 block_after_run = block + run_length

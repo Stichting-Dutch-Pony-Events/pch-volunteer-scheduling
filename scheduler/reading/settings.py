@@ -40,14 +40,14 @@ def read_settings(sheet: Worksheet) -> Settings:
     """
     debug_print(f"read_settings: reading tab {sheet.title}")
     # 1. Every setting as text, by name; then the names: nothing unknown, nothing missing.
-    unparsed_settings = _settings_by_name(sheet)
+    unparsed_settings = _unparsed_settings(sheet)
     _check_setting_names(unparsed_settings)
 
     # 2. The settings that only have one allowed value for now.
-    _check_fixed_settings(unparsed_settings)
+    _check_settings_with_one_allowed_value(unparsed_settings)
 
     # 3. The days, and the default hour limits (in minutes, None = no limit).
-    days = _days(unparsed_settings["Days"])
+    days = _parse_days(unparsed_settings["Days"])
 
     per_day_name = "Default maximum hours per day"
     total_name = "Default maximum hours total"
@@ -62,15 +62,15 @@ def read_settings(sheet: Worksheet) -> Settings:
 
     # 4. Turn it all into Settings.
     return Settings(
-        min_stretch_minutes=_whole_number(unparsed_settings, "Minimum work stretch"),
-        max_stretch_minutes=_whole_number(unparsed_settings, "Maximum work stretch"),
-        min_break_minutes=_whole_number(unparsed_settings, "Minimum break"),
+        min_stretch_minutes=_whole_number_setting(unparsed_settings, "Minimum work stretch"),
+        max_stretch_minutes=_whole_number_setting(unparsed_settings, "Maximum work stretch"),
+        min_break_minutes=_whole_number_setting(unparsed_settings, "Minimum break"),
         days=days,
         default_max_minutes_per_day=default_per_day,
         default_max_minutes_total=default_total)
 
 
-def _settings_by_name(sheet: Worksheet) -> dict[str, str]:
+def _unparsed_settings(sheet: Worksheet) -> dict[str, str]:
     """Every setting on the Settings tab as {name: value}, both as text (through cell_text).
 
     A row without a name is skipped. Raises WorkbookError for a missing Setting or Value
@@ -108,18 +108,18 @@ def _check_setting_names(unparsed_settings: dict[str, str]) -> None:
             raise WorkbookError(f"Settings: the required setting {required_setting!r} is empty.")
 
 
-def _check_fixed_settings(unparsed_settings: dict[str, str]) -> None:
+def _check_settings_with_one_allowed_value(unparsed_settings: dict[str, str]) -> None:
     """Raise WorkbookError if a setting with only one allowed value for now has another one.
 
     Workbook format version must be WORKBOOK_FORMAT_VERSION, Time step MINUTES_PER_BLOCK
     (15) and Day boundary DAY_STARTS_AT_HOUR (06:00).
     """
-    version = _whole_number(unparsed_settings, "Workbook format version")
+    version = _whole_number_setting(unparsed_settings, "Workbook format version")
     if version != WORKBOOK_FORMAT_VERSION:
         raise WorkbookError(f"Settings, 'Workbook format version': this workbook is version "
                             f"{version}, this scheduler reads version {WORKBOOK_FORMAT_VERSION}.")
 
-    time_step = _whole_number(unparsed_settings, "Time step")
+    time_step = _whole_number_setting(unparsed_settings, "Time step")
     if time_step != MINUTES_PER_BLOCK:
         raise WorkbookError(f"Settings, 'Time step': the scheduler only supports "
                             f"{MINUTES_PER_BLOCK} minutes for now, not {time_step}.")
@@ -132,7 +132,7 @@ def _check_fixed_settings(unparsed_settings: dict[str, str]) -> None:
                             f"{expected_day_boundary} for now, not {day_boundary}.")
 
 
-def _days(text: str) -> tuple[str, ...]:
+def _parse_days(text: str) -> tuple[str, ...]:
     """The Days setting as a tuple: "Friday, Saturday, Sunday" -> ("Friday", "Saturday", ...).
 
     Raises WorkbookError for a day that appears more than once.
@@ -147,7 +147,7 @@ def _days(text: str) -> tuple[str, ...]:
     return tuple(days)  # a tuple, like the default in Settings
 
 
-def _whole_number(settings: dict[str, str], name: str) -> int:
+def _whole_number_setting(settings: dict[str, str], name: str) -> int:
     """The setting with this name as a whole number; WorkbookError if it isn't one."""
     try:
         return int(settings[name])

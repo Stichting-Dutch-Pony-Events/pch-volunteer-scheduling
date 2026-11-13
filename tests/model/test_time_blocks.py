@@ -1,6 +1,6 @@
 import pytest
 
-from scheduler.model import Settings, block_of, time_of, day_of, all_blocks
+from scheduler.model import Settings, block_of, day_and_time_of, day_of, all_blocks
 
 
 def test_first_day_at_six_is_block_0():
@@ -63,25 +63,25 @@ def test_days_come_from_the_settings():
     assert block == 0
 
 
-def test_time_of_turns_a_block_back_into_day_and_time():
+def test_day_and_time_of_turns_a_block_back_into_day_and_time():
     """Block 30 is Friday 13:30."""
     # Arrange
     settings = Settings()
 
     # Act
-    day_and_time = time_of(30, settings)
+    day_and_time = day_and_time_of(30, settings)
 
     # Assert
     assert day_and_time == ("Friday", "13:30")
 
 
-def test_time_of_shows_night_blocks_under_the_previous_day():
+def test_day_and_time_of_shows_night_blocks_under_the_previous_day():
     """Block 172 is shown as Saturday 01:00, not Sunday 01:00."""
     # Arrange
     settings = Settings()
 
     # Act
-    day_and_time = time_of(172, settings)
+    day_and_time = day_and_time_of(172, settings)
 
     # Assert
     assert day_and_time == ("Saturday", "01:00")
@@ -149,17 +149,17 @@ def test_day_of_a_block_outside_the_convention_days_raises_value_error(block):
 
 
 @pytest.mark.parametrize("block", [-1, 288], ids=["before the first day", "after the last day"])
-def test_time_of_a_block_outside_the_convention_days_raises_value_error(block):
+def test_day_and_time_of_a_block_outside_the_convention_days_raises_value_error(block):
     """A block before the first day or after the last day gives a clear error."""
     # Arrange
     settings = Settings()
 
     # Act
-    # (Act and Assert are combined, pytest.raises checks the exception while time_of runs.)
+    # (Act and Assert are combined, pytest.raises checks the exception while day_and_time_of runs.)
 
     # Assert
     with pytest.raises(ValueError):
-        time_of(block, settings)
+        day_and_time_of(block, settings)
 
 
 def test_all_blocks_covers_every_block_of_every_convention_day():

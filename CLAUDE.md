@@ -128,7 +128,9 @@ Fictional nicknames for tests and examples (never use real nicknames):
   (`dict[tuple[str, str, int], cp_model.IntVar]`, the solver's yes/no variables keyed by
   (volunteer_name, post, block)), `create_variables`, and the helpers the rules use to
   find variables again: `variables_by_volunteer_and_block` (a lookup made once per
-  rule), `variables_of` (a volunteer's variables in a block range), `blocks_of_event`.
+  rule), `variables_of` (a volunteer's variables in a block range), `blocks_of_convention`
+  (first to last block with demand; not to be confused with `all_blocks` in model.py =
+  every block of every day, or with the Events tab).
   Rules return `-> None`. `runs_of_consecutive_blocks` in model.py (public, tested in
   test_model.py) is used by `Schedule.work_stretches_of` and `_short_pieces`.
 - **openpyxl** for reading/writing `.xlsx`. No pandas for now.
@@ -153,7 +155,7 @@ scheduler/            __main__.py (the command line, run with `python -m schedul
                       (debug_print)
 scheduler/reading/    workbook.py (read_problem), settings.py, volunteers.py, posts.py,
                       skills.py, demand.py (one reader per tab), cells.py (shared helpers)
-scheduler/solving/    solver.py (solve, make_solver, raise_if_no_schedule), checks.py
+scheduler/solving/    solver.py (solve, make_cp_sat_solver, raise_if_no_schedule), checks.py
                       (check_problem, find_warnings), variables.py (Works,
                       create_variables, lookup helpers), hard_rules.py (add_<name>_rule)
 scheduler/writing/    output.py (write_output), schedule_sheet.py (the Schedule tab and
@@ -946,8 +948,21 @@ up to date with `main`):
    `_post_columns` -> `find_post_columns`, `_hour_limits` -> `parse_hour_limits`, to
    avoid clashing with local variables). Step 4 done: errors imported from
    scheduler.errors everywhere, layout updated here and in the README.
-   **Step 5 (user, 2026-11-13):** go over the names of all functions, public and
-   private, looking for confusing names and names that are too much alike.
+   **Step 5 done (2026-11-13):** function names reviewed. Renamed (old names still appear
+   in the roadmap history above): `time_of` -> `day_and_time_of` (it returns both),
+   `blocks_of_event` -> `blocks_of_convention` ("event" is reserved for the Events tab),
+   `_check_fixed_settings` -> `_check_settings_with_one_allowed_value` ("Fixed" is a tab),
+   `make_solver` -> `make_cp_sat_solver`; in checks.py `_hours_lines` / `_hours_line` /
+   `_hours_text` -> `_hours_shortage_lines` / `_format_hours_line` /
+   `_minutes_as_hours_text`, `_message` -> `_message_from_lines`; in reading/
+   `_settings_by_name` -> `_unparsed_settings`, `_hour_limit` -> `_parse_hour_limit`,
+   `_days` -> `_parse_days`, `_whole_number` -> `_whole_number_setting`. Left as they are
+   (user, 2026-11-13): `Works`, `VariablesByVolunteerAndBlock`, `cell_text`. Variable
+   names inside functions: another time.
+   **Step 6 (user, 2026-11-13):** a strategy to keep the import lines of our own modules
+   tidy (order, grouping), and whether to use aliases (`import ... as`). Also decide then:
+   rename `helpers.py` to `debug.py` (it only holds the --debug-time switch and
+   debug_print; "helpers" is vague).
 2. Soft rules: the first objective (start/end on :00/:30, stay at one post as a weight,
    avoid short stretches, prefer higher skill scores, prefer stretches of at most
    120 min), then fair spread of hours (relative to availability). In small steps: the
@@ -1065,7 +1080,8 @@ After the minimal viable scheduler:
       (e.g. a list of every typo in the workbook; fits the window program later).
 - [ ] Time step and day boundary configurable (e.g. 30 min blocks, another boundary).
       Not only the reader: `MINUTES_PER_BLOCK`, `BLOCKS_PER_DAY` and `DAY_STARTS_AT_HOUR`
-      move from model.py constants into `Settings`, used by `block_of`/`time_of`/rules.
+      move from model.py constants into `Settings`, used by `block_of`/`day_and_time_of`/
+      rules.
       Raise the workbook format version if the Settings rows change.
 - [ ] Maybe: also read `.ods` (Nextcloud / LibreOffice). openpyxl can't; options: a
       second front-end with e.g. `odfpy` giving the same cell values (the tab readers

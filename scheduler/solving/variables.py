@@ -1,8 +1,8 @@
 """The solver's yes/no variables: creating them and finding them again.
 
 create_variables makes them (solver.py calls it); variables_by_volunteer_and_block,
-variables_of and blocks_of_event help the rules find them again. Shared by the hard rules,
-and later by the soft rules too.
+variables_of and blocks_of_convention help the rules find them again. Shared by the hard
+rules, and later by the soft rules too.
 """
 from ortools.sat.python import cp_model
 
@@ -64,10 +64,10 @@ def variables_of(lookup: VariablesByVolunteerAndBlock, volunteer_name: str, firs
     return variables
 
 
-def blocks_of_event(problem: Problem) -> range:
+def blocks_of_convention(problem: Problem) -> range:
     """All blocks from the first to the last block in the demand, in order.
 
-    This spans the whole event, across days and nights: night blocks without demand
+    This spans the whole convention, across days and nights: night blocks without demand
     have no variables, so the rules simply skip them. Returns an empty range when there
     is no demand, so loops over it simply don't run.
     """

@@ -3,7 +3,7 @@ from ortools.sat.python import cp_model
 
 from scheduler.errors import NoScheduleFound, TimeLimitReached
 from scheduler.model import Volunteer, Post, Problem, Settings, all_blocks
-from scheduler.solving.solver import solve, make_solver, raise_if_no_schedule
+from scheduler.solving.solver import solve, make_cp_sat_solver, raise_if_no_schedule
 
 
 RULES = Settings(min_stretch_minutes=60, max_stretch_minutes=180, min_break_minutes=30,
@@ -18,7 +18,7 @@ def test_solver_gets_the_time_limit_in_seconds():
     # Nothing to set up: the time limit is the only input.
 
     # Act
-    solver = make_solver(time_limit_seconds=600)
+    solver = make_cp_sat_solver(time_limit_seconds=600)
 
     # Assert
     assert solver.parameters.max_time_in_seconds == 600
@@ -31,7 +31,7 @@ def test_without_a_time_limit_the_solver_keeps_its_default():
     fresh_solver = cp_model.CpSolver()
 
     # Act
-    solver = make_solver(time_limit_seconds=None)
+    solver = make_cp_sat_solver(time_limit_seconds=None)
 
     # Assert
     assert solver.parameters.max_time_in_seconds == fresh_solver.parameters.max_time_in_seconds

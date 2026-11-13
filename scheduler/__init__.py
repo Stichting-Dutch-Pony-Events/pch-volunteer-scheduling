@@ -13,7 +13,7 @@ Where to find what, in the order a run goes through them:
 Used by all of them:
 
     model.py      the data (Volunteer, Post, Settings, Problem, Schedule) and the time
-                  helpers (block_of, time_of, day_of, all_blocks)
+                  helpers (block_of, day_and_time_of, day_of, all_blocks)
     errors.py     the error types (WorkbookError, NoScheduleFound and its children)
     helpers.py    debug_print() for --debug-time
 """

@@ -6,7 +6,7 @@ without openpyxl, so they can be tested without writing a file.
 from openpyxl import Workbook
 
 from scheduler.helpers import debug_print
-from scheduler.model import Problem, Schedule, BLOCKS_PER_DAY, time_of
+from scheduler.model import Problem, Schedule, BLOCKS_PER_DAY, day_and_time_of
 
 
 def create_schedule_sheet(workbook: Workbook, problem: Problem, schedule: Schedule) -> None:
@@ -43,7 +43,7 @@ def create_schedule_sheet(workbook: Workbook, problem: Problem, schedule: Schedu
     #    nickname lands under the right header. .get gives None (an empty cell) when nobody
     #    sits in that slot during this block.
     for block in rows_to_show(problem):
-        day, time = time_of(block, problem.settings)
+        day, time = day_and_time_of(block, problem.settings)
         row = [day, time]
         for post, slot in columns:
             row.append(names.get((post, slot, block)))

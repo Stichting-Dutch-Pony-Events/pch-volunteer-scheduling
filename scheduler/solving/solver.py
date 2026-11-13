@@ -37,7 +37,7 @@ def _solve_and_read_schedule(model: cp_model.CpModel, works: variables.Works,
     """Run the solver and turn every variable set to 1 into an assignment."""
     # The gap between this line and the next output is CP-SAT's own search time.
     debug_print("_solve_and_read_schedule: running CP-SAT")
-    solver = make_solver(time_limit_seconds=time_limit_seconds)
+    solver = make_cp_sat_solver(time_limit_seconds=time_limit_seconds)
     status = solver.solve(model)
 
     # Stop here if CP-SAT found no schedule (see raise_if_no_schedule).
@@ -50,7 +50,7 @@ def _solve_and_read_schedule(model: cp_model.CpModel, works: variables.Works,
     return Schedule(assignments=assignments)
 
 
-def make_solver(time_limit_seconds: int | None) -> cp_model.CpSolver:
+def make_cp_sat_solver(time_limit_seconds: int | None) -> cp_model.CpSolver:
     """A CP-SAT solver that stops after time_limit_seconds (None = no limit).
 
     A building block of solve(); public because it is tested on its own.

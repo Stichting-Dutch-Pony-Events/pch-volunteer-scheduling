@@ -11,7 +11,7 @@ find_warnings (at the bottom) is different: it finds things that don't stop a ru
 are probably a mistake in the input, and only returns them as lines of text.
 """
 from scheduler.errors import NotEnoughQualified, NotEnoughVolunteers, NotEnoughHours
-from scheduler.model import Problem, runs_of_consecutive_blocks, time_of, day_of, block_of
+from scheduler.model import Problem, runs_of_consecutive_blocks, day_and_time_of, day_of, block_of
 from scheduler.model import Volunteer
 from scheduler.model import Settings, BLOCKS_PER_DAY, MINUTES_PER_BLOCK
 from scheduler.helpers import debug_print
@@ -31,22 +31,22 @@ def check_problem(problem: Problem) -> None:
 
     lines = _not_enough_qualified_lines(problem=problem)
     if lines:
-        raise NotEnoughQualified(_message(lines=lines))
+        raise NotEnoughQualified(_message_from_lines(lines=lines))
 
     lines = _not_enough_volunteers_lines(problem=problem)
     if lines:
-        raise NotEnoughVolunteers(_message(lines=lines))
+        raise NotEnoughVolunteers(_message_from_lines(lines=lines))
 
     lines = _not_enough_hours_at_post_lines(problem=problem)
     if lines:
-        raise NotEnoughHours(_message(lines=lines))
+        raise NotEnoughHours(_message_from_lines(lines=lines))
 
     lines = _not_enough_hours_in_total_lines(problem=problem)
     if lines:
-        raise NotEnoughHours(_message(lines=lines))
+        raise NotEnoughHours(_message_from_lines(lines=lines))
 
 
-def _message(lines: list[str]) -> str:
+def _message_from_lines(lines: list[str]) -> str:
     """Join the lines into one message: at most MAX_LINES lines, then "and N more"."""
     error_text = "\n".join(lines[:MAX_LINES])
     if len(lines) > MAX_LINES:
@@ -96,7 +96,7 @@ def _not_enough_qualified_lines(problem: Problem) -> list[str]:
         runs = runs_of_consecutive_blocks(unmet_demands[(post, end_line)])
 
         for block, block_after_last in runs:
-            day, start = time_of(block=block, settings=problem.settings)
+            day, start = day_and_time_of(block=block, settings=problem.settings)
             end = _end_time(block_after_last=block_after_last, settings=problem.settings)
 
             line = f"{post}, {day} {start}-{end}" + end_line
@@ -145,7 +145,7 @@ def _not_enough_volunteers_lines(problem: Problem) -> list[str]:
         runs = runs_of_consecutive_blocks(unmet_demands[end_line])
 
         for block, block_after_last in runs:
-            day, start = time_of(block=block, settings=problem.settings)
+            day, start = day_and_time_of(block=block, settings=problem.settings)
             end = _end_time(block_after_last=block_after_last, settings=problem.settings)
 
             line = f"{day} {start}-{end}" + end_line
@@ -172,9 +172,9 @@ def _not_enough_hours_at_post_lines(problem: Problem) -> list[str]:
             if post.name in volunteer.skills:
                 qualified.append(volunteer)
 
-        lines += _hours_lines(problem=problem, label=post.name, posts={post.name},
-                              volunteers=qualified, who="the qualified volunteers",
-                              show_names=True)
+        lines += _hours_shortage_lines(problem=problem, label=post.name, posts={post.name},
+                                       volunteers=qualified, who="the qualified volunteers",
+                                       show_names=True)
 
     return lines
 
@@ -192,13 +192,13 @@ def _not_enough_hours_in_total_lines(problem: Problem) -> list[str]:
     for (post, block) in problem.demand:
         all_posts.add(post)
 
-    return _hours_lines(problem=problem, label="All posts", posts=all_posts,
-                        volunteers=problem.volunteers, who="the volunteers",
-                        show_names=False)
+    return _hours_shortage_lines(problem=problem, label="All posts", posts=all_posts,
+                                 volunteers=problem.volunteers, who="the volunteers",
+                                 show_names=False)
 
 
-def _hours_lines(problem: Problem, label: str, posts: set[str], volunteers: list[Volunteer],
-                 who: str, show_names: bool) -> list[str]:
+def _hours_shortage_lines(problem: Problem, label: str, posts: set[str],
+                          volunteers: list[Volunteer], who: str, show_names: bool) -> list[str]:
     """The lines of both hours checks: compare the hours the given posts need with the
     hours the given volunteers can work, per day and over all days.
 
@@ -234,8 +234,8 @@ def _hours_lines(problem: Problem, label: str, posts: set[str], volunteers: list
                 names.append(volunteer.name)
 
         if needed > can_work:
-            lines.append(_hours_line(f"{label}, {day}", needed, who, can_work, names,
-                                     show_names))
+            lines.append(_format_hours_line(f"{label}, {day}", needed, who, can_work, names,
+                                            show_names))
 
     # 3. Over all days: the sum of a volunteer's days, but their total limit counts only
     #    once (each day above used it as a cap, so the sum of the days can be higher).
@@ -257,18 +257,19 @@ def _hours_lines(problem: Problem, label: str, posts: set[str], volunteers: list
             names.append(volunteer.name)
 
     if needed > can_work:
-        lines.append(_hours_line(f"{label}, over all days", needed, who, can_work, names,
-                                 show_names))
+        lines.append(_format_hours_line(f"{label}, over all days", needed, who, can_work,
+                                        names, show_names))
 
     return lines
 
 
-def _hours_line(start: str, needed: int, who: str, can_work: int, names: list[str],
-                show_names: bool) -> str:
+def _format_hours_line(start: str, needed: int, who: str, can_work: int, names: list[str],
+                       show_names: bool) -> str:
     """One line of an hours check, e.g. "Tickets, Friday: needs 3 hours, the qualified
     volunteers can work 2 hours (Mock Mane)". needed and can_work are in minutes.
     """
-    line = f"{start}: needs {_hours_text(needed)}, {who} can work {_hours_text(can_work)}"
+    line = (f"{start}: needs {_minutes_as_hours_text(needed)}, "
+            f"{who} can work {_minutes_as_hours_text(can_work)}")
     if show_names:
         line += " (" + ", ".join(names) + ")"
 
@@ -288,7 +289,7 @@ def _minutes_can_work_on_day(volunteer: Volunteer, blocks_of_day: set[int]) -> i
     return minutes
 
 
-def _hours_text(minutes: int) -> str:
+def _minutes_as_hours_text(minutes: int) -> str:
     """Minutes as hours for a message: 180 -> "3 hours", 150 -> "2.5 hours"."""
     if minutes % 60 == 0:
         return f"{minutes // 60} hours"
@@ -300,16 +301,16 @@ def _end_time(block_after_last: int, settings: Settings) -> str:
     """The end time ("HH:MM") of a time range that stops just before block_after_last.
 
     Usually that is simply the time of block_after_last. But a range that runs until the
-    very end of the convention has a block_after_last that no longer exists, so time_of
+    very end of the convention has a block_after_last that no longer exists, so day_and_time_of
     would raise; that range ends at the day boundary (06:00).
     """
     final_block = (len(settings.days) * BLOCKS_PER_DAY) - 1
 
     if block_after_last > final_block:
         # The convention ends at 06:00, the same time of day as block 0.
-        _, end = time_of(block=0, settings=settings)
+        _, end = day_and_time_of(block=0, settings=settings)
     else:
-        _, end = time_of(block=block_after_last, settings=settings)
+        _, end = day_and_time_of(block=block_after_last, settings=settings)
 
     return end
 

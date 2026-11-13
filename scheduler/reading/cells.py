@@ -118,7 +118,7 @@ def parse_hour_limits(per_day: tuple[str, str], total: tuple[str, str],
     """The hour limits per day and in total of one Settings or Volunteers row, in minutes.
 
     per_day and total are (name, text): the setting or column name for the messages, and
-    the cell text (already through cell_text). Each text goes through _hour_limit, with at
+    the cell text (already through cell_text). Each text goes through _parse_hour_limit, with at
     most 24 hours per day and in total at most 24 hours for each day of the convention.
     An empty text gives None: read_volunteers then fills in the default, read_settings
     never lets an empty value get here. Per day may not be more than the total, but only
@@ -130,11 +130,11 @@ def parse_hour_limits(per_day: tuple[str, str], total: tuple[str, str],
 
     per_day_minutes = None
     if per_day_text != "":
-        per_day_minutes = _hour_limit(per_day_name, per_day_text, 24)
+        per_day_minutes = _parse_hour_limit(per_day_name, per_day_text, 24)
 
     total_minutes = None
     if total_text != "":
-        total_minutes = _hour_limit(total_name, total_text, 24 * number_of_days)
+        total_minutes = _parse_hour_limit(total_name, total_text, 24 * number_of_days)
 
     # Only compare two numbers: an empty text or "none" (both None here) is never compared.
     if per_day_minutes is not None and total_minutes is not None:
@@ -145,7 +145,7 @@ def parse_hour_limits(per_day: tuple[str, str], total: tuple[str, str],
     return per_day_minutes, total_minutes
 
 
-def _hour_limit(name: str, text: str, max_hours: int) -> int | None:
+def _parse_hour_limit(name: str, text: str, max_hours: int) -> int | None:
     """One hour limit cell (already through cell_text) as minutes.
 
     Whole hours from 1 up to max_hours (24 for a day, 24 times the number of days for the
