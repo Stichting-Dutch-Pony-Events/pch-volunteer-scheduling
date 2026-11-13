@@ -15,5 +15,5 @@ Used by all of them:
     model.py      the data (Volunteer, Post, Settings, Problem, Schedule) and the time
                   helpers (block_of, day_and_time_of, day_of, all_blocks)
     errors.py     the error types (WorkbookError, NoScheduleFound and its children)
-    helpers.py    debug_print() for --debug-time
+    debug.py      the --debug-time switch (set_debug_time) and debug_print()
 """

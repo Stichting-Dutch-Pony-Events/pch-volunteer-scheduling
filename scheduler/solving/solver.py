@@ -1,7 +1,7 @@
 from ortools.sat.python import cp_model
 
 from scheduler.errors import NoScheduleFound, TimeLimitReached
-from scheduler.helpers import debug_print
+from scheduler.debug import debug_print
 from scheduler.model import Schedule, Problem
 from scheduler.solving import checks, hard_rules, variables
 

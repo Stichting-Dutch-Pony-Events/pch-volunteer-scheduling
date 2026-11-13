@@ -6,7 +6,7 @@ rules, and later by the soft rules too.
 """
 from ortools.sat.python import cp_model
 
-from scheduler.helpers import debug_print
+from scheduler.debug import debug_print
 from scheduler.model import Problem
 
 # The solver's yes/no variables: (volunteer_name, post, block) -> variable.

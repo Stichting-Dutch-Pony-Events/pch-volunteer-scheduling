@@ -8,7 +8,7 @@ import openpyxl
 import pytest
 
 import scheduler.__main__ as command_line
-from scheduler import helpers
+from scheduler import debug
 from scheduler.errors import NoScheduleFound, TimeLimitReached
 from scheduler.model import Problem
 
@@ -383,35 +383,35 @@ def test_debug_time_flag_switches_debug_printing_on(tmp_path, monkeypatch):
     """With --debug-time, the program switches debug_print on."""
     # Arrange
     # monkeypatch puts the switch back as it was after this test.
-    monkeypatch.setattr(helpers, "debug_time_on", False)
+    monkeypatch.setattr(debug, "debug_time_on", False)
     output = tmp_path / "output.xlsx"
 
     # Act
     command_line.main([str(TEST_WORKBOOK), str(output), "--debug-time"])
 
     # Assert
-    assert helpers.debug_time_on is True
+    assert debug.debug_time_on is True
 
 
 def test_without_debug_time_flag_debug_printing_is_off(tmp_path, monkeypatch):
     """Without --debug-time, debug_print is switched off, even if it was on before."""
     # Arrange
     # On before the run, so the test shows that main really switches it off.
-    monkeypatch.setattr(helpers, "debug_time_on", True)
+    monkeypatch.setattr(debug, "debug_time_on", True)
     output = tmp_path / "output.xlsx"
 
     # Act
     command_line.main([str(TEST_WORKBOOK), str(output)])
 
     # Assert
-    assert helpers.debug_time_on is False
+    assert debug.debug_time_on is False
 
 
 def test_debug_time_flag_prints_debug_lines_from_reading_solving_and_writing(
         tmp_path, monkeypatch, capsys):
     """With --debug-time, the readers, the rules and the sheet writers each print a line."""
     # Arrange
-    monkeypatch.setattr(helpers, "debug_time_on", False)
+    monkeypatch.setattr(debug, "debug_time_on", False)
     output = tmp_path / "output.xlsx"
 
     # Act
@@ -433,7 +433,7 @@ def test_debug_time_flag_prints_debug_lines_for_the_variables_and_cp_sat(
         tmp_path, monkeypatch, capsys):
     """With --debug-time, making the variables and running CP-SAT each print a line."""
     # Arrange
-    monkeypatch.setattr(helpers, "debug_time_on", False)
+    monkeypatch.setattr(debug, "debug_time_on", False)
     output = tmp_path / "output.xlsx"
 
     # Act

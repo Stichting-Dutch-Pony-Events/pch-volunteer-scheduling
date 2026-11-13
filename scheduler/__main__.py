@@ -11,7 +11,7 @@ from datetime import datetime
 from pathlib import Path
 
 from scheduler.errors import NoScheduleFound, TimeLimitReached, WorkbookError
-from scheduler.helpers import set_debug_time
+from scheduler.debug import set_debug_time
 from scheduler.reading.workbook import read_problem
 from scheduler.solving.checks import find_warnings
 from scheduler.solving.solver import solve

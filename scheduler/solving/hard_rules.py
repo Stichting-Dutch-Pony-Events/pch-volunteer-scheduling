@@ -6,7 +6,7 @@ create_variables (see Works in variables.py, which also has the helpers to find 
 """
 from ortools.sat.python import cp_model
 
-from scheduler.helpers import debug_print
+from scheduler.debug import debug_print
 from scheduler.model import Problem, runs_of_consecutive_blocks, block_of
 from scheduler.model import MINUTES_PER_BLOCK, BLOCKS_PER_DAY
 from scheduler.solving.variables import Works, variables_by_volunteer_and_block

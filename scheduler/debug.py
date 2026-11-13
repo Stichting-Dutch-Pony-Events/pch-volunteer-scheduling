@@ -1,4 +1,4 @@
-"""Small helpers that any part of the scheduler may use.
+"""Debug output for the command line's --debug-time flag; any part of the scheduler may use it.
 
 debug_print: timing output switched on with the command line's --debug-time flag, so calls
 to it can stay in the code; while debugging is off they print nothing.

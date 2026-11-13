@@ -14,7 +14,7 @@ from scheduler.errors import NotEnoughQualified, NotEnoughVolunteers, NotEnoughH
 from scheduler.model import Problem, runs_of_consecutive_blocks, day_and_time_of, day_of, block_of
 from scheduler.model import Volunteer
 from scheduler.model import Settings, BLOCKS_PER_DAY, MINUTES_PER_BLOCK
-from scheduler.helpers import debug_print
+from scheduler.debug import debug_print
 
 # At most this many problem lines in one message; the rest is counted ("and 12 more").
 MAX_LINES = 10

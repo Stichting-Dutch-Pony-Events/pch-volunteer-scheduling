@@ -108,7 +108,7 @@ pch-volunteer-scheduling/
 ├── scheduler/
 │   ├── __main__.py          the command line (python -m scheduler ...)
 │   ├── errors.py            the error types
-│   ├── helpers.py           debug output (--debug-time)
+│   ├── debug.py             debug output (--debug-time)
 │   ├── model.py             data classes and time helpers
 │   ├── reading/             reads the input workbook, one module per tab
 │   ├── solving/             checks the input, the rules, builds and solves the schedule
@@ -121,7 +121,7 @@ pch-volunteer-scheduling/
 │   ├── reading/             tests of reading the input workbook
 │   ├── solving/             tests of the solver and its rules
 │   ├── writing/             tests of writing the output workbook
-│   └── test_helpers.py
+│   └── test_debug.py
 ├── requirements.txt
 └── README.md
 ```

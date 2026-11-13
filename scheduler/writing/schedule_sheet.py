@@ -5,7 +5,7 @@ without openpyxl, so they can be tested without writing a file.
 """
 from openpyxl import Workbook
 
-from scheduler.helpers import debug_print
+from scheduler.debug import debug_print
 from scheduler.model import Problem, Schedule, BLOCKS_PER_DAY, day_and_time_of
 
 
