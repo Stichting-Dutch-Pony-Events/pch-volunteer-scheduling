@@ -10,6 +10,7 @@ from openpyxl import Workbook
 from scheduler.model import Problem, Schedule
 from scheduler.writing.schedule_sheet import create_schedule_sheet
 
+
 def write_output(problem: Problem, schedule: Schedule, path: str | Path) -> None:
     """Write the schedule to a new .xlsx workbook at path, overwriting an existing file.
 
@@ -29,3 +30,4 @@ def write_output(problem: Problem, schedule: Schedule, path: str | Path) -> None
 
     # 4. Save. An existing file at path is overwritten without asking.
     workbook.save(path)
+    
