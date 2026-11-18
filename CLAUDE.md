@@ -1034,6 +1034,16 @@ up to date with `main`):
    test_read_problem's GOOD_PROBLEM (both need `soft_rules`). Workbooks after the code:
    Meaning texts "per hour" -> "per time step (15 minutes)" in the template, the test
    workbook, the PCH draft and the UKPC workbook (backups first); values stay 0/2/6.
+   **2c, right after 2b (agreed 2026-11-18): refactor the Settings reader tests per kind
+   of value**, before the next soft rule brings more weight rows. Tests stay green. One
+   public parse function per kind of value, tested directly without a sheet (e.g.
+   `_weight_setting` -> public `parse_weight(name, text, default) -> int`, like
+   `parse_hour_limits`): one parametrized "valid" and one "invalid" test. The
+   read_settings tests then only test the wiring: every row into the right field
+   (GOOD_SETTINGS), missing optional row = its default (one parametrized test with a
+   concrete table in the test file: name, field, default), the general checks (unknown,
+   missing, duplicate, ...) and checks across settings. A new weight then costs one table
+   line plus one GOOD_SETTINGS field. No table-driven reader (plain code stays).
    **Soft rules can be switched on/off (user's idea, option B agreed 2026-11-18):**
    `Settings.soft_rules: frozenset[str] = frozenset()` = the soft rules that are on;
    empty by default, so `Settings()` = hard rules only and every test switches on exactly
