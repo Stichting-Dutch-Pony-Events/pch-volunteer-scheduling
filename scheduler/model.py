@@ -85,6 +85,13 @@ class Settings:
     weight_skill_score_2: int = 2
     weight_skill_score_3: int = 0
 
+    def __post_init__(self) -> None:
+        """Check the settings right after initialisation."""
+        for name in self.soft_rules:
+            if name not in SOFT_RULE_NAMES:
+                raise ValueError(f"Unknown soft rule {name!r}. Known: "
+                                 + ", ".join(sorted(SOFT_RULE_NAMES)))
+
 
 @dataclass
 class Problem:

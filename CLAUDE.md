@@ -63,8 +63,15 @@ likes to write tests (and often code) themselves; Claude reviews and explains.
    Use the newer lowercase OR-Tools API (`new_int_var`, `add`, `solve`, `value`).
    **Type hints on every function we write from now on** (agreed 2026-11-01): all
    parameters and the return type, e.g. `def solve(problem: Problem) -> Schedule:`.
-   Tests are the exception (no hints needed on `test_...` functions). Older functions
-   without hints get them when we touch them anyway.
+   **Tests (revised by the user, 2026-11-18): every parameter of a test function gets a
+   type hint too**, so Pylance can autocomplete fixtures: `monkeypatch:
+   pytest.MonkeyPatch`, `capsys: pytest.CaptureFixture[str]`, `tmp_path: Path` (from
+   pathlib), parametrize values their own type (`answer: str`, `block: int`). The same
+   for helper functions inside tests (e.g. a `fake_penalty(model: cp_model.CpModel,
+   problem: Problem, works: Works) -> list[cp_model.LinearExpr]`). A return type on
+   `test_...` functions is not needed (they return nothing). Existing tests get the hints
+   when we touch them anyway. Older functions without hints get them when we touch them
+   anyway.
    **Line length: soft limit of 100 characters** (not PEP 8's 79). The user has a
    ruler at 100 in their local `.vscode/settings.json` (not in git), which also sets
    `files.eol` to CRLF and trims trailing whitespace on save.
@@ -1015,9 +1022,10 @@ up to date with `main`):
    test_model.py). solve() only calls a soft rule when it is on (`if "skill_score" in
    problem.settings.soft_rules:`), so a rule that is off builds no helper variables. In
    2b the reader switches every soft rule on; a workbook switch per rule comes later.
-   Hard rules are not switchable. Test stubs in tests/solving/test_soft_rule_switches.py
-   (unknown name raises; rule off = no preference, with the score 1 volunteer first
-   since CP-SAT picks the last one without an objective). Then gap limit / time limit: decide after a real-data run.
+   Hard rules are not switchable. Testing the switch (proposed 2026-11-18): not through
+   the solver's outcome (that leans on CP-SAT's choice without an objective, fragile) but
+   with monkeypatch: replace `soft_rules.add_skill_score_penalty` by a fake that records
+   its calls and returns [] ; rule off -> not called, rule on -> called once. Then gap limit / time limit: decide after a real-data run.
    Soft rules: the first objective (start/end on :00/:30, stay at one post as a weight,
    avoid short stretches, prefer higher skill scores, prefer stretches of at most
    120 min), then fair spread of hours (relative to availability). In small steps: the
@@ -1131,6 +1139,12 @@ After the minimal viable scheduler:
     name (e.g. `<input>_schedule.xlsx`, maybe with a timestamp); `--seed` (same schedule
     again, or an alternative); `--verbose` / `--quiet`; `--version` (scheduler and
     workbook format version); a separate exit code for "no schedule possible" (e.g. 3).
+- [ ] **Type hints on the parameters of all existing tests (user, 2026-11-18; after the
+      soft rules):** one tidy-up commit adding the hints agreed in "How we work" point 5
+      (`monkeypatch: pytest.MonkeyPatch`, `capsys: pytest.CaptureFixture[str]`,
+      `tmp_path: Path`, parametrize values) to the ~30 tests that use fixtures or
+      parametrize (mostly test_main.py and test_debug.py). Until then: new and touched
+      tests get them.
 - [ ] **More checks in `Settings.__post_init__` (user, 2026-11-18; after the soft rules):**
       Settings is frozen, so a check at creation covers every later use. Since 1.1 it only
       checks the soft rule names. Candidates: minimum stretch <= maximum stretch, all

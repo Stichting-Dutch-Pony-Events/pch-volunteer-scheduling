@@ -42,7 +42,7 @@ def test_unknown_soft_rule_name_raises_value_error():
     # (Act and Assert are in the same expression)
 
     # Assert
-    with pytest.raises(ValueError, match="skil_score"):
+    with pytest.raises(ValueError, match="skil_score.*Known: skill_score"):
         Settings(soft_rules=frozenset({"skil_score"}))
 
 
