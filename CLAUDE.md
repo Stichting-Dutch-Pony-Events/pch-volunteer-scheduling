@@ -1009,8 +1009,10 @@ up to date with `main`):
    `Settings.soft_rules: frozenset[str] = frozenset()` = the soft rules that are on;
    empty by default, so `Settings()` = hard rules only and every test switches on exactly
    its own soft rule (no interference between soft rules). `SOFT_RULE_NAMES` in
-   soft_rules.py lists the valid names; solve() raises ValueError for an unknown name
-   (typo protection) and only calls a soft rule when it is on (`if "skill_score" in
+   **model.py** (moved there from soft_rules.py: model.py importing soft_rules.py would be
+   circular) lists the valid names; **`Settings.__post_init__` raises ValueError for an
+   unknown name** (user, 2026-11-18: fail early, where the Settings is made; test in
+   test_model.py). solve() only calls a soft rule when it is on (`if "skill_score" in
    problem.settings.soft_rules:`), so a rule that is off builds no helper variables. In
    2b the reader switches every soft rule on; a workbook switch per rule comes later.
    Hard rules are not switchable. Test stubs in tests/solving/test_soft_rule_switches.py
@@ -1129,6 +1131,13 @@ After the minimal viable scheduler:
     name (e.g. `<input>_schedule.xlsx`, maybe with a timestamp); `--seed` (same schedule
     again, or an alternative); `--verbose` / `--quiet`; `--version` (scheduler and
     workbook format version); a separate exit code for "no schedule possible" (e.g. 3).
+- [ ] **More checks in `Settings.__post_init__` (user, 2026-11-18; after the soft rules):**
+      Settings is frozen, so a check at creation covers every later use. Since 1.1 it only
+      checks the soft rule names. Candidates: minimum stretch <= maximum stretch, all
+      minutes on the 15-minute grid, days not empty and without duplicates, hour limits
+      >= 1, weights >= 0. The reader keeps its WorkbookError messages (they name the tab
+      and setting); `__post_init__` is the safety net for code that makes Settings
+      directly. Same idea possible for Volunteer and Problem.
 - [ ] Collect and show all input errors at once instead of stopping at the first one
       (e.g. a list of every typo in the workbook; fits the window program later).
 - [ ] Time step and day boundary configurable (e.g. 30 min blocks, another boundary).

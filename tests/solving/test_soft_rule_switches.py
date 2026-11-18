@@ -4,16 +4,6 @@ from scheduler.model import Post, Problem, Settings, Volunteer, all_blocks
 from scheduler.solving.solver import solve
 
 
-def test_unknown_soft_rule_name_raises_value_error():
-    """A name in Settings.soft_rules that is not a soft rule raises ValueError."""
-    # Arrange
-
-    # Act
-
-    # Assert
-    pytest.skip("not written yet")
-
-
 def test_soft_rule_that_is_off_adds_no_penalty():
     """With the skill score rule off, the solver does not prefer the higher score."""
     # Arrange

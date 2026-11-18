@@ -33,6 +33,19 @@ def test_default_skill_score_weights_match_the_workbook():
     assert settings.weight_skill_score_1 == 6
 
 
+def test_unknown_soft_rule_name_raises_value_error():
+    """A name in Settings.soft_rules that is not a soft rule raises ValueError."""
+    # Arrange
+    # (nothing to arrange: the misspelled name is given straight to Settings)
+
+    # Act
+    # (Act and Assert are in the same expression)
+
+    # Assert
+    with pytest.raises(ValueError, match="skil_score"):
+        Settings(soft_rules=frozenset({"skil_score"}))
+
+
 def test_volunteer_has_no_hour_limits_unless_given():
     """A Volunteer made without hour limits has none (None = no limit)."""
     # Arrange

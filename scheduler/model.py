@@ -9,6 +9,11 @@ MINUTES_PER_BLOCK = 15
 BLOCKS_PER_DAY = 96
 DAY_STARTS_AT_HOUR = 6
 
+# The names that may be used in Settings.soft_rules to switch a soft rule on (each one is
+# a function in solving/soft_rules.py). Settings refuses any other name, so a typo can't
+# silently switch nothing on. Add the name here when adding a soft rule.
+SOFT_RULE_NAMES = {"skill_score"}
+
 
 def runs_of_consecutive_blocks(blocks) -> list[tuple[int, int]]:
     """Split blocks into runs of consecutive blocks, as (first_block, block_after_last).
@@ -70,7 +75,7 @@ class Settings:
     # looks at the limits on each Volunteer.
     default_max_minutes_per_day: int | None = None
     default_max_minutes_total: int | None = None
-    # The soft rules that are switched on, by name (see SOFT_RULE_NAMES in soft_rules.py).
+    # The soft rules that are switched on, by name (see SOFT_RULE_NAMES above).
     # Empty by default: Settings() means hard rules only, so a test switches on exactly the
     # soft rule it tests. A frozenset because Settings is frozen (a set could be changed).
     soft_rules: frozenset[str] = frozenset()

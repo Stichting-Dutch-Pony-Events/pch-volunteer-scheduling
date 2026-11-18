@@ -7,16 +7,13 @@ by the rule's weight from the settings; solve() adds them all up and asks CP-SAT
 minimise the sum. Weights are whole points per time block (15 minutes).
 
 They all take the same arguments as the hard rules: the model, the problem, and the works
-variables made by create_variables (see Works in variables.py).
+variables made by create_variables (see Works in variables.py). solve() only calls a rule
+when its name is in settings.soft_rules; the valid names are SOFT_RULE_NAMES in model.py.
 """
 from ortools.sat.python import cp_model
 
 from scheduler.model import Problem
 from scheduler.solving.variables import Works
-
-# The names that may be used in Settings.soft_rules to switch a soft rule on; solve()
-# refuses any other name, so a typo can't silently switch nothing on.
-SOFT_RULE_NAMES = {"skill_score"}
 
 
 def add_skill_score_penalty(model: cp_model.CpModel, problem: Problem,
