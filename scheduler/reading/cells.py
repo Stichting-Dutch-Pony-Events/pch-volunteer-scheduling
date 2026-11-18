@@ -122,7 +122,16 @@ def parse_whole_number(name: str, text: str, minimum: int) -> int:
     (also an empty text, "1.5" or "six") or a number below minimum raises ValueError
     starting with name; the reader puts the tab (and row) in front.
     """
-    raise NotImplementedError
+    try:
+        value = int(text)
+    except ValueError:
+        # from None: show only our clear message, not the ValueError behind it
+        raise ValueError(f"{name}: {text!r} is not a whole number.") from None
+
+    if value < minimum:
+        raise ValueError(f"{name}: {value} is less than the minimum of {minimum}.")
+
+    return value
 
 
 def parse_hour_limits(per_day: tuple[str, str], total: tuple[str, str],

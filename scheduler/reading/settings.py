@@ -49,7 +49,10 @@ def read_settings(sheet: Worksheet) -> Settings:
     _check_settings_with_one_allowed_value(unparsed_settings)
 
     # 3. The days, and the default hour limits (in minutes, None = no limit).
-    days = parse_days(unparsed_settings["Days"])
+    try:
+        days = parse_days(unparsed_settings["Days"])
+    except ValueError as error:
+        raise WorkbookError(f"Settings, Days: {error}") from None
 
     per_day_name = "Default maximum hours per day"
     total_name = "Default maximum hours total"
@@ -145,16 +148,17 @@ def _check_settings_with_one_allowed_value(unparsed_settings: dict[str, str]) ->
 def parse_days(text: str) -> tuple[str, ...]:
     """The Days setting as a tuple: "Friday, Saturday, Sunday" -> ("Friday", "Saturday", ...).
 
-    Raises ValueError naming the day for an empty day name ("Friday, , Saturday" or a
-    comma at the end) or a day that appears more than once; read_settings puts the tab and
+    Raises ValueError for an empty day name ("Friday, , Saturday" or a comma at the end)
+    or a day that appears more than once (naming that day); read_settings puts the tab and
     setting in front. Public because it is tested on its own (test_parse_values.py).
-    (Step 1 of 2c: the code below still raises WorkbookError and allows empty names.)
     """
     days = []
     for day in text.split(","):
         day = day.strip()
+        if day == "":
+            raise ValueError("an empty day name (two commas in a row, or a comma at the end).")
         if day in days:
-            raise WorkbookError(f"Settings, 'Days': {day!r} appears more than once.")
+            raise ValueError(f"{day!r} appears more than once.")
         days.append(day)
 
     return tuple(days)  # a tuple, like the default in Settings
