@@ -3,7 +3,7 @@ from openpyxl.worksheet.worksheet import Worksheet
 
 from scheduler.debug import debug_print
 from scheduler.errors import WorkbookError
-from scheduler.model import DAY_STARTS_AT_HOUR, MINUTES_PER_BLOCK, Settings
+from scheduler.model import DAY_STARTS_AT_HOUR, MINUTES_PER_BLOCK, SOFT_RULE_NAMES, Settings
 from scheduler.reading.cells import cell_text, find_columns, parse_hour_limits
 
 # The layout of the input workbook this scheduler reads (the "Workbook format version"
@@ -34,9 +34,11 @@ def read_settings(sheet: Worksheet) -> Settings:
     (comma separated, no duplicates), Minimum work stretch, Maximum work stretch and
     Minimum break (whole numbers, in minutes), Default maximum hours per day and total
     (whole hours or "none"; at most 24 per day, 24 per day of the convention in total,
-    per day not more than the total). Settings the scheduler does not use yet (meals,
-    weights) are accepted and ignored. Raises WorkbookError for a missing, empty,
-    duplicate or unknown setting, or a value that is not allowed.
+    per day not more than the total). Optional: Weight: skill score 1, 2 and 3 (whole
+    numbers of at least 0, points per time step; a missing row or empty Value gives the
+    default in Settings). Every soft rule is switched on. Settings the scheduler does not
+    use yet (meals, the other weights) are accepted and ignored. Raises WorkbookError for
+    a missing, empty, duplicate or unknown setting, or a value that is not allowed.
     """
     debug_print(f"read_settings: reading tab {sheet.title}")
     # 1. Every setting as text, by name; then the names: nothing unknown, nothing missing.
@@ -61,13 +63,21 @@ def read_settings(sheet: Worksheet) -> Settings:
         raise WorkbookError(f"Settings, {error}") from None
 
     # 4. Turn it all into Settings.
+    default_settings = Settings()  # only used to look up the defaults for optional settings
     return Settings(
         min_stretch_minutes=_whole_number_setting(unparsed_settings, "Minimum work stretch"),
         max_stretch_minutes=_whole_number_setting(unparsed_settings, "Maximum work stretch"),
         min_break_minutes=_whole_number_setting(unparsed_settings, "Minimum break"),
         days=days,
         default_max_minutes_per_day=default_per_day,
-        default_max_minutes_total=default_total)
+        default_max_minutes_total=default_total,
+        weight_skill_score_1=_weight_setting(unparsed_settings, "Weight: skill score 1",
+                                             default_settings.weight_skill_score_1),
+        weight_skill_score_2=_weight_setting(unparsed_settings, "Weight: skill score 2",
+                                             default_settings.weight_skill_score_2),
+        weight_skill_score_3=_weight_setting(unparsed_settings, "Weight: skill score 3",
+                                             default_settings.weight_skill_score_3),
+        soft_rules=frozenset(SOFT_RULE_NAMES))
 
 
 def _unparsed_settings(sheet: Worksheet) -> dict[str, str]:
@@ -164,4 +174,21 @@ def _weight_setting(unparsed_settings: dict[str, str], name: str, default: int) 
     number of at least 0 (0 is allowed); anything else raises WorkbookError naming the
     setting.
     """
-    raise NotImplementedError
+    # Missing or empty row? return default
+    unparsed_weight = unparsed_settings.get(name, "")
+    if unparsed_weight == "":
+        return default
+
+    # Catch non-integers
+    try:
+        weight = int(unparsed_weight)
+    except ValueError:
+        raise WorkbookError(f"Settings, {name!r}: {unparsed_weight!r} is not a whole "
+                            "number.") from None
+
+    # Catch negative numbers
+    if weight < 0:
+        raise WorkbookError(f"Settings, {name!r}: {unparsed_weight!r} cannot be a negative "
+                            "number; a weight is 0 or more.")
+
+    return weight

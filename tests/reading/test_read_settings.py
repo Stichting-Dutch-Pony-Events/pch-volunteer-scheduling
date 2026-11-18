@@ -31,7 +31,9 @@ GOOD_ROWS = [
 # What GOOD_ROWS should give.
 GOOD_SETTINGS = Settings(min_stretch_minutes=45, max_stretch_minutes=150,
                          min_break_minutes=20, days=("Friday", "Saturday"),
-                         default_max_minutes_per_day=360, default_max_minutes_total=720)
+                         default_max_minutes_per_day=360, default_max_minutes_total=720,
+                         weight_skill_score_1=5, weight_skill_score_2=3, weight_skill_score_3=1,
+                         soft_rules=frozenset({"skill_score"}))
 
 
 def _settings_sheet(rows: list[tuple], header: tuple[str, ...] = HEADER) -> Worksheet:
@@ -463,7 +465,7 @@ def test_negative_skill_score_weight_raises_workbook_error():
     # (Act and Assert in the same line)
 
     # Assert
-    with pytest.raises(WorkbookError, match=f"Weight: skill score 1.*Negative"):
+    with pytest.raises(WorkbookError, match="Weight: skill score 1.*negative"):
         read_settings(sheet)
 
 

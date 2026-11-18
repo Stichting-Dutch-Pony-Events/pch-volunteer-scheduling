@@ -30,7 +30,8 @@ GOOD_PROBLEM = Problem(
             ("Infobooth", 114): 1, ("Infobooth", 115): 1},
     settings=Settings(min_stretch_minutes=60, max_stretch_minutes=180,
                       min_break_minutes=30, days=("Friday", "Saturday"),
-                      default_max_minutes_per_day=480, default_max_minutes_total=960))
+                      default_max_minutes_per_day=480, default_max_minutes_total=960,
+                      soft_rules=frozenset({"skill_score"})))
 
 
 def _add_sheet(workbook: Workbook, title: str, rows: list[tuple]) -> None:
