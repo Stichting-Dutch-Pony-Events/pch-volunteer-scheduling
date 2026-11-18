@@ -1069,6 +1069,26 @@ up to date with `main`):
    **Step 1 written by Claude (2026-11-18):** `_parse_hour_limit` -> `parse_hour_limit`
    and `_parse_days` -> `parse_days` (renamed, code unchanged), `parse_whole_number` stub
    in cells.py, 9 test stubs (24 cases) in test_parse_values.py. 397 green, 24 skipped.
+   **Step 2 done (2026-11-18, user):** parse_whole_number, parse_days (ValueError, empty
+   name = error), read_settings builds Settings inside one try (ValueError -> "Settings,
+   ..."), `_weight_setting` -> `_optional_whole_number_setting`, `_whole_number_setting`
+   removed, parse_hour_limit uses parse_whole_number (adds the "none" hint). 421 green.
+   **Step 3 (agreed 2026-11-18):** test_read_settings.py gets the tables
+   `REQUIRED_SETTINGS` and `OPTIONAL_SETTINGS` (name, field, default) and 4 new tests
+   (stubs written by Claude, 421 green + 20 skipped): invalid value per kind -> WorkbookError
+   "Settings, <setting>" (5 cases: whole number, one allowed value, days, hour limit,
+   optional); missing optional = default; empty optional = default; empty required =
+   error (over the table). Once green, remove the 10 tests covered by them or by
+   test_parse_values.py (days split, not-whole-number, same day twice, hour limit not
+   whole / <= 0, the 6 weight-specific tests); the missing-setting test uses the table.
+   Kept: GOOD_SETTINGS, order, empty rows, unknown/duplicate, Value column, fixed values,
+   Excel time, `none`, the three hour-limit pair checks, every soft rule on.
+   **Step 3 done (2026-11-18):** the user removed the 12 covered tests (422 green); Claude
+   reordered test_read_settings.py into sections that follow read_settings (Reading the
+   tab, Setting names and presence, Settings with one allowed value, Values, Default hour
+   limits, Soft rules; tests moved unchanged, checked by script). Review: every step of
+   read_settings is covered; the gap found is in the checks, not the tests (see "More
+   checks in Settings.__post_init__").
    **Soft rules can be switched on/off (user's idea, option B agreed 2026-11-18):**
    `Settings.soft_rules: frozenset[str] = frozenset()` = the soft rules that are on;
    empty by default, so `Settings()` = hard rules only and every test switches on exactly
@@ -1216,6 +1236,19 @@ After the minimal viable scheduler:
       skill score weight rows (2b) are the first optional rows: a missing row or an empty
       Value cell both give the default from Settings. Apply the same rule to every other
       setting that is or becomes optional (required settings stay "empty = error").
+      **Gap found in the review of 2c (2026-11-18): the reader accepts values the solver
+      can't use properly**, so add reader checks (WorkbookError naming the setting, with
+      tests in test_read_settings.py) as well as the `__post_init__` net: (1) minutes not
+      on the 15-minute grid are silently rounded down, e.g. Minimum work stretch 50 ->
+      `50 // 15` = 3 blocks = 45 minutes, a *weaker* rule than typed (hard_rules.py
+      divides with `//`); (2) Minimum/Maximum work stretch 0 are accepted (the reader
+      uses minimum 0 for all three minute settings, kept as it was in the 2c refactor);
+      (3) Maximum work stretch below the minimum is accepted. All three now end in a
+      vague NoScheduleFound or a silently different rule instead of a clear input error.
+- [ ] **Small tidy-up (user, 2026-11-18; after 2c):** read_demand still has its own
+      `int()` with `needed = -1` as a trick; let it use `parse_whole_number(post, text, 0)`
+      with the hint "(a whole number, 0 = closed)" added, like parse_hour_limit adds the
+      "none" hint. Skills stays as it is (a choice of 1/2/3, not a number).
 - [ ] Collect and show all input errors at once instead of stopping at the first one
       (e.g. a list of every typo in the workbook; fits the window program later).
 - [ ] Time step and day boundary configurable (e.g. 30 min blocks, another boundary).

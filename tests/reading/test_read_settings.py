@@ -35,6 +35,17 @@ GOOD_SETTINGS = Settings(min_stretch_minutes=45, max_stretch_minutes=150,
                          weight_skill_score_1=5, weight_skill_score_2=3, weight_skill_score_3=1,
                          soft_rules=frozenset({"skill_score"}))
 
+# The settings that must be there with a value (missing or empty = error).
+REQUIRED_SETTINGS = ["Workbook format version", "Time step", "Day boundary", "Days",
+                     "Minimum work stretch", "Maximum work stretch", "Minimum break",
+                     "Default maximum hours per day", "Default maximum hours total"]
+
+# The optional settings: (row name, Settings field, default). Missing or empty = default.
+# A new optional setting = one line here (plus its row in GOOD_ROWS and GOOD_SETTINGS).
+OPTIONAL_SETTINGS = [("Weight: skill score 1", "weight_skill_score_1", 6),
+                     ("Weight: skill score 2", "weight_skill_score_2", 2),
+                     ("Weight: skill score 3", "weight_skill_score_3", 0)]
+
 
 def _settings_sheet(rows: list[tuple], header: tuple[str, ...] = HEADER) -> Worksheet:
     """A new in-memory sheet called Settings: the header in row 1, then one row per setting."""
@@ -67,6 +78,8 @@ def _rows_without(name: str, rows: list[tuple] = GOOD_ROWS) -> list[tuple]:
             new_rows.append((setting, good_value))
     return new_rows
 
+
+# --- Reading the tab ---
 
 def test_settings_tab_is_read_into_settings():
     """A complete, correct Settings tab gives the matching Settings."""
@@ -106,6 +119,35 @@ def test_rows_without_a_setting_name_are_skipped():
     assert result == GOOD_SETTINGS
 
 
+def test_missing_value_column_raises_workbook_error():
+    """A Settings tab without a Value column is an error."""
+    # Arrange
+    sheet = _settings_sheet(GOOD_ROWS, header=("Setting", "Amount", "Unit", "Meaning"))
+
+    # Act
+    # (Act and Assert are combined, pytest.raises checks the exception while the call runs.)
+
+    # Assert
+    with pytest.raises(WorkbookError, match="Settings.*Value"):
+        read_settings(sheet)
+
+
+def test_the_same_setting_twice_raises_workbook_error():
+    """Two rows with the same setting are an error: it is unclear which value is meant."""
+    # Arrange
+    rows = GOOD_ROWS + [("Minimum break", 30)]   # a second Minimum break row
+    sheet = _settings_sheet(rows)
+
+    # Act
+    # (Act and Assert are combined, pytest.raises checks the exception while the call runs.)
+
+    # Assert
+    with pytest.raises(WorkbookError, match="Minimum break"):
+        read_settings(sheet)
+
+
+# --- Setting names and presence ---
+
 def test_known_settings_the_scheduler_does_not_use_yet_are_accepted():
     """A setting like "Lunch break length" is known, so it is accepted (and ignored for now)."""
     # Arrange
@@ -133,36 +175,8 @@ def test_unknown_setting_raises_workbook_error():
         read_settings(sheet)
 
 
-def test_days_are_split_on_commas_with_spaces_removed():
-    """Days "Saturday ,Sunday" gives the days ("Saturday", "Sunday")."""
-    # Arrange
-    sheet = _settings_sheet(_rows_with("Days", "Saturday ,Sunday"))
-
-    # Act
-    result = read_settings(sheet)
-
-    # Assert
-    assert result.days == ("Saturday", "Sunday")
-
-
-def test_day_boundary_typed_as_an_excel_time_is_accepted():
-    """A Day boundary typed into Excel as the time 06:00 counts the same as the text "06:00"."""
-    # Arrange
-    sheet = _settings_sheet(_rows_with("Day boundary", time(6, 0)))
-
-    # Act
-    result = read_settings(sheet)
-
-    # Assert
-    assert result == GOOD_SETTINGS
-
-
-@pytest.mark.parametrize(
-    "missing_setting",
-    ["Workbook format version", "Time step", "Day boundary", "Days",
-     "Minimum work stretch", "Maximum work stretch", "Minimum break",
-     "Default maximum hours per day", "Default maximum hours total"])
-def test_missing_setting_raises_workbook_error(missing_setting):
+@pytest.mark.parametrize("missing_setting", REQUIRED_SETTINGS)
+def test_missing_setting_raises_workbook_error(missing_setting: str):
     """Leaving out a required setting is an error naming that setting."""
     # Arrange
     sheet = _settings_sheet(_rows_without(missing_setting))
@@ -175,35 +189,50 @@ def test_missing_setting_raises_workbook_error(missing_setting):
         read_settings(sheet)
 
 
-def test_setting_with_an_empty_value_raises_workbook_error():
-    """A required setting with an empty Value cell is an error, just like a missing one."""
+@pytest.mark.parametrize("empty_setting", REQUIRED_SETTINGS)
+def test_required_setting_with_an_empty_value_raises_workbook_error(empty_setting: str):
+    """A required setting with an empty Value cell is an error naming that setting."""
     # Arrange
-    sheet = _settings_sheet(_rows_with("Minimum break", None))
+    rows = _rows_with(empty_setting, None)
+    sheet = _settings_sheet(rows)
 
     # Act
-    # (Act and Assert are combined, pytest.raises checks the exception while the call runs.)
+    # (Act and Assert in the same line)
 
     # Assert
-    with pytest.raises(WorkbookError, match="Minimum break"):
+    with pytest.raises(WorkbookError, match=f"Settings:.*{empty_setting}"):
         read_settings(sheet)
 
 
-@pytest.mark.parametrize(
-    "value",
-    ["half an hour", 22.5],
-    ids=["text", "decimal"])
-def test_setting_that_is_not_a_whole_number_raises_workbook_error(value):
-    """A minutes setting that is not a whole number is an error naming the value."""
+@pytest.mark.parametrize("missing_setting, field, default", OPTIONAL_SETTINGS)
+def test_missing_optional_setting_gets_the_default(missing_setting: str, field: str,
+                                                   default: int):
+    """An optional setting that is left out gets its default."""
     # Arrange
-    sheet = _settings_sheet(_rows_with("Minimum break", value))
+    rows = _rows_without(missing_setting)
+    sheet = _settings_sheet(rows)
 
     # Act
-    # (Act and Assert are combined, pytest.raises checks the exception while the call runs.)
+    settings = read_settings(sheet)
 
     # Assert
-    with pytest.raises(WorkbookError, match=str(value)):
-        read_settings(sheet)
+    assert getattr(settings, field) == default
 
+
+@pytest.mark.parametrize("empty_setting, field, default", OPTIONAL_SETTINGS)
+def test_empty_optional_setting_gets_the_default(empty_setting: str, field: str, default: int):
+    """An optional setting with an empty Value cell gets its default."""
+    rows = _rows_with(empty_setting, None)
+    sheet = _settings_sheet(rows)
+
+    # Act
+    settings = read_settings(sheet)
+
+    # Assert
+    assert getattr(settings, field) == default
+
+
+# --- Settings with one allowed value ---
 
 def test_other_workbook_format_version_raises_workbook_error():
     """A workbook made for another layout (another format version) is an error."""
@@ -244,43 +273,42 @@ def test_day_boundary_other_than_06_00_raises_workbook_error():
         read_settings(sheet)
 
 
-def test_the_same_day_twice_raises_workbook_error():
-    """Days "Friday, Friday" is an error."""
+def test_day_boundary_typed_as_an_excel_time_is_accepted():
+    """A Day boundary typed into Excel as the time 06:00 counts the same as the text "06:00"."""
     # Arrange
-    sheet = _settings_sheet(_rows_with("Days", "Friday, Friday"))
+    sheet = _settings_sheet(_rows_with("Day boundary", time(6, 0)))
 
     # Act
-    # (Act and Assert are combined, pytest.raises checks the exception while the call runs.)
+    result = read_settings(sheet)
 
     # Assert
-    with pytest.raises(WorkbookError, match="Friday"):
-        read_settings(sheet)
+    assert result == GOOD_SETTINGS
 
 
-def test_the_same_setting_twice_raises_workbook_error():
-    """Two rows with the same setting are an error: it is unclear which value is meant."""
+# --- Values ---
+# What exactly is a valid value is tested in test_parse_values.py; this test checks
+# that the reader uses the right parse function for each kind of setting and turns
+# its ValueError into a WorkbookError naming the tab and the setting.
+
+@pytest.mark.parametrize("setting, value", [
+    ("Minimum break", "six"),
+    ("Time step", "fifteen"),
+    ("Days", "Friday, Friday"),
+    ("Default maximum hours per day", "eight"),
+    ("Weight: skill score 1", -1)],
+    ids=["whole number", "setting with one allowed value", "days", "hour limit",
+         "optional whole number"])
+def test_invalid_value_raises_workbook_error_naming_the_setting(setting: str, value: object):
+    """An invalid value of any kind raises WorkbookError starting with the tab and setting."""
     # Arrange
-    rows = GOOD_ROWS + [("Minimum break", 30)]   # a second Minimum break row
+    rows = _rows_with(setting, value)
     sheet = _settings_sheet(rows)
 
     # Act
-    # (Act and Assert are combined, pytest.raises checks the exception while the call runs.)
+    # (Act and Assert in the same line)
 
     # Assert
-    with pytest.raises(WorkbookError, match="Minimum break"):
-        read_settings(sheet)
-
-
-def test_missing_value_column_raises_workbook_error():
-    """A Settings tab without a Value column is an error."""
-    # Arrange
-    sheet = _settings_sheet(GOOD_ROWS, header=("Setting", "Amount", "Unit", "Meaning"))
-
-    # Act
-    # (Act and Assert are combined, pytest.raises checks the exception while the call runs.)
-
-    # Assert
-    with pytest.raises(WorkbookError, match="Settings.*Value"):
+    with pytest.raises(WorkbookError, match=f"Settings,.*{setting}"):
         read_settings(sheet)
 
 
@@ -313,36 +341,6 @@ def test_none_as_default_hour_limit_means_no_limit(setting, field):
 
     # Assert
     assert getattr(result, field) is None
-
-
-@pytest.mark.parametrize("value", [7.5, "eight", "8h"], ids=["decimal", "word", "unit"])
-def test_default_hour_limit_that_is_not_a_whole_number_raises_workbook_error(value):
-    """A default hour limit that is not a whole number of hours is an error naming the value."""
-    # Arrange
-    rows = _rows_with("Default maximum hours per day", value)
-    sheet = _settings_sheet(rows)
-
-    # Act
-    # (Act and Assert are combined, pytest.raises checks the exception while the call runs.)
-
-    # Assert
-    with pytest.raises(WorkbookError, match=f"Settings.*{value}"):
-        read_settings(sheet)
-
-
-@pytest.mark.parametrize("value", [0, -2], ids=["zero", "negative"])
-def test_default_hour_limit_of_zero_or_less_raises_workbook_error(value):
-    """A default hour limit of 0 or less is an error naming the setting."""
-    # Arrange
-    rows = _rows_with("Default maximum hours per day", value)
-    sheet = _settings_sheet(rows)
-
-    # Act
-    # (Act and Assert are combined, pytest.raises checks the exception while the call runs.)
-
-    # Assert
-    with pytest.raises(WorkbookError, match="Settings.*Default maximum hours per day"):
-        read_settings(sheet)
 
 
 def test_default_daily_limit_over_24_hours_raises_workbook_error():
@@ -391,96 +389,7 @@ def test_default_daily_limit_above_the_default_total_raises_workbook_error():
         read_settings(sheet)
 
 
-# Soft rule weights: optional rows, whole points per time block. One helper reads all
-# three rows, so its own logic (empty, not a whole number, negative, zero) is tested with
-# one row; the tests that use all three rows catch mixed-up rows and wrong defaults.
-
-def test_skill_score_weights_are_read():
-    """The three skill score weight rows are read into their own fields."""
-    # Arrange
-    sheet = _settings_sheet(GOOD_ROWS)
-
-    # Act
-    settings = read_settings(sheet)
-
-    # Assert
-    assert settings.weight_skill_score_1 == 5
-    assert settings.weight_skill_score_2 == 3
-    assert settings.weight_skill_score_3 == 1
-
-
-@pytest.mark.parametrize("missing_setting, field, default", [
-    ("Weight: skill score 1", "weight_skill_score_1", 6),
-    ("Weight: skill score 2", "weight_skill_score_2", 2),
-    ("Weight: skill score 3", "weight_skill_score_3", 0)])
-def test_missing_skill_score_weight_gets_the_default(missing_setting: str, field: str,
-                                                     default: int):
-    """A missing skill score weight row gives that weight's default from Settings."""
-    # Arrange
-    rows = _rows_without(missing_setting)
-    sheet = _settings_sheet(rows)
-
-    # Act
-    settings = read_settings(sheet)
-
-    # Assert
-    assert getattr(settings, field) == default
-
-
-def test_empty_skill_score_weight_gets_the_default():
-    """A skill score weight row with an empty value gives the default from Settings."""
-    # Arrange
-    rows = _rows_with("Weight: skill score 1", "")
-    sheet = _settings_sheet(rows)
-
-    # Act
-    settings = read_settings(sheet)
-
-    # Assert
-    assert settings.weight_skill_score_1 == 6
-
-
-@pytest.mark.parametrize("value", [1.5, "six"], ids=["decimal", "word"])
-def test_skill_score_weight_that_is_not_a_whole_number_raises_workbook_error(value: object):
-    """A skill score weight that is not a whole number is an error naming the setting."""
-    # Arrange
-    rows = _rows_with("Weight: skill score 1", value)
-    sheet = _settings_sheet(rows)
-
-    # Act
-    # (Act and Assert in the same line)
-
-    # Assert
-    with pytest.raises(WorkbookError, match=f"Weight: skill score 1.*{value}"):
-        read_settings(sheet)
-
-
-def test_negative_skill_score_weight_raises_workbook_error():
-    """A negative skill score weight is an error naming the setting."""
-    # Arrange
-    rows = _rows_with("Weight: skill score 1", "-1")
-    sheet = _settings_sheet(rows)
-
-    # Act
-    # (Act and Assert in the same line)
-
-    # Assert
-    with pytest.raises(WorkbookError, match="Weight: skill score 1.*minimum"):
-        read_settings(sheet)
-
-
-def test_skill_score_weight_of_zero_is_allowed():
-    """A skill score weight of 0 is read as 0 (unlike the hour limits, 0 is allowed)."""
-    # Arrange
-    rows = _rows_with("Weight: skill score 1", "0")
-    sheet = _settings_sheet(rows)
-
-    # Act
-    settings = read_settings(sheet)
-
-    # Assert
-    assert settings.weight_skill_score_1 == 0
-
+# --- Soft rules ---
 
 def test_every_soft_rule_is_switched_on():
     """The reader switches every soft rule on (a switch per rule in the workbook is later)."""
