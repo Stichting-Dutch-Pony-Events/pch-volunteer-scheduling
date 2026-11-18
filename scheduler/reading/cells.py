@@ -178,15 +178,11 @@ def parse_hour_limit(name: str, text: str, max_hours: int) -> int | None:
         return None
 
     try:
-        hours = int(text)
-    except ValueError:
-        # from None: show only our clear message, not the ValueError behind it
-        raise ValueError(f"{name}: {text!r} is not a whole number of hours "
-                         f"(or \"none\" for no limit).") from None
+        hours = parse_whole_number(name, text, 1)
+    except ValueError as error:
+        # Add the hint about "none", which parse_whole_number doesn't know about.
+        raise ValueError(f"{error} Use whole hours, or \"none\" for no limit.") from None
 
-    if hours < 1:
-        raise ValueError(f"{name}: {hours} hours is not allowed: at least 1 "
-                         f"(or \"none\" for no limit).")
     if hours > max_hours:
         raise ValueError(f"{name}: {hours} is more than the maximum of {max_hours} hours.")
 

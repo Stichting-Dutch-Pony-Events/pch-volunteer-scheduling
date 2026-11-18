@@ -246,7 +246,7 @@ def test_hour_limit_of_zero_or_less_raises_workbook_error(value):
     # (Act and Assert are combined, pytest.raises checks the exception while the call runs.)
 
     # Assert
-    with pytest.raises(WorkbookError, match="Mock Mane.*Max hours per day.*at least 1"):
+    with pytest.raises(WorkbookError, match="Mock Mane.*Max hours per day.*minimum of 1"):
         read_volunteers(sheet, RULES)
 
 
