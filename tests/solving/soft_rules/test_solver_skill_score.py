@@ -1,7 +1,11 @@
 from dataclasses import replace
 
+from ortools.sat.python import cp_model
+
 from scheduler.model import Post, Problem, Settings, Volunteer, all_blocks
+from scheduler.solving.soft_rules import add_skill_score_penalty
 from scheduler.solving.solver import solve
+from scheduler.solving.variables import create_variables
 
 
 # Passed explicitly instead of relying on the defaults in model.py, including the skill
@@ -218,3 +222,48 @@ def test_solver_minimises_the_penalty_with_a_time_limit():
 
     # Assert
     assert schedule.assignments == expected
+
+
+# Switching the rule on and off. The rule checks settings.soft_rules itself, so these
+# tests call it directly (no solving needed); the tests above show that solve() uses it.
+
+def test_skill_score_penalty_that_is_off_returns_nothing():
+    """With the skill score rule switched off, add_skill_score_penalty returns no terms."""
+    # Arrange
+    # Same weights as RULES (score 1 costs 6), but no soft rule switched on.
+    settings = replace(RULES, soft_rules=frozenset())
+    demand = {}
+    for block in range(0, 4):
+        demand[("Tickets", block)] = 1
+    problem = Problem(volunteers=[Volunteer(name="Mock Mane", skills={"Tickets": 1},
+                                            available_blocks=ALL_DAYS)],
+                      posts=[Post("Tickets")], demand=demand, settings=settings)
+    model = cp_model.CpModel()
+    works = create_variables(model, problem)
+
+    # Act
+    penalties = add_skill_score_penalty(model, problem, works)
+
+    # Assert
+    assert penalties == []
+
+
+def test_skill_score_penalty_that_is_on_returns_one_term_per_block():
+    """With the rule on, a volunteer with a costly score gives one term per block."""
+    # Arrange
+    # Mock Mane has score 1 (6 points per block) and can work blocks 0-3: four variables,
+    # so four penalty terms.
+    demand = {}
+    for block in range(0, 4):
+        demand[("Tickets", block)] = 1
+    problem = Problem(volunteers=[Volunteer(name="Mock Mane", skills={"Tickets": 1},
+                                            available_blocks=ALL_DAYS)],
+                      posts=[Post("Tickets")], demand=demand, settings=RULES)
+    model = cp_model.CpModel()
+    works = create_variables(model, problem)
+
+    # Act
+    penalties = add_skill_score_penalty(model, problem, works)
+
+    # Assert
+    assert len(penalties) == 4

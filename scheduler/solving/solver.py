@@ -3,7 +3,7 @@ from ortools.sat.python import cp_model
 from scheduler.debug import debug_print
 from scheduler.errors import NoScheduleFound, TimeLimitReached
 from scheduler.model import Problem, Schedule
-from scheduler.solving import checks, hard_rules, variables
+from scheduler.solving import checks, hard_rules, soft_rules, variables
 
 
 def solve(problem: Problem, time_limit_seconds: int | None = None) -> Schedule:
@@ -28,6 +28,11 @@ def solve(problem: Problem, time_limit_seconds: int | None = None) -> Schedule:
     hard_rules.add_stay_at_post_rule(model, problem, works)
     hard_rules.add_maximum_hours_per_day_rule(model, problem, works)
     hard_rules.add_maximum_hours_total_rule(model, problem, works)
+
+    # Soft rules (see soft_rules.py)
+    penalties = []
+    penalties += soft_rules.add_skill_score_penalty(model, problem, works)
+    model.minimize(cp_model.LinearExpr.sum(penalties))
 
     return _solve_and_read_schedule(model, works, time_limit_seconds)
 

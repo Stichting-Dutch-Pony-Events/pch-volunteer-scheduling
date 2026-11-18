@@ -12,6 +12,7 @@ when its name is in settings.soft_rules; the valid names are SOFT_RULE_NAMES in 
 """
 from ortools.sat.python import cp_model
 
+from scheduler.debug import debug_print
 from scheduler.model import Problem
 from scheduler.solving.variables import Works
 
@@ -23,4 +24,30 @@ def add_skill_score_penalty(model: cp_model.CpModel, problem: Problem,
     Every block a volunteer works at a post costs the weight of their skill score for that
     post (settings.weight_skill_score_1, _2 or _3).
     """
-    raise NotImplementedError
+    # if the rule is not added, then return nothing
+    if "skill_score" not in problem.settings.soft_rules:
+        debug_print("add_skill_score_penalty: skipping the rule")
+        return []
+
+    debug_print("add_skill_score_penalty: adding the rule")
+
+    # create a dictionary of volunteers by name
+    volunteers_by_name = {}
+    for volunteer in problem.volunteers:
+        volunteers_by_name[volunteer.name] = volunteer
+
+    # create a dictionary of weight by scores
+    weight_of_score = {1: problem.settings.weight_skill_score_1,
+                       2: problem.settings.weight_skill_score_2,
+                       3: problem.settings.weight_skill_score_3}
+
+    # per work (block a volunteer can work), create a penalty
+    penalties = []
+    for (volunteer_name, post_name, block), variable in works.items():
+        skill_score = volunteers_by_name[volunteer_name].skills[post_name]
+        weight = weight_of_score[skill_score]
+
+        if weight > 0:
+            penalties.append(variable * weight)
+
+    return penalties

@@ -1012,6 +1012,13 @@ up to date with `main`):
    implementing, run the new
    tests in a scratch copy without the minimize line with a few CP-SAT seeds, each must
    go red for most.
+   **2a done (2026-11-18):** `add_skill_score_penalty` implemented by the user (lookups
+   volunteers_by_name and weight_of_score made once, `variable * weight` per works entry,
+   weight 0 skipped), solve() collects `penalties` and calls `model.minimize(...)`. 387
+   green. Scratch check: without `minimize` the 6 preference tests go red for every seed
+   (0-4), the guards stay green; without the switch check the "off" test goes red. Next:
+   2b (optional weight rows per time block in the workbook, read by read_settings, the
+   reader switches every soft rule on), then a real-data run with permission.
    **Soft rules can be switched on/off (user's idea, option B agreed 2026-11-18):**
    `Settings.soft_rules: frozenset[str] = frozenset()` = the soft rules that are on;
    empty by default, so `Settings()` = hard rules only and every test switches on exactly
@@ -1019,13 +1026,16 @@ up to date with `main`):
    **model.py** (moved there from soft_rules.py: model.py importing soft_rules.py would be
    circular) lists the valid names; **`Settings.__post_init__` raises ValueError for an
    unknown name** (user, 2026-11-18: fail early, where the Settings is made; test in
-   test_model.py). solve() only calls a soft rule when it is on (`if "skill_score" in
-   problem.settings.soft_rules:`), so a rule that is off builds no helper variables. In
+   test_model.py). **Revised (user, 2026-11-18): each soft rule checks the switch
+   itself** as its first line (`if "skill_score" not in problem.settings.soft_rules:
+   return []`), so solve() stays a plain list like the hard rules (`penalties +=
+   soft_rules.add_..._penalty(...)`, then `model.minimize(...)`); a rule that is off
+   builds no helper variables. Every soft rule gets an "off returns []" test that calls
+   the rule directly (works via `create_variables` on a tiny problem, no solving); the
+   monkeypatch tests in test_soft_rule_switches.py were dropped (file removed), the
+   switch tests are now at the end of test_solver_skill_score.py. In
    2b the reader switches every soft rule on; a workbook switch per rule comes later.
-   Hard rules are not switchable. Testing the switch (proposed 2026-11-18): not through
-   the solver's outcome (that leans on CP-SAT's choice without an objective, fragile) but
-   with monkeypatch: replace `soft_rules.add_skill_score_penalty` by a fake that records
-   its calls and returns [] ; rule off -> not called, rule on -> called once. Then gap limit / time limit: decide after a real-data run.
+   Hard rules are not switchable. Then gap limit / time limit: decide after a real-data run.
    Soft rules: the first objective (start/end on :00/:30, stay at one post as a weight,
    avoid short stretches, prefer higher skill scores, prefer stretches of at most
    120 min), then fair spread of hours (relative to availability). In small steps: the
