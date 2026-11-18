@@ -70,6 +70,11 @@ class Settings:
     # looks at the limits on each Volunteer.
     default_max_minutes_per_day: int | None = None
     default_max_minutes_total: int | None = None
+    # Soft rule weights: penalty points per time block (15 minutes) worked at a post where
+    # the volunteer has this skill score. Lower = preferred, so score 3 costs the least.
+    weight_skill_score_1: int = 6
+    weight_skill_score_2: int = 2
+    weight_skill_score_3: int = 0
 
 
 @dataclass

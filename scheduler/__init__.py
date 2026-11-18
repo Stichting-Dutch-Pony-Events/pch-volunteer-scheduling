@@ -7,7 +7,7 @@ Where to find what, in the order a run goes through them:
                   module per tab, cells.py (helpers shared by the readers)
     solving/      checks the problem, builds the CP-SAT model and solves it: solver.py
                   (solve), checks.py (check_problem, find_warnings), variables.py,
-                  hard_rules.py
+                  hard_rules.py, soft_rules.py
     writing/      writes the output workbook: output.py (write_output), schedule_sheet.py
 
 Used by all of them:

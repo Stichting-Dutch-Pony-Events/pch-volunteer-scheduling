@@ -982,7 +982,22 @@ up to date with `main`):
    `feature/subpackages` deleted.** **Continue here next session:** step 2, the soft rules,
    starting with a design discussion of the objective machinery (branch e.g.
    `feature/soft-rules`; remind the user to make it).
-2. Soft rules: the first objective (start/end on :00/:30, stay at one post as a weight,
+2. **Step 2a (agreed 2026-11-18), branch `feature/soft-rules`:** the objective machinery
+   plus the skill score rule. `solving/soft_rules.py`: one `add_<name>_penalty(model,
+   problem, works) -> list[cp_model.LinearExpr]` per soft rule; it returns its penalty
+   terms already times the weight; solve() collects them and calls
+   `model.minimize(cp_model.LinearExpr.sum(penalties))` (`LinearExpr.sum`, not Python's
+   `sum`, for long lists). **Weights are whole points per time block** (user), so they
+   follow the time step; `Settings.weight_skill_score_1/2/3` (defaults 6/2/0, lower =
+   preferred). Optional workbook rows and reading them = step 2b (also update the
+   Meaning texts, now "per hour"). Stubs written by Claude: the Settings fields,
+   `add_skill_score_penalty` (NotImplementedError, not yet called from solve()), 1 test
+   stub in test_model.py (defaults), 8 in tests/solving/test_solver_skill_score.py.
+   Against tests green by luck (no objective = any valid schedule): one preferred
+   volunteer against several others, preferred one last; after implementing, run the new
+   tests in a scratch copy without the minimize line with a few CP-SAT seeds, each must
+   go red for most. Then gap limit / time limit: decide after a real-data run.
+   Soft rules: the first objective (start/end on :00/:30, stay at one post as a weight,
    avoid short stretches, prefer higher skill scores, prefer stretches of at most
    120 min), then fair spread of hours (relative to availability). In small steps: the
    objective machinery with one rule first, then one rule per step, each followed by a

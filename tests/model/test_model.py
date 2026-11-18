@@ -1,3 +1,5 @@
+import pytest
+
 from scheduler.model import Schedule, Settings, Volunteer, runs_of_consecutive_blocks
 
 
@@ -15,6 +17,16 @@ def test_default_settings_match_the_agreed_rules():
     # Assert
     assert (settings.min_stretch_minutes, settings.max_stretch_minutes,
             settings.min_break_minutes) == (60, 180, 30)
+
+
+def test_default_skill_score_weights_match_the_workbook():
+    """The default skill score weights are 6, 2 and 0 points per block for score 1, 2, 3."""
+    # Arrange
+
+    # Act
+
+    # Assert
+    pytest.skip("not written yet")
 
 
 def test_volunteer_has_no_hour_limits_unless_given():
