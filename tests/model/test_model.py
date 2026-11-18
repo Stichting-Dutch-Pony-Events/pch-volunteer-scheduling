@@ -22,11 +22,15 @@ def test_default_settings_match_the_agreed_rules():
 def test_default_skill_score_weights_match_the_workbook():
     """The default skill score weights are 6, 2 and 0 points per block for score 1, 2, 3."""
     # Arrange
+    # (nothing to arrange: we look at a fresh Settings with all defaults)
 
     # Act
+    settings = Settings()
 
     # Assert
-    pytest.skip("not written yet")
+    assert settings.weight_skill_score_3 == 0
+    assert settings.weight_skill_score_2 == 2
+    assert settings.weight_skill_score_1 == 6
 
 
 def test_volunteer_has_no_hour_limits_unless_given():

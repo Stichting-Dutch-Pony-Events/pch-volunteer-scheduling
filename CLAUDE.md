@@ -99,7 +99,9 @@ addresses and real names), no schedules with nicknames, no notes about specific 
 `tests/data/**`). Tests use small **made-up** examples only.
 
 Fictional nicknames for tests and examples (never use real nicknames):
-**Mock Mane, Testy Hooves, Dummy Dash, Sample Sparkle, Placeholder Pip.**
+**Mock Mane, Testy Hooves, Dummy Dash, Sample Sparkle, Placeholder Pip**, and **Star
+Fixture** for a volunteer who is clearly the preferred one ("star volunteer"; added
+2026-11-18). All are puns on test words, so they can't be mistaken for a real nickname.
 
 ## Technology
 
@@ -178,10 +180,11 @@ tests/reading/        test_celltext.py, test_availability.py, test_find_columns.
                       test_read_settings.py, test_read_volunteers.py,
                       test_read_posts.py, test_read_skills.py, test_read_demand.py,
                       test_read_problem.py (one test file per reader part)
-tests/solving/        test_solver_availability.py, test_solver_basics.py,
+tests/solving/        test_checks.py, test_warnings.py, test_solver_time_limit.py;
+                      hard_rules/ (test_solver_availability.py, test_solver_basics.py,
                       test_solver_work_stretches.py, test_solver_stay_at_post.py,
-                      test_checks.py, test_solver_maximum_hours.py, test_warnings.py,
-                      test_solver_time_limit.py
+                      test_solver_maximum_hours.py); soft_rules/
+                      (test_solver_skill_score.py)
 tests/writing/        test_assign_slots.py, test_write_helpers.py,
                       test_create_schedule_sheet.py, test_write_output.py (tests of
                       writing the output workbook)
@@ -994,7 +997,12 @@ up to date with `main`):
    `add_skill_score_penalty` (NotImplementedError, not yet called from solve()), 1 test
    stub in test_model.py (defaults), 8 in tests/solving/test_solver_skill_score.py.
    Against tests green by luck (no objective = any valid schedule): one preferred
-   volunteer against several others, preferred one last; after implementing, run the new
+   volunteer against several others, **preferred one FIRST** (tried: without an
+   objective CP-SAT picked the last volunteer in the list every time, so "last" was
+   green by luck). Test folders (user): tests/solving/hard_rules/ (the five
+   test_solver_* files of hard rules) and tests/solving/soft_rules/; test_checks.py,
+   test_warnings.py and test_solver_time_limit.py stay in tests/solving/. After
+   implementing, run the new
    tests in a scratch copy without the minimize line with a few CP-SAT seeds, each must
    go red for most. Then gap limit / time limit: decide after a real-data run.
    Soft rules: the first objective (start/end on :00/:30, stay at one post as a weight,

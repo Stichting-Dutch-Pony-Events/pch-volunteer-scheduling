@@ -10,19 +10,34 @@ RULES = Settings(min_stretch_minutes=60, max_stretch_minutes=180, min_break_minu
                  days=("Friday", "Saturday", "Sunday"),
                  weight_skill_score_1=6, weight_skill_score_2=2, weight_skill_score_3=0)
 
+ALL_DAYS = all_blocks(RULES)
+
 # Against a test that is green by luck (without an objective CP-SAT takes any valid
 # schedule): one volunteer with the preferred score against several others, and the
-# preferred one last in the list.
+# preferred one FIRST in the list. (Tried 2026-11-18: without an objective, CP-SAT picked
+# the last volunteer in the list every time, so "preferred last" was green by luck.)
 
 
 def test_volunteer_with_score_3_gets_the_post_over_score_1():
     """Of two qualified volunteers, the one with skill score 3 works, not the one with 1."""
     # Arrange
+    volunteers = [Volunteer(name="Star Fixture", skills={"Tickets": 3}, available_blocks=ALL_DAYS),
+                  Volunteer(name="Mock Mane", skills={"Tickets": 1}, available_blocks=ALL_DAYS)]
+
+    demand = {}
+    expected = set()
+    for block in range(0, 8):
+        demand[("Tickets", block)] = 1
+        expected.add(("Star Fixture", "Tickets", block))
+
+    problem = Problem(volunteers=volunteers, posts=[Post("Tickets")],
+                      demand=demand, settings=RULES)
 
     # Act
+    schedule = solve(problem)
 
     # Assert
-    pytest.skip("not written yet")
+    assert schedule.assignments == expected
 
 
 def test_score_2_is_preferred_over_score_1():
