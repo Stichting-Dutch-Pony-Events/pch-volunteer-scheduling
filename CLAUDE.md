@@ -1034,6 +1034,11 @@ up to date with `main`):
    test_read_problem's GOOD_PROBLEM (both need `soft_rules`). Workbooks after the code:
    Meaning texts "per hour" -> "per time step (15 minutes)" in the template, the test
    workbook, the PCH draft and the UKPC workbook (backups first); values stay 0/2/6.
+   **2b done (2026-11-18):** `_weight_setting` implemented by the user, read_settings
+   takes the defaults from a `Settings()` and switches on `frozenset(SOFT_RULE_NAMES)`;
+   397 green. Meaning texts of the three skill score rows now "Penalty per time step (15
+   minutes) at a post with score N ... Optional: empty or missing = default" in all four
+   workbooks (Settings D21-D23 only; backups `..._before_weight_meanings.xlsx`).
    **2c, right after 2b (agreed 2026-11-18): refactor the Settings reader tests per kind
    of value**, before the next soft rule brings more weight rows. Tests stay green. One
    public parse function per kind of value, tested directly without a sheet (e.g.
