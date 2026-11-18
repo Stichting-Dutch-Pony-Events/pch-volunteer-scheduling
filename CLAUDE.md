@@ -978,6 +978,10 @@ up to date with `main`):
    (2026-11-13): the rule is in the Technology section ("Import lines") and, short, in the
    README under Code style; every import block in scheduler/ and tests/ was rewritten to
    it by a scratch script (tests unchanged otherwise).
+   **Step 1 of 1.1 merged into `develop` (PR #5, merge commit `0a3151b`, 2026-11-13);
+   `feature/subpackages` deleted.** **Continue here next session:** step 2, the soft rules,
+   starting with a design discussion of the objective machinery (branch e.g.
+   `feature/soft-rules`; remind the user to make it).
 2. Soft rules: the first objective (start/end on :00/:30, stay at one post as a weight,
    avoid short stretches, prefer higher skill scores, prefer stretches of at most
    120 min), then fair spread of hours (relative to availability). In small steps: the
