@@ -384,3 +384,83 @@ def test_default_daily_limit_above_the_default_total_raises_workbook_error():
     match = "Default maximum hours per day.*Default maximum hours total"
     with pytest.raises(WorkbookError, match=match):
         read_settings(sheet)
+
+
+# Soft rule weights: optional rows, whole points per time block. One helper reads all
+# three rows, so its own logic (empty, not a whole number, negative, zero) is tested with
+# one row; the tests that use all three rows catch mixed-up rows and wrong defaults.
+
+def test_skill_score_weights_are_read():
+    """The three skill score weight rows are read into their own fields."""
+    # Arrange
+
+    # Act
+
+    # Assert
+    pytest.skip("not written yet")
+
+
+@pytest.mark.parametrize("missing_setting, field, default", [
+    ("Weight: skill score 1", "weight_skill_score_1", 6),
+    ("Weight: skill score 2", "weight_skill_score_2", 2),
+    ("Weight: skill score 3", "weight_skill_score_3", 0)])
+def test_missing_skill_score_weight_gets_the_default(missing_setting: str, field: str,
+                                                     default: int):
+    """A missing skill score weight row gives that weight's default from Settings."""
+    # Arrange
+
+    # Act
+
+    # Assert
+    pytest.skip("not written yet")
+
+
+def test_empty_skill_score_weight_gets_the_default():
+    """A skill score weight row with an empty value gives the default from Settings."""
+    # Arrange
+
+    # Act
+
+    # Assert
+    pytest.skip("not written yet")
+
+
+@pytest.mark.parametrize("value", [1.5, "six"], ids=["decimal", "word"])
+def test_skill_score_weight_that_is_not_a_whole_number_raises_workbook_error(value: object):
+    """A skill score weight that is not a whole number is an error naming the setting."""
+    # Arrange
+
+    # Act
+
+    # Assert
+    pytest.skip("not written yet")
+
+
+def test_negative_skill_score_weight_raises_workbook_error():
+    """A negative skill score weight is an error naming the setting."""
+    # Arrange
+
+    # Act
+
+    # Assert
+    pytest.skip("not written yet")
+
+
+def test_skill_score_weight_of_zero_is_allowed():
+    """A skill score weight of 0 is read as 0 (unlike the hour limits, 0 is allowed)."""
+    # Arrange
+
+    # Act
+
+    # Assert
+    pytest.skip("not written yet")
+
+
+def test_every_soft_rule_is_switched_on():
+    """The reader switches every soft rule on (a switch per rule in the workbook is later)."""
+    # Arrange
+
+    # Act
+
+    # Assert
+    pytest.skip("not written yet")

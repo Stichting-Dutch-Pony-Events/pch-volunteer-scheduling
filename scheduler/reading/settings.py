@@ -155,3 +155,13 @@ def _whole_number_setting(settings: dict[str, str], name: str) -> int:
         # from None: show only our clear message, not the ValueError behind it
         raise WorkbookError(f"Settings, {name!r}: {settings[name]!r} is not a whole "
                             f"number.") from None
+
+
+def _weight_setting(unparsed_settings: dict[str, str], name: str, default: int) -> int:
+    """An optional soft rule weight (points per time block) from the Settings tab.
+
+    A missing row or an empty Value gives default. Otherwise the value must be a whole
+    number of at least 0 (0 is allowed); anything else raises WorkbookError naming the
+    setting.
+    """
+    raise NotImplementedError

@@ -1019,6 +1019,21 @@ up to date with `main`):
    (0-4), the guards stay green; without the switch check the "off" test goes red. Next:
    2b (optional weight rows per time block in the workbook, read by read_settings, the
    reader switches every soft rule on), then a real-data run with permission.
+   **2b design (agreed 2026-11-18):** rows "Weight: skill score 1/2/3" optional; missing
+   row or empty Value = the Settings default; else a whole number >= 0 (0 allowed), per
+   time step; otherwise WorkbookError naming the setting. One helper
+   `_weight_setting(unparsed_settings, name, default) -> int` in reading/settings.py,
+   called once per row. read_settings sets `soft_rules=frozenset(SOFT_RULE_NAMES)` (every
+   soft rule on; a per-rule workbook switch comes later). Tests in test_read_settings.py,
+   section "Soft rule weights": all three read (5/3/1, catches mixed-up rows); missing
+   row = its own default (parametrized over the three, catches a wrong default); and with
+   one row ("Weight: skill score 1", default 6): empty = default, not a whole number
+   (1.5 / "six"), negative, zero allowed; every soft rule switched on (concrete
+   `frozenset({"skill_score"})`). Expected to go red after the change and then be fixed
+   by the user: `test_settings_tab_is_read_into_settings` (GOOD_SETTINGS) and
+   test_read_problem's GOOD_PROBLEM (both need `soft_rules`). Workbooks after the code:
+   Meaning texts "per hour" -> "per time step (15 minutes)" in the template, the test
+   workbook, the PCH draft and the UKPC workbook (backups first); values stay 0/2/6.
    **Soft rules can be switched on/off (user's idea, option B agreed 2026-11-18):**
    `Settings.soft_rules: frozenset[str] = frozenset()` = the soft rules that are on;
    empty by default, so `Settings()` = hard rules only and every test switches on exactly
@@ -1162,6 +1177,10 @@ After the minimal viable scheduler:
       >= 1, weights >= 0. The reader keeps its WorkbookError messages (they name the tab
       and setting); `__post_init__` is the safety net for code that makes Settings
       directly. Same idea possible for Volunteer and Problem.
+      **Also then (user, 2026-11-18): "empty = default" for every optional setting.** The
+      skill score weight rows (2b) are the first optional rows: a missing row or an empty
+      Value cell both give the default from Settings. Apply the same rule to every other
+      setting that is or becomes optional (required settings stay "empty = error").
 - [ ] Collect and show all input errors at once instead of stopping at the first one
       (e.g. a list of every typo in the workbook; fits the window program later).
 - [ ] Time step and day boundary configurable (e.g. 30 min blocks, another boundary).
