@@ -70,6 +70,10 @@ class Settings:
     # looks at the limits on each Volunteer.
     default_max_minutes_per_day: int | None = None
     default_max_minutes_total: int | None = None
+    # The soft rules that are switched on, by name (see SOFT_RULE_NAMES in soft_rules.py).
+    # Empty by default: Settings() means hard rules only, so a test switches on exactly the
+    # soft rule it tests. A frozenset because Settings is frozen (a set could be changed).
+    soft_rules: frozenset[str] = frozenset()
     # Soft rule weights: penalty points per time block (15 minutes) worked at a post where
     # the volunteer has this skill score. Lower = preferred, so score 3 costs the least.
     weight_skill_score_1: int = 6

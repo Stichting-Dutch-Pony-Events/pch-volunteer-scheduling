@@ -1004,7 +1004,18 @@ up to date with `main`):
    test_warnings.py and test_solver_time_limit.py stay in tests/solving/. After
    implementing, run the new
    tests in a scratch copy without the minimize line with a few CP-SAT seeds, each must
-   go red for most. Then gap limit / time limit: decide after a real-data run.
+   go red for most.
+   **Soft rules can be switched on/off (user's idea, option B agreed 2026-11-18):**
+   `Settings.soft_rules: frozenset[str] = frozenset()` = the soft rules that are on;
+   empty by default, so `Settings()` = hard rules only and every test switches on exactly
+   its own soft rule (no interference between soft rules). `SOFT_RULE_NAMES` in
+   soft_rules.py lists the valid names; solve() raises ValueError for an unknown name
+   (typo protection) and only calls a soft rule when it is on (`if "skill_score" in
+   problem.settings.soft_rules:`), so a rule that is off builds no helper variables. In
+   2b the reader switches every soft rule on; a workbook switch per rule comes later.
+   Hard rules are not switchable. Test stubs in tests/solving/test_soft_rule_switches.py
+   (unknown name raises; rule off = no preference, with the score 1 volunteer first
+   since CP-SAT picks the last one without an objective). Then gap limit / time limit: decide after a real-data run.
    Soft rules: the first objective (start/end on :00/:30, stay at one post as a weight,
    avoid short stretches, prefer higher skill scores, prefer stretches of at most
    120 min), then fair spread of hours (relative to availability). In small steps: the

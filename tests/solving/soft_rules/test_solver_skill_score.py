@@ -5,9 +5,11 @@ from scheduler.solving.solver import solve
 
 
 # Passed explicitly instead of relying on the defaults in model.py, including the skill
-# score weights (penalty points per block worked; lower = preferred).
+# score weights (penalty points per block worked; lower = preferred). Only the skill score
+# soft rule is switched on, so no other soft rule can change the outcome.
 RULES = Settings(min_stretch_minutes=60, max_stretch_minutes=180, min_break_minutes=30,
                  days=("Friday", "Saturday", "Sunday"),
+                 soft_rules=frozenset({"skill_score"}),
                  weight_skill_score_1=6, weight_skill_score_2=2, weight_skill_score_3=0)
 
 ALL_DAYS = all_blocks(RULES)

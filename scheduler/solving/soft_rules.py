@@ -14,6 +14,10 @@ from ortools.sat.python import cp_model
 from scheduler.model import Problem
 from scheduler.solving.variables import Works
 
+# The names that may be used in Settings.soft_rules to switch a soft rule on; solve()
+# refuses any other name, so a typo can't silently switch nothing on.
+SOFT_RULE_NAMES = {"skill_score"}
+
 
 def add_skill_score_penalty(model: cp_model.CpModel, problem: Problem,
                             works: Works) -> list[cp_model.LinearExpr]:
