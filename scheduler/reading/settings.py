@@ -4,7 +4,7 @@ from openpyxl.worksheet.worksheet import Worksheet
 from scheduler.debug import debug_print
 from scheduler.errors import WorkbookError
 from scheduler.model import DAY_STARTS_AT_HOUR, MINUTES_PER_BLOCK, SOFT_RULE_NAMES, Settings
-from scheduler.reading.cells import cell_text, find_columns, parse_hour_limits
+from scheduler.reading.cells import cell_text, find_columns, parse_hour_limits, parse_whole_number
 
 # The layout of the input workbook this scheduler reads (the "Workbook format version"
 # setting). Raise it only when the workbook layout changes, e.g. a renamed setting or a
@@ -67,20 +67,28 @@ def read_settings(sheet: Worksheet) -> Settings:
 
     # 4. Turn it all into Settings.
     default_settings = Settings()  # only used to look up the defaults for optional settings
-    return Settings(
-        min_stretch_minutes=_whole_number_setting(unparsed_settings, "Minimum work stretch"),
-        max_stretch_minutes=_whole_number_setting(unparsed_settings, "Maximum work stretch"),
-        min_break_minutes=_whole_number_setting(unparsed_settings, "Minimum break"),
-        days=days,
-        default_max_minutes_per_day=default_per_day,
-        default_max_minutes_total=default_total,
-        weight_skill_score_1=_weight_setting(unparsed_settings, "Weight: skill score 1",
-                                             default_settings.weight_skill_score_1),
-        weight_skill_score_2=_weight_setting(unparsed_settings, "Weight: skill score 2",
-                                             default_settings.weight_skill_score_2),
-        weight_skill_score_3=_weight_setting(unparsed_settings, "Weight: skill score 3",
-                                             default_settings.weight_skill_score_3),
-        soft_rules=frozenset(SOFT_RULE_NAMES))
+    try:
+        settings = Settings(
+            min_stretch_minutes=parse_whole_number(
+                "Minimum work stretch", unparsed_settings["Minimum work stretch"], 0),
+            max_stretch_minutes=parse_whole_number(
+                "Maximum work stretch", unparsed_settings["Maximum work stretch"], 0),
+            min_break_minutes=parse_whole_number(
+                "Minimum break", unparsed_settings["Minimum break"], 0),
+            days=days,
+            default_max_minutes_per_day=default_per_day,
+            default_max_minutes_total=default_total,
+            weight_skill_score_1=_optional_whole_number_setting(
+                unparsed_settings, "Weight: skill score 1", default_settings.weight_skill_score_1),
+            weight_skill_score_2=_optional_whole_number_setting(
+                unparsed_settings, "Weight: skill score 2", default_settings.weight_skill_score_2),
+            weight_skill_score_3=_optional_whole_number_setting(
+                unparsed_settings, "Weight: skill score 3", default_settings.weight_skill_score_3),
+            soft_rules=frozenset(SOFT_RULE_NAMES))
+    except ValueError as error:
+        raise WorkbookError(f"Settings, {error}") from None
+
+    return settings
 
 
 def _unparsed_settings(sheet: Worksheet) -> dict[str, str]:
@@ -127,12 +135,17 @@ def _check_settings_with_one_allowed_value(unparsed_settings: dict[str, str]) ->
     Workbook format version must be WORKBOOK_FORMAT_VERSION, Time step MINUTES_PER_BLOCK
     (15) and Day boundary DAY_STARTS_AT_HOUR (06:00).
     """
-    version = _whole_number_setting(unparsed_settings, "Workbook format version")
+    try:
+        version = parse_whole_number("Workbook format version",
+                                     unparsed_settings["Workbook format version"], 0)
+
+        time_step = parse_whole_number("Time step", unparsed_settings["Time step"], 0)
+    except ValueError as error:
+        raise WorkbookError(f"Settings, {error}") from None
+
     if version != WORKBOOK_FORMAT_VERSION:
         raise WorkbookError(f"Settings, 'Workbook format version': this workbook is version "
                             f"{version}, this scheduler reads version {WORKBOOK_FORMAT_VERSION}.")
-
-    time_step = _whole_number_setting(unparsed_settings, "Time step")
     if time_step != MINUTES_PER_BLOCK:
         raise WorkbookError(f"Settings, 'Time step': the scheduler only supports "
                             f"{MINUTES_PER_BLOCK} minutes for now, not {time_step}.")
@@ -164,38 +177,14 @@ def parse_days(text: str) -> tuple[str, ...]:
     return tuple(days)  # a tuple, like the default in Settings
 
 
-def _whole_number_setting(settings: dict[str, str], name: str) -> int:
-    """The setting with this name as a whole number; WorkbookError if it isn't one."""
-    try:
-        return int(settings[name])
-    except ValueError:
-        # from None: show only our clear message, not the ValueError behind it
-        raise WorkbookError(f"Settings, {name!r}: {settings[name]!r} is not a whole "
-                            f"number.") from None
-
-
-def _weight_setting(unparsed_settings: dict[str, str], name: str, default: int) -> int:
-    """An optional soft rule weight (points per time block) from the Settings tab.
-
-    A missing row or an empty Value gives default. Otherwise the value must be a whole
-    number of at least 0 (0 is allowed); anything else raises WorkbookError naming the
-    setting.
+def _optional_whole_number_setting(unparsed_settings: dict[str, str],
+                                   name: str, default: int) -> int:
+    """An optional whole number setting (at least 0) from the Settings tab,
+    e.g. a soft rule weight.
     """
-    # Missing or empty row? return default
-    unparsed_weight = unparsed_settings.get(name, "")
-    if unparsed_weight == "":
+    # A missing row counts the same as an empty Value: both give the default.
+    text = unparsed_settings.get(name, "")
+    if text == "":
         return default
 
-    # Catch non-integers
-    try:
-        weight = int(unparsed_weight)
-    except ValueError:
-        raise WorkbookError(f"Settings, {name!r}: {unparsed_weight!r} is not a whole "
-                            "number.") from None
-
-    # Catch negative numbers
-    if weight < 0:
-        raise WorkbookError(f"Settings, {name!r}: {unparsed_weight!r} cannot be a negative "
-                            "number; a weight is 0 or more.")
-
-    return weight
+    return parse_whole_number(name, text, 0)

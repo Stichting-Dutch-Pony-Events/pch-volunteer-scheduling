@@ -465,7 +465,7 @@ def test_negative_skill_score_weight_raises_workbook_error():
     # (Act and Assert in the same line)
 
     # Assert
-    with pytest.raises(WorkbookError, match="Weight: skill score 1.*negative"):
+    with pytest.raises(WorkbookError, match="Weight: skill score 1.*minimum"):
         read_settings(sheet)
 
 
