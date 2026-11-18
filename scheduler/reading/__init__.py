@@ -7,5 +7,6 @@
     skills.py           read_skills()
     demand.py           read_demand()
     cells.py            helpers shared by the readers: cell_text, find_columns,
-                        find_post_columns, parse_availability, parse_hour_limits
+                        find_post_columns, parse_availability, parse_whole_number,
+                        parse_hour_limit, parse_hour_limits
 """

@@ -1,10 +1,12 @@
 """Helpers that turn cells into values, shared by the tab readers.
 
 cell_text tidies one cell; find_columns and find_post_columns find columns by their
-header; parse_availability and parse_hour_limits turn a cell's text into blocks or
-minutes. They raise WorkbookError (naming the tab) or ValueError (the reader puts the
-tab and row in front). cell_text and parse_availability are plain functions without
-openpyxl, so they can be tested with simple values instead of a workbook.
+header; parse_availability, parse_whole_number, parse_hour_limit and parse_hour_limits
+turn a cell's text into blocks, a number or minutes. They raise WorkbookError (naming the
+tab) or ValueError (the reader puts the tab and row in front). cell_text and the parse_
+functions are plain functions without openpyxl, so they can be tested with simple values
+instead of a workbook. The parse_ functions only turn text into a value: whether a cell
+may be empty (and what that means) is up to the reader.
 """
 from datetime import time
 
@@ -113,12 +115,22 @@ def parse_availability(text: str, day: str, settings: Settings) -> set[int]:
     return set(range(first_block, block_after_last))
 
 
+def parse_whole_number(name: str, text: str, minimum: int) -> int:
+    """The text of one cell (already through cell_text) as a whole number of at least minimum.
+
+    name is the setting or column, for the message. Text that is not a whole number
+    (also an empty text, "1.5" or "six") or a number below minimum raises ValueError
+    starting with name; the reader puts the tab (and row) in front.
+    """
+    raise NotImplementedError
+
+
 def parse_hour_limits(per_day: tuple[str, str], total: tuple[str, str],
                       number_of_days: int) -> tuple[int | None, int | None]:
     """The hour limits per day and in total of one Settings or Volunteers row, in minutes.
 
     per_day and total are (name, text): the setting or column name for the messages, and
-    the cell text (already through cell_text). Each text goes through _parse_hour_limit, with at
+    the cell text (already through cell_text). Each text goes through parse_hour_limit, with at
     most 24 hours per day and in total at most 24 hours for each day of the convention.
     An empty text gives None: read_volunteers then fills in the default, read_settings
     never lets an empty value get here. Per day may not be more than the total, but only
@@ -130,11 +142,11 @@ def parse_hour_limits(per_day: tuple[str, str], total: tuple[str, str],
 
     per_day_minutes = None
     if per_day_text != "":
-        per_day_minutes = _parse_hour_limit(per_day_name, per_day_text, 24)
+        per_day_minutes = parse_hour_limit(per_day_name, per_day_text, 24)
 
     total_minutes = None
     if total_text != "":
-        total_minutes = _parse_hour_limit(total_name, total_text, 24 * number_of_days)
+        total_minutes = parse_hour_limit(total_name, total_text, 24 * number_of_days)
 
     # Only compare two numbers: an empty text or "none" (both None here) is never compared.
     if per_day_minutes is not None and total_minutes is not None:
@@ -145,7 +157,7 @@ def parse_hour_limits(per_day: tuple[str, str], total: tuple[str, str],
     return per_day_minutes, total_minutes
 
 
-def _parse_hour_limit(name: str, text: str, max_hours: int) -> int | None:
+def parse_hour_limit(name: str, text: str, max_hours: int) -> int | None:
     """One hour limit cell (already through cell_text) as minutes.
 
     Whole hours from 1 up to max_hours (24 for a day, 24 times the number of days for the

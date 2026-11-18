@@ -49,7 +49,7 @@ def read_settings(sheet: Worksheet) -> Settings:
     _check_settings_with_one_allowed_value(unparsed_settings)
 
     # 3. The days, and the default hour limits (in minutes, None = no limit).
-    days = _parse_days(unparsed_settings["Days"])
+    days = parse_days(unparsed_settings["Days"])
 
     per_day_name = "Default maximum hours per day"
     total_name = "Default maximum hours total"
@@ -142,10 +142,13 @@ def _check_settings_with_one_allowed_value(unparsed_settings: dict[str, str]) ->
                             f"{expected_day_boundary} for now, not {day_boundary}.")
 
 
-def _parse_days(text: str) -> tuple[str, ...]:
+def parse_days(text: str) -> tuple[str, ...]:
     """The Days setting as a tuple: "Friday, Saturday, Sunday" -> ("Friday", "Saturday", ...).
 
-    Raises WorkbookError for a day that appears more than once.
+    Raises ValueError naming the day for an empty day name ("Friday, , Saturday" or a
+    comma at the end) or a day that appears more than once; read_settings puts the tab and
+    setting in front. Public because it is tested on its own (test_parse_values.py).
+    (Step 1 of 2c: the code below still raises WorkbookError and allows empty names.)
     """
     days = []
     for day in text.split(","):

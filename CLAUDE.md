@@ -1049,6 +1049,26 @@ up to date with `main`):
    concrete table in the test file: name, field, default), the general checks (unknown,
    missing, duplicate, ...) and checks across settings. A new weight then costs one table
    line plus one GOOD_SETTINGS field. No table-driven reader (plain code stays).
+   **2c design (agreed 2026-11-18), two axes:** *kind of value* = a public parse function
+   in cells.py that only turns text into a value (an empty text is invalid for it) and
+   raises ValueError naming the setting/column (the reader puts tab and row in front):
+   `parse_whole_number(name, text, minimum) -> int` (weights minimum 0, minutes 1),
+   `parse_hour_limit(name, text, max_hours) -> int | None` ("none" = None, else via
+   parse_whole_number minimum 1, at most max_hours, in minutes), `parse_hour_limits`
+   (the pair, unchanged), `parse_days(text)` (public, stays in settings.py, raises
+   ValueError; new: an empty day name is an error). *Presence* stays in the reader:
+   required = `_check_setting_names`; optional = `unparsed_settings.get(name, "")`, empty
+   = the default from `Settings()`; fixed = `_check_settings_with_one_allowed_value`.
+   (Rejected: `default=None` meaning "required" in the parse function; it clashes with
+   the hour limits, where None is a valid default = no limit.) `__post_init__` checks
+   stay out of 2c (own roadmap item; it only knows field names, not workbook rows).
+   Order: 1. stubs + tests in tests/reading/test_parse_values.py; 2. the readers use the
+   functions, old reader tests unchanged as the guard; 3. thin out test_read_settings.py
+   (remove per-value tests covered by test_parse_values.py, add the optional table),
+   only after the replacements are green.
+   **Step 1 written by Claude (2026-11-18):** `_parse_hour_limit` -> `parse_hour_limit`
+   and `_parse_days` -> `parse_days` (renamed, code unchanged), `parse_whole_number` stub
+   in cells.py, 9 test stubs (24 cases) in test_parse_values.py. 397 green, 24 skipped.
    **Soft rules can be switched on/off (user's idea, option B agreed 2026-11-18):**
    `Settings.soft_rules: frozenset[str] = frozenset()` = the soft rules that are on;
    empty by default, so `Settings()` = hard rules only and every test switches on exactly
