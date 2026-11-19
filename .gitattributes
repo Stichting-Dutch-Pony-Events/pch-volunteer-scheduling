@@ -1,0 +1,8 @@
+# Text files are stored with LF in git and checked out with CRLF (Windows), whatever the
+# git settings on the computer say. Git detects text files itself (text=auto).
+* text=auto eol=crlf
+
+# Never touch the line endings of these: they are binary.
+*.xlsx binary
+*.ods binary
+*.png binary

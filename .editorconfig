@@ -1,0 +1,8 @@
+root = true
+
+# Every file in this project: Windows line endings, no trailing spaces, one newline at
+# the end. Needs the "EditorConfig for VS Code" extension in VS Code.
+[*]
+end_of_line = crlf
+trim_trailing_whitespace = true
+insert_final_newline = true

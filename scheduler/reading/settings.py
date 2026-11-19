@@ -3,8 +3,8 @@ from openpyxl.worksheet.worksheet import Worksheet
 
 from scheduler.debug import debug_print
 from scheduler.errors import WorkbookError
-from scheduler.model import DAY_STARTS_AT_HOUR, MINUTES_PER_BLOCK, Settings
-from scheduler.reading.cells import cell_text, find_columns, parse_hour_limits
+from scheduler.model import DAY_STARTS_AT_HOUR, MINUTES_PER_BLOCK, SOFT_RULE_NAMES, Settings
+from scheduler.reading.cells import cell_text, find_columns, parse_hour_limits, parse_whole_number
 
 # The layout of the input workbook this scheduler reads (the "Workbook format version"
 # setting). Raise it only when the workbook layout changes, e.g. a renamed setting or a
@@ -19,7 +19,8 @@ KNOWN_SETTINGS = {"Workbook format version", "Time step", "Day boundary", "Days"
                   "Default maximum hours total", "Weight: miss a REALLY-want event",
                   "Weight: miss a like-to-attend event", "Weight: skill score 3",
                   "Weight: skill score 2", "Weight: skill score 1",
-                  "Weight: shift longer than preferred", "Weight: unfair spread of hours"}
+                  "Weight: shift longer than preferred", "Weight: unfair spread of hours",
+                  "Weight: start or end off the half hour"}
 
 REQUIRED_SETTINGS = {"Workbook format version", "Time step", "Day boundary", "Days",
                      "Minimum work stretch", "Maximum work stretch", "Minimum break",
@@ -34,9 +35,12 @@ def read_settings(sheet: Worksheet) -> Settings:
     (comma separated, no duplicates), Minimum work stretch, Maximum work stretch and
     Minimum break (whole numbers, in minutes), Default maximum hours per day and total
     (whole hours or "none"; at most 24 per day, 24 per day of the convention in total,
-    per day not more than the total). Settings the scheduler does not use yet (meals,
-    weights) are accepted and ignored. Raises WorkbookError for a missing, empty,
-    duplicate or unknown setting, or a value that is not allowed.
+    per day not more than the total). Optional: Weight: skill score 1, 2 and 3 (points
+    per time step) and Weight: start or end off the half hour (points per start or end);
+    whole numbers of at least 0, a missing row or empty Value gives the default in
+    Settings. Every soft rule is switched on. Settings the scheduler does not
+    use yet (meals, the other weights) are accepted and ignored. Raises WorkbookError for
+    a missing, empty, duplicate or unknown setting, or a value that is not allowed.
     """
     debug_print(f"read_settings: reading tab {sheet.title}")
     # 1. Every setting as text, by name; then the names: nothing unknown, nothing missing.
@@ -47,7 +51,10 @@ def read_settings(sheet: Worksheet) -> Settings:
     _check_settings_with_one_allowed_value(unparsed_settings)
 
     # 3. The days, and the default hour limits (in minutes, None = no limit).
-    days = _parse_days(unparsed_settings["Days"])
+    try:
+        days = parse_days(unparsed_settings["Days"])
+    except ValueError as error:
+        raise WorkbookError(f"Settings, Days: {error}") from None
 
     per_day_name = "Default maximum hours per day"
     total_name = "Default maximum hours total"
@@ -60,14 +67,38 @@ def read_settings(sheet: Worksheet) -> Settings:
         # Put the tab in front of the message from parse_hour_limits.
         raise WorkbookError(f"Settings, {error}") from None
 
-    # 4. Turn it all into Settings.
-    return Settings(
-        min_stretch_minutes=_whole_number_setting(unparsed_settings, "Minimum work stretch"),
-        max_stretch_minutes=_whole_number_setting(unparsed_settings, "Maximum work stretch"),
-        min_break_minutes=_whole_number_setting(unparsed_settings, "Minimum break"),
-        days=days,
-        default_max_minutes_per_day=default_per_day,
-        default_max_minutes_total=default_total)
+    # 4. The work stretch and break, in minutes.
+    # 5. The soft rule weights, optional: missing or empty = the default in Settings.
+    defaults = Settings()  # only used to look up the defaults of the optional settings
+    try:
+        min_stretch = parse_whole_number("Minimum work stretch",
+                                         unparsed_settings["Minimum work stretch"], 0)
+        max_stretch = parse_whole_number("Maximum work stretch",
+                                         unparsed_settings["Maximum work stretch"], 0)
+        min_break = parse_whole_number("Minimum break", unparsed_settings["Minimum break"], 0)
+
+        weight_score_1 = _optional_whole_number_setting(
+            unparsed_settings, "Weight: skill score 1", defaults.weight_skill_score_1)
+        weight_score_2 = _optional_whole_number_setting(
+            unparsed_settings, "Weight: skill score 2", defaults.weight_skill_score_2)
+        weight_score_3 = _optional_whole_number_setting(
+            unparsed_settings, "Weight: skill score 3", defaults.weight_skill_score_3)
+        weight_off_round_time = _optional_whole_number_setting(
+            unparsed_settings, "Weight: start or end off the half hour",
+            defaults.weight_off_round_time)
+    except ValueError as error:
+        # Put the tab in front of the message from the parse function.
+        raise WorkbookError(f"Settings, {error}") from None
+
+    # 6. Everything together; every soft rule is switched on.
+    return Settings(min_stretch_minutes=min_stretch, max_stretch_minutes=max_stretch,
+                    min_break_minutes=min_break, days=days,
+                    default_max_minutes_per_day=default_per_day,
+                    default_max_minutes_total=default_total,
+                    weight_skill_score_1=weight_score_1, weight_skill_score_2=weight_score_2,
+                    weight_skill_score_3=weight_score_3,
+                    weight_off_round_time=weight_off_round_time,
+                    soft_rules=frozenset(SOFT_RULE_NAMES))
 
 
 def _unparsed_settings(sheet: Worksheet) -> dict[str, str]:
@@ -114,12 +145,17 @@ def _check_settings_with_one_allowed_value(unparsed_settings: dict[str, str]) ->
     Workbook format version must be WORKBOOK_FORMAT_VERSION, Time step MINUTES_PER_BLOCK
     (15) and Day boundary DAY_STARTS_AT_HOUR (06:00).
     """
-    version = _whole_number_setting(unparsed_settings, "Workbook format version")
+    try:
+        version = parse_whole_number("Workbook format version",
+                                     unparsed_settings["Workbook format version"], 0)
+
+        time_step = parse_whole_number("Time step", unparsed_settings["Time step"], 0)
+    except ValueError as error:
+        raise WorkbookError(f"Settings, {error}") from None
+
     if version != WORKBOOK_FORMAT_VERSION:
         raise WorkbookError(f"Settings, 'Workbook format version': this workbook is version "
                             f"{version}, this scheduler reads version {WORKBOOK_FORMAT_VERSION}.")
-
-    time_step = _whole_number_setting(unparsed_settings, "Time step")
     if time_step != MINUTES_PER_BLOCK:
         raise WorkbookError(f"Settings, 'Time step': the scheduler only supports "
                             f"{MINUTES_PER_BLOCK} minutes for now, not {time_step}.")
@@ -132,26 +168,33 @@ def _check_settings_with_one_allowed_value(unparsed_settings: dict[str, str]) ->
                             f"{expected_day_boundary} for now, not {day_boundary}.")
 
 
-def _parse_days(text: str) -> tuple[str, ...]:
+def parse_days(text: str) -> tuple[str, ...]:
     """The Days setting as a tuple: "Friday, Saturday, Sunday" -> ("Friday", "Saturday", ...).
 
-    Raises WorkbookError for a day that appears more than once.
+    Raises ValueError for an empty day name ("Friday, , Saturday" or a comma at the end)
+    or a day that appears more than once (naming that day); read_settings puts the tab and
+    setting in front. Public because it is tested on its own (test_parse_values.py).
     """
     days = []
     for day in text.split(","):
         day = day.strip()
+        if day == "":
+            raise ValueError("an empty day name (two commas in a row, or a comma at the end).")
         if day in days:
-            raise WorkbookError(f"Settings, 'Days': {day!r} appears more than once.")
+            raise ValueError(f"{day!r} appears more than once.")
         days.append(day)
 
     return tuple(days)  # a tuple, like the default in Settings
 
 
-def _whole_number_setting(settings: dict[str, str], name: str) -> int:
-    """The setting with this name as a whole number; WorkbookError if it isn't one."""
-    try:
-        return int(settings[name])
-    except ValueError:
-        # from None: show only our clear message, not the ValueError behind it
-        raise WorkbookError(f"Settings, {name!r}: {settings[name]!r} is not a whole "
-                            f"number.") from None
+def _optional_whole_number_setting(unparsed_settings: dict[str, str],
+                                   name: str, default: int) -> int:
+    """An optional whole number setting (at least 0) from the Settings tab,
+    e.g. a soft rule weight.
+    """
+    # A missing row counts the same as an empty Value: both give the default.
+    text = unparsed_settings.get(name, "")
+    if text == "":
+        return default
+
+    return parse_whole_number(name, text, 0)

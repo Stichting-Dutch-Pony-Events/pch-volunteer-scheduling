@@ -1,3 +1,5 @@
+import pytest
+
 from scheduler.model import Schedule, Settings, Volunteer, runs_of_consecutive_blocks
 
 
@@ -15,6 +17,45 @@ def test_default_settings_match_the_agreed_rules():
     # Assert
     assert (settings.min_stretch_minutes, settings.max_stretch_minutes,
             settings.min_break_minutes) == (60, 180, 30)
+
+
+def test_default_skill_score_weights_match_the_workbook():
+    """The default skill score weights are 6, 2 and 0 points per block for score 1, 2, 3."""
+    # Arrange
+    # (nothing to arrange: we look at a fresh Settings with all defaults)
+
+    # Act
+    settings = Settings()
+
+    # Assert
+    assert settings.weight_skill_score_3 == 0
+    assert settings.weight_skill_score_2 == 2
+    assert settings.weight_skill_score_1 == 6
+
+
+def test_default_round_times_weight_is_10_per_start_or_end():
+    """The default penalty for a start or end on :15 or :45 is 10 points."""
+    # Arrange
+    # (nothing to arrange: we look at a fresh Settings with all defaults)
+
+    # Act
+    settings = Settings()
+
+    # Assert
+    assert settings.weight_off_round_time == 10
+
+
+def test_unknown_soft_rule_name_raises_value_error():
+    """A name in Settings.soft_rules that is not a soft rule raises ValueError."""
+    # Arrange
+    # (nothing to arrange: the misspelled name is given straight to Settings)
+
+    # Act
+    # (Act and Assert are in the same expression)
+
+    # Assert
+    with pytest.raises(ValueError, match="skil_score.*Known:"):
+        Settings(soft_rules=frozenset({"skil_score"}))
 
 
 def test_volunteer_has_no_hour_limits_unless_given():

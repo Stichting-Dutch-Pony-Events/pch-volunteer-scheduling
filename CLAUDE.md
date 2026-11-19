@@ -63,12 +63,22 @@ likes to write tests (and often code) themselves; Claude reviews and explains.
    Use the newer lowercase OR-Tools API (`new_int_var`, `add`, `solve`, `value`).
    **Type hints on every function we write from now on** (agreed 2026-11-01): all
    parameters and the return type, e.g. `def solve(problem: Problem) -> Schedule:`.
-   Tests are the exception (no hints needed on `test_...` functions). Older functions
-   without hints get them when we touch them anyway.
+   **Tests (revised by the user, 2026-11-18): every parameter of a test function gets a
+   type hint too**, so Pylance can autocomplete fixtures: `monkeypatch:
+   pytest.MonkeyPatch`, `capsys: pytest.CaptureFixture[str]`, `tmp_path: Path` (from
+   pathlib), parametrize values their own type (`answer: str`, `block: int`). The same
+   for helper functions inside tests (e.g. a `fake_penalty(model: cp_model.CpModel,
+   problem: Problem, works: Works) -> list[cp_model.LinearExpr]`). A return type on
+   `test_...` functions is not needed (they return nothing). Existing tests get the hints
+   when we touch them anyway. Older functions without hints get them when we touch them
+   anyway.
    **Line length: soft limit of 100 characters** (not PEP 8's 79). The user has a
    ruler at 100 in their local `.vscode/settings.json` (not in git), which also sets
    `files.eol` to CRLF and trims trailing whitespace on save.
-6. Files use **Windows line endings (CRLF)**; keep them that way when editing. A
+6. Files use **Windows line endings (CRLF)**; keep them that way when editing. Enforced
+   since 2026-11-19 by `.editorconfig` (CRLF on save, with the "EditorConfig for VS Code"
+   extension) and `.gitattributes` (`* text=auto eol=crlf`: git stores LF, checks out
+   CRLF; xlsx/ods/png binary). A
    Linux-based shell can show line-ending noise in `git status` (e.g. LICENSE) that is
    not a real change; use `git -c core.autocrlf=true status`.
 7. The `.venv` is a Windows venv: the user runs the tests in VS Code
@@ -99,7 +109,9 @@ addresses and real names), no schedules with nicknames, no notes about specific 
 `tests/data/**`). Tests use small **made-up** examples only.
 
 Fictional nicknames for tests and examples (never use real nicknames):
-**Mock Mane, Testy Hooves, Dummy Dash, Sample Sparkle, Placeholder Pip.**
+**Mock Mane, Testy Hooves, Dummy Dash, Sample Sparkle, Placeholder Pip**, and **Star
+Fixture** for a volunteer who is clearly the preferred one ("star volunteer"; added
+2026-11-18). All are puns on test words, so they can't be mistaken for a real nickname.
 
 ## Technology
 
@@ -178,10 +190,11 @@ tests/reading/        test_celltext.py, test_availability.py, test_find_columns.
                       test_read_settings.py, test_read_volunteers.py,
                       test_read_posts.py, test_read_skills.py, test_read_demand.py,
                       test_read_problem.py (one test file per reader part)
-tests/solving/        test_solver_availability.py, test_solver_basics.py,
+tests/solving/        test_checks.py, test_warnings.py, test_solver_time_limit.py;
+                      hard_rules/ (test_solver_availability.py, test_solver_basics.py,
                       test_solver_work_stretches.py, test_solver_stay_at_post.py,
-                      test_checks.py, test_solver_maximum_hours.py, test_warnings.py,
-                      test_solver_time_limit.py
+                      test_solver_maximum_hours.py); soft_rules/
+                      (test_solver_skill_score.py)
 tests/writing/        test_assign_slots.py, test_write_helpers.py,
                       test_create_schedule_sheet.py, test_write_output.py (tests of
                       writing the output workbook)
@@ -982,7 +995,141 @@ up to date with `main`):
    `feature/subpackages` deleted.** **Continue here next session:** step 2, the soft rules,
    starting with a design discussion of the objective machinery (branch e.g.
    `feature/soft-rules`; remind the user to make it).
-2. Soft rules: the first objective (start/end on :00/:30, stay at one post as a weight,
+2. **Step 2a (agreed 2026-11-18), branch `feature/soft-rules`:** the objective machinery
+   plus the skill score rule. `solving/soft_rules.py`: one `add_<name>_penalty(model,
+   problem, works) -> list[cp_model.LinearExpr]` per soft rule; it returns its penalty
+   terms already times the weight; solve() collects them and calls
+   `model.minimize(cp_model.LinearExpr.sum(penalties))` (`LinearExpr.sum`, not Python's
+   `sum`, for long lists). **Weights are whole points per time block** (user), so they
+   follow the time step; `Settings.weight_skill_score_1/2/3` (defaults 6/2/0, lower =
+   preferred). Optional workbook rows and reading them = step 2b (also update the
+   Meaning texts, now "per hour"). Stubs written by Claude: the Settings fields,
+   `add_skill_score_penalty` (NotImplementedError, not yet called from solve()), 1 test
+   stub in test_model.py (defaults), 8 in tests/solving/test_solver_skill_score.py.
+   Against tests green by luck (no objective = any valid schedule): one preferred
+   volunteer against several others, **preferred one FIRST** (tried: without an
+   objective CP-SAT picked the last volunteer in the list every time, so "last" was
+   green by luck). Test folders (user): tests/solving/hard_rules/ (the five
+   test_solver_* files of hard rules) and tests/solving/soft_rules/; test_checks.py,
+   test_warnings.py and test_solver_time_limit.py stay in tests/solving/. After
+   implementing, run the new
+   tests in a scratch copy without the minimize line with a few CP-SAT seeds, each must
+   go red for most.
+   **2a done (2026-11-18):** `add_skill_score_penalty` implemented by the user (lookups
+   volunteers_by_name and weight_of_score made once, `variable * weight` per works entry,
+   weight 0 skipped), solve() collects `penalties` and calls `model.minimize(...)`. 387
+   green. Scratch check: without `minimize` the 6 preference tests go red for every seed
+   (0-4), the guards stay green; without the switch check the "off" test goes red. Next:
+   2b (optional weight rows per time block in the workbook, read by read_settings, the
+   reader switches every soft rule on), then a real-data run with permission.
+   **2b design (agreed 2026-11-18):** rows "Weight: skill score 1/2/3" optional; missing
+   row or empty Value = the Settings default; else a whole number >= 0 (0 allowed), per
+   time step; otherwise WorkbookError naming the setting. One helper
+   `_weight_setting(unparsed_settings, name, default) -> int` in reading/settings.py,
+   called once per row. read_settings sets `soft_rules=frozenset(SOFT_RULE_NAMES)` (every
+   soft rule on; a per-rule workbook switch comes later). Tests in test_read_settings.py,
+   section "Soft rule weights": all three read (5/3/1, catches mixed-up rows); missing
+   row = its own default (parametrized over the three, catches a wrong default); and with
+   one row ("Weight: skill score 1", default 6): empty = default, not a whole number
+   (1.5 / "six"), negative, zero allowed; every soft rule switched on (concrete
+   `frozenset({"skill_score"})`). Expected to go red after the change and then be fixed
+   by the user: `test_settings_tab_is_read_into_settings` (GOOD_SETTINGS) and
+   test_read_problem's GOOD_PROBLEM (both need `soft_rules`). Workbooks after the code:
+   Meaning texts "per hour" -> "per time step (15 minutes)" in the template, the test
+   workbook, the PCH draft and the UKPC workbook (backups first); values stay 0/2/6.
+   **2b done (2026-11-18):** `_weight_setting` implemented by the user, read_settings
+   takes the defaults from a `Settings()` and switches on `frozenset(SOFT_RULE_NAMES)`;
+   397 green. Meaning texts of the three skill score rows now "Penalty per time step (15
+   minutes) at a post with score N ... Optional: empty or missing = default" in all four
+   workbooks (Settings D21-D23 only; backups `..._before_weight_meanings.xlsx`).
+   **2c, right after 2b (agreed 2026-11-18): refactor the Settings reader tests per kind
+   of value**, before the next soft rule brings more weight rows. Tests stay green. One
+   public parse function per kind of value, tested directly without a sheet (e.g.
+   `_weight_setting` -> public `parse_weight(name, text, default) -> int`, like
+   `parse_hour_limits`): one parametrized "valid" and one "invalid" test. The
+   read_settings tests then only test the wiring: every row into the right field
+   (GOOD_SETTINGS), missing optional row = its default (one parametrized test with a
+   concrete table in the test file: name, field, default), the general checks (unknown,
+   missing, duplicate, ...) and checks across settings. A new weight then costs one table
+   line plus one GOOD_SETTINGS field. No table-driven reader (plain code stays).
+   **2c design (agreed 2026-11-18), two axes:** *kind of value* = a public parse function
+   in cells.py that only turns text into a value (an empty text is invalid for it) and
+   raises ValueError naming the setting/column (the reader puts tab and row in front):
+   `parse_whole_number(name, text, minimum) -> int` (weights minimum 0, minutes 1),
+   `parse_hour_limit(name, text, max_hours) -> int | None` ("none" = None, else via
+   parse_whole_number minimum 1, at most max_hours, in minutes), `parse_hour_limits`
+   (the pair, unchanged), `parse_days(text)` (public, stays in settings.py, raises
+   ValueError; new: an empty day name is an error). *Presence* stays in the reader:
+   required = `_check_setting_names`; optional = `unparsed_settings.get(name, "")`, empty
+   = the default from `Settings()`; fixed = `_check_settings_with_one_allowed_value`.
+   (Rejected: `default=None` meaning "required" in the parse function; it clashes with
+   the hour limits, where None is a valid default = no limit.) `__post_init__` checks
+   stay out of 2c (own roadmap item; it only knows field names, not workbook rows).
+   Order: 1. stubs + tests in tests/reading/test_parse_values.py; 2. the readers use the
+   functions, old reader tests unchanged as the guard; 3. thin out test_read_settings.py
+   (remove per-value tests covered by test_parse_values.py, add the optional table),
+   only after the replacements are green.
+   **Step 1 written by Claude (2026-11-18):** `_parse_hour_limit` -> `parse_hour_limit`
+   and `_parse_days` -> `parse_days` (renamed, code unchanged), `parse_whole_number` stub
+   in cells.py, 9 test stubs (24 cases) in test_parse_values.py. 397 green, 24 skipped.
+   **Step 2 done (2026-11-18, user):** parse_whole_number, parse_days (ValueError, empty
+   name = error), read_settings builds Settings inside one try (ValueError -> "Settings,
+   ..."), `_weight_setting` -> `_optional_whole_number_setting`, `_whole_number_setting`
+   removed, parse_hour_limit uses parse_whole_number (adds the "none" hint). 421 green.
+   **Step 3 (agreed 2026-11-18):** test_read_settings.py gets the tables
+   `REQUIRED_SETTINGS` and `OPTIONAL_SETTINGS` (name, field, default) and 4 new tests
+   (stubs written by Claude, 421 green + 20 skipped): invalid value per kind -> WorkbookError
+   "Settings, <setting>" (5 cases: whole number, one allowed value, days, hour limit,
+   optional); missing optional = default; empty optional = default; empty required =
+   error (over the table). Once green, remove the 10 tests covered by them or by
+   test_parse_values.py (days split, not-whole-number, same day twice, hour limit not
+   whole / <= 0, the 6 weight-specific tests); the missing-setting test uses the table.
+   Kept: GOOD_SETTINGS, order, empty rows, unknown/duplicate, Value column, fixed values,
+   Excel time, `none`, the three hour-limit pair checks, every soft rule on.
+   **Step 3 done (2026-11-18):** the user removed the 12 covered tests (422 green); Claude
+   reordered test_read_settings.py into sections that follow read_settings (Reading the
+   tab, Setting names and presence, Settings with one allowed value, Values, Default hour
+   limits, Soft rules; tests moved unchanged, checked by script). Review: every step of
+   read_settings is covered; the gap found is in the checks, not the tests (see "More
+   checks in Settings.__post_init__").
+   **2d, round times (agreed 2026-11-19):** `add_round_times_penalty`, switch name
+   `"round_times"`: every work stretch (any post; a post switch inside a stretch is not a
+   start) that starts or ends on :15/:45 (odd blocks) costs `Settings.weight_off_round_time`
+   (default 10) per start and per end. Grid fixed at 30 min for now ("Shift start step"
+   stays unused). Plan: a yes/no variable per volunteer per odd block, `starts >= work(b) -
+   work(b - 1)` (and the same for ends); minimising keeps it honest. Stubs written by
+   Claude: name in SOFT_RULE_NAMES, the Settings field, the rule stub (not yet called from
+   solve()), 1 test stub in test_model.py, 8 in tests/solving/soft_rules/
+   test_solver_round_times.py (hand-over choice forced by availability; two tests with
+   skill score on show the weights decide). Adding the name makes 9 old tests red on
+   purpose (the reader switches every soft rule on; the "Known: ..." message), for the
+   user to fix. Workbook row later (like 2b). **Implemented by the user (2026-11-19):** one
+   bool `changes` per volunteer per odd block, two inequalities (not `abs`, which CP-SAT
+   refuses; not `add_abs_equality`, kept linear); no upper-bound constraints (minimising
+   keeps 0,0/1,1 at 0; add them only if we ever print the penalty while solving). Seed
+   check: without the rule tests 1, 3, 5 red for seeds 0-7; the hour test was green by luck
+   (CP-SAT takes the earliest hand-over), so reworked to 07:45 vs 08:00. Hand-overs always
+   count a start and an end together, so Claude added
+   `test_each_start_and_end_off_the_half_hour_costs_the_weight` (work fixed by hand, only
+   this rule, checks `objective_value`; 4 cases): red without either inequality.
+   **Soft rules can be switched on/off (user's idea, option B agreed 2026-11-18):**
+   `Settings.soft_rules: frozenset[str] = frozenset()` = the soft rules that are on;
+   empty by default, so `Settings()` = hard rules only and every test switches on exactly
+   its own soft rule (no interference between soft rules). `SOFT_RULE_NAMES` in
+   **model.py** (moved there from soft_rules.py: model.py importing soft_rules.py would be
+   circular) lists the valid names; **`Settings.__post_init__` raises ValueError for an
+   unknown name** (user, 2026-11-18: fail early, where the Settings is made; test in
+   test_model.py). **Revised (user, 2026-11-18): each soft rule checks the switch
+   itself** as its first line (`if "skill_score" not in problem.settings.soft_rules:
+   return []`), so solve() stays a plain list like the hard rules (`penalties +=
+   soft_rules.add_..._penalty(...)`, then `model.minimize(...)`); a rule that is off
+   builds no helper variables. Every soft rule gets an "off returns []" test that calls
+   the rule directly (works via `create_variables` on a tiny problem, no solving); the
+   monkeypatch tests in test_soft_rule_switches.py were dropped (file removed), the
+   switch tests are now at the end of test_solver_skill_score.py. In
+   2b the reader switches every soft rule on; a workbook switch per rule comes later.
+   Hard rules are not switchable. Then gap limit / time limit: decide after a real-data run.
+   Soft rules: the first objective (start/end on :00/:30, stay at one post as a weight,
    avoid short stretches, prefer higher skill scores, prefer stretches of at most
    120 min), then fair spread of hours (relative to availability). In small steps: the
    objective machinery with one rule first, then one rule per step, each followed by a
@@ -1095,6 +1242,36 @@ After the minimal viable scheduler:
     name (e.g. `<input>_schedule.xlsx`, maybe with a timestamp); `--seed` (same schedule
     again, or an alternative); `--verbose` / `--quiet`; `--version` (scheduler and
     workbook format version); a separate exit code for "no schedule possible" (e.g. 3).
+- [ ] **Type hints on the parameters of all existing tests (user, 2026-11-18; after the
+      soft rules):** one tidy-up commit adding the hints agreed in "How we work" point 5
+      (`monkeypatch: pytest.MonkeyPatch`, `capsys: pytest.CaptureFixture[str]`,
+      `tmp_path: Path`, parametrize values) to the ~30 tests that use fixtures or
+      parametrize (mostly test_main.py and test_debug.py). Until then: new and touched
+      tests get them.
+- [ ] **More checks in `Settings.__post_init__` (user, 2026-11-18; after the soft rules):**
+      Settings is frozen, so a check at creation covers every later use. Since 1.1 it only
+      checks the soft rule names. Candidates: minimum stretch <= maximum stretch, all
+      minutes on the 15-minute grid, days not empty and without duplicates, hour limits
+      >= 1, weights >= 0. The reader keeps its WorkbookError messages (they name the tab
+      and setting); `__post_init__` is the safety net for code that makes Settings
+      directly. Same idea possible for Volunteer and Problem.
+      **Also then (user, 2026-11-18): "empty = default" for every optional setting.** The
+      skill score weight rows (2b) are the first optional rows: a missing row or an empty
+      Value cell both give the default from Settings. Apply the same rule to every other
+      setting that is or becomes optional (required settings stay "empty = error").
+      **Gap found in the review of 2c (2026-11-18): the reader accepts values the solver
+      can't use properly**, so add reader checks (WorkbookError naming the setting, with
+      tests in test_read_settings.py) as well as the `__post_init__` net: (1) minutes not
+      on the 15-minute grid are silently rounded down, e.g. Minimum work stretch 50 ->
+      `50 // 15` = 3 blocks = 45 minutes, a *weaker* rule than typed (hard_rules.py
+      divides with `//`); (2) Minimum/Maximum work stretch 0 are accepted (the reader
+      uses minimum 0 for all three minute settings, kept as it was in the 2c refactor);
+      (3) Maximum work stretch below the minimum is accepted. All three now end in a
+      vague NoScheduleFound or a silently different rule instead of a clear input error.
+- [ ] **Small tidy-up (user, 2026-11-18; after 2c):** read_demand still has its own
+      `int()` with `needed = -1` as a trick; let it use `parse_whole_number(post, text, 0)`
+      with the hint "(a whole number, 0 = closed)" added, like parse_hour_limit adds the
+      "none" hint. Skills stays as it is (a choice of 1/2/3, not a number).
 - [ ] Collect and show all input errors at once instead of stopping at the first one
       (e.g. a list of every typo in the workbook; fits the window program later).
 - [ ] Time step and day boundary configurable (e.g. 30 min blocks, another boundary).
