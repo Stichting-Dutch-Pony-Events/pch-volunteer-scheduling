@@ -19,7 +19,8 @@ KNOWN_SETTINGS = {"Workbook format version", "Time step", "Day boundary", "Days"
                   "Default maximum hours total", "Weight: miss a REALLY-want event",
                   "Weight: miss a like-to-attend event", "Weight: skill score 3",
                   "Weight: skill score 2", "Weight: skill score 1",
-                  "Weight: shift longer than preferred", "Weight: unfair spread of hours"}
+                  "Weight: shift longer than preferred", "Weight: unfair spread of hours",
+                  "Weight: start or end off the half hour"}
 
 REQUIRED_SETTINGS = {"Workbook format version", "Time step", "Day boundary", "Days",
                      "Minimum work stretch", "Maximum work stretch", "Minimum break",
@@ -34,9 +35,10 @@ def read_settings(sheet: Worksheet) -> Settings:
     (comma separated, no duplicates), Minimum work stretch, Maximum work stretch and
     Minimum break (whole numbers, in minutes), Default maximum hours per day and total
     (whole hours or "none"; at most 24 per day, 24 per day of the convention in total,
-    per day not more than the total). Optional: Weight: skill score 1, 2 and 3 (whole
-    numbers of at least 0, points per time step; a missing row or empty Value gives the
-    default in Settings). Every soft rule is switched on. Settings the scheduler does not
+    per day not more than the total). Optional: Weight: skill score 1, 2 and 3 (points
+    per time step) and Weight: start or end off the half hour (points per start or end);
+    whole numbers of at least 0, a missing row or empty Value gives the default in
+    Settings. Every soft rule is switched on. Settings the scheduler does not
     use yet (meals, the other weights) are accepted and ignored. Raises WorkbookError for
     a missing, empty, duplicate or unknown setting, or a value that is not allowed.
     """
@@ -65,30 +67,38 @@ def read_settings(sheet: Worksheet) -> Settings:
         # Put the tab in front of the message from parse_hour_limits.
         raise WorkbookError(f"Settings, {error}") from None
 
-    # 4. Turn it all into Settings.
-    default_settings = Settings()  # only used to look up the defaults for optional settings
+    # 4. The work stretch and break, in minutes.
+    # 5. The soft rule weights, optional: missing or empty = the default in Settings.
+    defaults = Settings()  # only used to look up the defaults of the optional settings
     try:
-        settings = Settings(
-            min_stretch_minutes=parse_whole_number(
-                "Minimum work stretch", unparsed_settings["Minimum work stretch"], 0),
-            max_stretch_minutes=parse_whole_number(
-                "Maximum work stretch", unparsed_settings["Maximum work stretch"], 0),
-            min_break_minutes=parse_whole_number(
-                "Minimum break", unparsed_settings["Minimum break"], 0),
-            days=days,
-            default_max_minutes_per_day=default_per_day,
-            default_max_minutes_total=default_total,
-            weight_skill_score_1=_optional_whole_number_setting(
-                unparsed_settings, "Weight: skill score 1", default_settings.weight_skill_score_1),
-            weight_skill_score_2=_optional_whole_number_setting(
-                unparsed_settings, "Weight: skill score 2", default_settings.weight_skill_score_2),
-            weight_skill_score_3=_optional_whole_number_setting(
-                unparsed_settings, "Weight: skill score 3", default_settings.weight_skill_score_3),
-            soft_rules=frozenset(SOFT_RULE_NAMES))
+        min_stretch = parse_whole_number("Minimum work stretch",
+                                         unparsed_settings["Minimum work stretch"], 0)
+        max_stretch = parse_whole_number("Maximum work stretch",
+                                         unparsed_settings["Maximum work stretch"], 0)
+        min_break = parse_whole_number("Minimum break", unparsed_settings["Minimum break"], 0)
+
+        weight_score_1 = _optional_whole_number_setting(
+            unparsed_settings, "Weight: skill score 1", defaults.weight_skill_score_1)
+        weight_score_2 = _optional_whole_number_setting(
+            unparsed_settings, "Weight: skill score 2", defaults.weight_skill_score_2)
+        weight_score_3 = _optional_whole_number_setting(
+            unparsed_settings, "Weight: skill score 3", defaults.weight_skill_score_3)
+        weight_off_round_time = _optional_whole_number_setting(
+            unparsed_settings, "Weight: start or end off the half hour",
+            defaults.weight_off_round_time)
     except ValueError as error:
+        # Put the tab in front of the message from the parse function.
         raise WorkbookError(f"Settings, {error}") from None
 
-    return settings
+    # 6. Everything together; every soft rule is switched on.
+    return Settings(min_stretch_minutes=min_stretch, max_stretch_minutes=max_stretch,
+                    min_break_minutes=min_break, days=days,
+                    default_max_minutes_per_day=default_per_day,
+                    default_max_minutes_total=default_total,
+                    weight_skill_score_1=weight_score_1, weight_skill_score_2=weight_score_2,
+                    weight_skill_score_3=weight_score_3,
+                    weight_off_round_time=weight_off_round_time,
+                    soft_rules=frozenset(SOFT_RULE_NAMES))
 
 
 def _unparsed_settings(sheet: Worksheet) -> dict[str, str]:
