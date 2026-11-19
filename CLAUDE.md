@@ -1100,7 +1100,15 @@ up to date with `main`):
    test_solver_round_times.py (hand-over choice forced by availability; two tests with
    skill score on show the weights decide). Adding the name makes 9 old tests red on
    purpose (the reader switches every soft rule on; the "Known: ..." message), for the
-   user to fix. Workbook row later (like 2b).
+   user to fix. Workbook row later (like 2b). **Implemented by the user (2026-11-19):** one
+   bool `changes` per volunteer per odd block, two inequalities (not `abs`, which CP-SAT
+   refuses; not `add_abs_equality`, kept linear); no upper-bound constraints (minimising
+   keeps 0,0/1,1 at 0; add them only if we ever print the penalty while solving). Seed
+   check: without the rule tests 1, 3, 5 red for seeds 0-7; the hour test was green by luck
+   (CP-SAT takes the earliest hand-over), so reworked to 07:45 vs 08:00. Hand-overs always
+   count a start and an end together, so Claude added
+   `test_each_start_and_end_off_the_half_hour_costs_the_weight` (work fixed by hand, only
+   this rule, checks `objective_value`; 4 cases): red without either inequality.
    **Soft rules can be switched on/off (user's idea, option B agreed 2026-11-18):**
    `Settings.soft_rules: frozenset[str] = frozenset()` = the soft rules that are on;
    empty by default, so `Settings()` = hard rules only and every test switches on exactly

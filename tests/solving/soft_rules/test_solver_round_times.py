@@ -216,6 +216,49 @@ def test_skill_score_wins_over_round_times_with_a_low_weight():
     assert schedule.assignments == expected
 
 
+# Counting starts and ends separately. In a hand-over (the tests above) a start and an end
+# always come together, so those tests still pass when only one of them is counted. Here
+# one volunteer's work is fixed by hand and only this rule is added (no hard rules), so
+# the lowest penalty CP-SAT can reach is exactly what the rule counts for that stretch.
+
+@pytest.mark.parametrize("first_block, block_after_last, expected_penalty",
+                         [(2, 6, 0),     # 06:30-07:30: start and end round
+                          (1, 6, 10),    # 06:15-07:30: only the start off the half hour
+                          (2, 7, 10),    # 06:30-07:45: only the end off the half hour
+                          (1, 7, 20)])   # 06:15-07:45: both
+def test_each_start_and_end_off_the_half_hour_costs_the_weight(
+        first_block: int, block_after_last: int, expected_penalty: int):
+    """A start on :15/:45 costs the weight, an end too, and both together twice the weight."""
+    # Arrange
+    # Tickets is open in blocks 0-11, so the stretch lies inside the convention and its end
+    # is counted too. Mock Mane works the stretch and nothing else.
+    demand = {}
+    for block in range(0, 12):
+        demand[("Tickets", block)] = 1
+
+    problem = Problem(volunteers=[Volunteer(name="Mock Mane", skills={"Tickets": 1},
+                                            available_blocks=ALL_DAYS)],
+                      posts=[Post("Tickets")], demand=demand, settings=RULES)
+    model = cp_model.CpModel()
+    works = create_variables(model, problem)
+
+    for (volunteer_name, post, block), variable in works.items():
+        if first_block <= block < block_after_last:
+            model.add(variable == 1)
+        else:
+            model.add(variable == 0)
+
+    penalties = add_round_times_penalty(model, problem, works)
+    model.minimize(cp_model.LinearExpr.sum(penalties))
+    solver = cp_model.CpSolver()
+
+    # Act
+    solver.solve(model)
+
+    # Assert
+    assert solver.objective_value == expected_penalty
+
+
 # Switching the rule on and off. The rule checks settings.soft_rules itself, so these
 # tests call it directly (no solving needed); the tests above show that solve() uses it.
 

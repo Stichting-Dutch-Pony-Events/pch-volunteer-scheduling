@@ -14,7 +14,8 @@ from ortools.sat.python import cp_model
 
 from scheduler.debug import debug_print
 from scheduler.model import Problem
-from scheduler.solving.variables import Works
+from scheduler.solving.variables import (Works, blocks_of_convention,
+                                         variables_by_volunteer_and_block, variables_of)
 
 
 def add_skill_score_penalty(model: cp_model.CpModel, problem: Problem,
@@ -61,4 +62,37 @@ def add_round_times_penalty(model: cp_model.CpModel, problem: Problem,
     :45 costs settings.weight_off_round_time, once for the start and once for the end.
     A switch to another post inside a stretch is not a start.
     """
-    raise NotImplementedError
+    # if the rule is not added, then return nothing
+    if ("round_times" not in problem.settings.soft_rules
+        or problem.settings.weight_off_round_time == 0):
+        debug_print("add_round_times_penalty: skipping the rule")
+        return []
+
+    debug_print("add_round_times_penalty: adding the rule")
+
+    lookup = variables_by_volunteer_and_block(works)
+
+    penalties = []
+    for block in blocks_of_convention(problem):
+        if block % 2 == 0:  # Block is even, thus starts at :00 or :30
+            continue
+
+        for volunteer in problem.volunteers:
+            # Collect the variables of every post this volunteer could work in this block.
+            # And the variable of the post before
+            works_before = variables_of(lookup, volunteer.name, block - 1, block)
+            works_now = variables_of(lookup, volunteer.name, block, block + 1)
+            if works_before == [] and works_now == []:
+                continue
+
+            # If the previous block was free, but the current block is worked, that means
+            # a start at :15 or :30, and should be penalised.
+            # If the previous block was worked, but the current block isnt, that means
+            # a stop at :15 or :30, and should be penalised.
+            changes = model.new_bool_var(f"{volunteer.name} starts or ends at {block}")
+            model.add(changes >= sum(works_before) - sum(works_now))
+            model.add(changes >= sum(works_now) - sum(works_before))
+
+            penalties.append(changes * problem.settings.weight_off_round_time)
+
+    return penalties
