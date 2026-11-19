@@ -28,12 +28,15 @@ GOOD_ROWS = [
     ("Weight: skill score 3", 1),
 ]
 
+# The reader switches every soft rule on; update this when a soft rule is added.
+ALL_SOFT_RULES = frozenset({"round_times", "skill_score"})
+
 # What GOOD_ROWS should give.
 GOOD_SETTINGS = Settings(min_stretch_minutes=45, max_stretch_minutes=150,
                          min_break_minutes=20, days=("Friday", "Saturday"),
                          default_max_minutes_per_day=360, default_max_minutes_total=720,
                          weight_skill_score_1=5, weight_skill_score_2=3, weight_skill_score_3=1,
-                         soft_rules=frozenset({"skill_score"}))
+                         soft_rules=ALL_SOFT_RULES)
 
 # The settings that must be there with a value (missing or empty = error).
 REQUIRED_SETTINGS = ["Workbook format version", "Time step", "Day boundary", "Days",
@@ -400,4 +403,4 @@ def test_every_soft_rule_is_switched_on():
     settings = read_settings(sheet)
 
     # Assert
-    assert settings.soft_rules == frozenset({"skill_score"})
+    assert settings.soft_rules == ALL_SOFT_RULES

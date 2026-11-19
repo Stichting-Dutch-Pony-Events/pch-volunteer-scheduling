@@ -1089,6 +1089,18 @@ up to date with `main`):
    limits, Soft rules; tests moved unchanged, checked by script). Review: every step of
    read_settings is covered; the gap found is in the checks, not the tests (see "More
    checks in Settings.__post_init__").
+   **2d, round times (agreed 2026-11-19):** `add_round_times_penalty`, switch name
+   `"round_times"`: every work stretch (any post; a post switch inside a stretch is not a
+   start) that starts or ends on :15/:45 (odd blocks) costs `Settings.weight_off_round_time`
+   (default 10) per start and per end. Grid fixed at 30 min for now ("Shift start step"
+   stays unused). Plan: a yes/no variable per volunteer per odd block, `starts >= work(b) -
+   work(b - 1)` (and the same for ends); minimising keeps it honest. Stubs written by
+   Claude: name in SOFT_RULE_NAMES, the Settings field, the rule stub (not yet called from
+   solve()), 1 test stub in test_model.py, 8 in tests/solving/soft_rules/
+   test_solver_round_times.py (hand-over choice forced by availability; two tests with
+   skill score on show the weights decide). Adding the name makes 9 old tests red on
+   purpose (the reader switches every soft rule on; the "Known: ..." message), for the
+   user to fix. Workbook row later (like 2b).
    **Soft rules can be switched on/off (user's idea, option B agreed 2026-11-18):**
    `Settings.soft_rules: frozenset[str] = frozenset()` = the soft rules that are on;
    empty by default, so `Settings()` = hard rules only and every test switches on exactly

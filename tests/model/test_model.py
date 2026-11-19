@@ -33,6 +33,18 @@ def test_default_skill_score_weights_match_the_workbook():
     assert settings.weight_skill_score_1 == 6
 
 
+def test_default_round_times_weight_is_10_per_start_or_end():
+    """The default penalty for a start or end on :15 or :45 is 10 points."""
+    # Arrange
+    # (nothing to arrange: we look at a fresh Settings with all defaults)
+
+    # Act
+    settings = Settings()
+
+    # Assert
+    assert settings.weight_off_round_time == 10
+
+
 def test_unknown_soft_rule_name_raises_value_error():
     """A name in Settings.soft_rules that is not a soft rule raises ValueError."""
     # Arrange
@@ -42,7 +54,7 @@ def test_unknown_soft_rule_name_raises_value_error():
     # (Act and Assert are in the same expression)
 
     # Assert
-    with pytest.raises(ValueError, match="skil_score.*Known: skill_score"):
+    with pytest.raises(ValueError, match="skil_score.*Known:"):
         Settings(soft_rules=frozenset({"skil_score"}))
 
 

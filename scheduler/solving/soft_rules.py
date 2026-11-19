@@ -51,3 +51,14 @@ def add_skill_score_penalty(model: cp_model.CpModel, problem: Problem,
             penalties.append(variable * weight)
 
     return penalties
+
+
+def add_round_times_penalty(model: cp_model.CpModel, problem: Problem,
+                            works: Works) -> list[cp_model.LinearExpr]:
+    """Soft rule: work stretches start and end on the hour or half hour.
+
+    Every work stretch (continuous work, also across posts) that starts or ends on :15 or
+    :45 costs settings.weight_off_round_time, once for the start and once for the end.
+    A switch to another post inside a stretch is not a start.
+    """
+    raise NotImplementedError
