@@ -40,7 +40,10 @@ def solve(problem: Problem, time_limit_seconds: int | None = None) -> Schedule:
 
 def _solve_and_read_schedule(model: cp_model.CpModel, works: variables.Works,
                              time_limit_seconds: int | None = None) -> Schedule:
-    """Run the solver and turn every variable set to 1 into an assignment."""
+    """Run the solver and turn every variable set to 1 into an assignment;
+    the Schedule also says whether CP-SAT proved it optimal, its penalty
+    and lowest penalty possible.
+    """
     # The gap between this line and the next output is CP-SAT's own search time.
     debug_print("_solve_and_read_schedule: running CP-SAT")
     solver = make_cp_sat_solver(time_limit_seconds=time_limit_seconds)
@@ -49,11 +52,16 @@ def _solve_and_read_schedule(model: cp_model.CpModel, works: variables.Works,
     # Stop here if CP-SAT found no schedule (see raise_if_no_schedule).
     raise_if_no_schedule(status=status, time_limit_seconds=time_limit_seconds)
 
+    # Every variable CP-SAT set to 1 is an assignment.
     assignments = set()
     for key, var in works.items():
         if solver.value(var) == 1:
             assignments.add(key)
-    return Schedule(assignments=assignments)
+
+    return Schedule(assignments=assignments,
+                    proven_optimal=(status == cp_model.OPTIMAL),
+                    penalty=round(solver.objective_value),
+                    lowest_possible_penalty=round(solver.best_objective_bound))
 
 
 def make_cp_sat_solver(time_limit_seconds: int | None) -> cp_model.CpSolver:
