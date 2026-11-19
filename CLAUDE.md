@@ -1112,6 +1112,29 @@ up to date with `main`):
    count a start and an end together, so Claude added
    `test_each_start_and_end_off_the_half_hour_costs_the_weight` (work fixed by hand, only
    this rule, checks `objective_value`; 4 cases): red without either inequality.
+   **Real-data runs with round times (2026-11-19):** PCH 0% off-grid starts/ends (was
+   29%), CP-SAT 62 s (optimal); UKPC hit the 10 min limit (round times is its first real
+   objective). Totals in DATA_NOTES.md, times in RUN_TIMES.md. Side effect: more stretches
+   of exactly 60 min; next soft rule = fewer, longer stretches (a penalty per stretch).
+   **Paused after 2d (user, 2026-11-19):** `feature/soft-rules` merged into `develop` (PR
+   #6). Next: branch **`feature/solver-progress`**, then a new branch from `develop` for the
+   next soft rule.
+   **Solver progress design (agreed 2026-11-19):** (1) `Schedule` gets `proven_optimal:
+   bool = False`, `penalty: int | None = None` (CP-SAT objective_value),
+   `lowest_possible_penalty: int | None = None` (best_objective_bound); the solver fills
+   them (`status == OPTIMAL`). (2) Final message: optimal "Solved, this took 1 min 5 s: the
+   best possible schedule (penalty 1,234)."; limit reached "Time limit reached after 10 min
+   8 s. This is the best schedule found (penalty 1,234); the best possible has a penalty
+   of at least 1,100 (at most 12% better). A longer --time-limit may find a better one.";
+   stopped by Ctrl+C (solving took clearly less than the limit) the same starting "Stopped
+   after ..." without the advice. Percentage = (penalty - lowest) / penalty, left out when
+   the penalty is 0. (3) A CpSolverSolutionCallback reports only the first schedule:
+   `solve()` gets an optional `on_first_schedule` function (default None, solve() itself
+   stays silent); the command line prints "Found a first schedule after 12 s (penalty
+   2,345); now looking for better ones. Press Ctrl+C to stop and keep the best schedule so
+   far." Every improvement: later, behind --verbose. (4) Ctrl+C: CP-SAT's
+   `catch_sigint_signal` is on by default (checked, 9.15), it stops like a time limit and
+   keeps the best schedule; the user tries it by hand on UKPC (not testable reliably).
    **Soft rules can be switched on/off (user's idea, option B agreed 2026-11-18):**
    `Settings.soft_rules: frozenset[str] = frozenset()` = the soft rules that are on;
    empty by default, so `Settings()` = hard rules only and every test switches on exactly
