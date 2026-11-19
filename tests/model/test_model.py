@@ -79,7 +79,7 @@ def test_schedule_made_by_hand_is_not_proven_optimal_and_has_no_penalty():
     schedule = Schedule(assignments=set())
 
     # Assert
-    assert schedule.proven_optimal == False
+    assert schedule.proven_optimal is False
     assert schedule.penalty is None
     assert schedule.lowest_possible_penalty is None
 
