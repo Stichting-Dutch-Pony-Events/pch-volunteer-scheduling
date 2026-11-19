@@ -12,6 +12,7 @@ from pathlib import Path
 
 from scheduler.debug import set_debug_time
 from scheduler.errors import NoScheduleFound, TimeLimitReached, WorkbookError
+from scheduler.model import Schedule
 from scheduler.reading.workbook import read_problem
 from scheduler.solving.checks import find_warnings
 from scheduler.solving.solver import solve
@@ -149,6 +150,18 @@ def format_duration(seconds: float) -> str:
     minutes = whole_seconds // 60
     rest = whole_seconds % 60
     return f"{minutes} min {rest} s"
+
+
+def solved_message(schedule: Schedule, solving_seconds: float, time_limit_seconds: int) -> str:
+    """The line printed after solving: how long it took and how good the schedule is.
+
+    Proven optimal: "Solved, this took ...: the best possible schedule (penalty N)."
+    Otherwise CP-SAT stopped early: "Time limit reached after ..." when solving took at
+    least the time limit, else "Stopped after ..." (Ctrl+C); then the penalty, the lowest
+    possible penalty and how much better the best possible could be. Public because it is
+    tested on its own.
+    """
+    raise NotImplementedError
 
 
 def _say(message: str) -> None:
