@@ -387,7 +387,7 @@ def test_optimal_schedule_says_it_is_the_best_possible():
     # Arrange
     schedule = Schedule(assignments=set(), proven_optimal=True,
                         penalty=24, lowest_possible_penalty=24)
-    expected = "Solved, this took 1 min 5 s: the best possible schedule (penalty 24)."
+    expected = "Solved, this took 1 min 5 s. This is the best possible schedule (penalty 24)."
 
     # Act
     message = command_line.solved_message(schedule=schedule, solving_seconds=65,

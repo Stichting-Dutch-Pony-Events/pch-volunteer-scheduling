@@ -115,7 +115,7 @@ def main(arguments: list[str]) -> int:
         solving_started = time.perf_counter()   # a stopwatch: only differences matter
         schedule = solve(problem=problem, time_limit_seconds=options.time_limit * 60)
         solving_seconds = time.perf_counter() - solving_started
-        _say(f"Solved, this took {format_duration(solving_seconds)}")
+        _say(solved_message(schedule, solving_seconds, options.time_limit * 60))
         _say(f"Writing {output_path}")
         write_output(problem=problem, schedule=schedule, path=output_path)
     except WorkbookError as error:
@@ -155,13 +155,48 @@ def format_duration(seconds: float) -> str:
 def solved_message(schedule: Schedule, solving_seconds: float, time_limit_seconds: int) -> str:
     """The line printed after solving: how long it took and how good the schedule is.
 
-    Proven optimal: "Solved, this took ...: the best possible schedule (penalty N)."
+    Proven optimal: "Solved, this took .... This is the best possible schedule (penalty N)."
     Otherwise CP-SAT stopped early: "Time limit reached after ..." when solving took at
-    least the time limit, else "Stopped after ..." (Ctrl+C); then the penalty, the lowest
-    possible penalty and how much better the best possible could be. Public because it is
-    tested on its own.
+    least the time limit (with the advice to use a longer --time-limit), else "Stopped
+    after ..." (Ctrl+C); then the penalty, the lowest possible penalty and how much better
+    the best possible could be ("less than 1%" below 1%, left out when the lowest possible
+    penalty is 0). Penalties get a thousands separator (1,234). Public because it is tested
+    on its own.
     """
-    raise NotImplementedError
+    # Proven optimal: a short message, nothing more to say.
+    if schedule.proven_optimal:
+        return (f"Solved, this took {format_duration(solving_seconds)}. "
+                f"This is the best possible schedule (penalty {schedule.penalty:,}).")
+
+    # solving_seconds includes building the model, so a run that reached the time limit
+    # always took at least that long; less means the user stopped it with Ctrl+C.
+    if solving_seconds >= time_limit_seconds:
+        how_it_ended = f"Time limit reached after {format_duration(solving_seconds)}. "
+        advice = " A longer --time-limit may find a better one."
+    else:
+        how_it_ended = f"Stopped after {format_duration(solving_seconds)}. "
+        advice = ""
+
+    best_found = f"This is the best schedule found (penalty {schedule.penalty:,}); "
+
+    # A lowest possible penalty of 0 means CP-SAT has proven nothing yet: no percentage.
+    if schedule.lowest_possible_penalty == 0:
+        best_possible = "the best possible has a penalty of at least 0."
+    else:
+        # How much lower the best possible penalty could be, as a percentage of this one.
+        difference = schedule.penalty - schedule.lowest_possible_penalty
+        percentage = (difference / schedule.penalty) * 100
+
+        # Rounded, this would say "at most 0% better".
+        if percentage < 1.0:
+            best_possible = (f"the best possible has a penalty of at least "
+                             f"{schedule.lowest_possible_penalty:,} (less than 1% better).")
+        else:
+            best_possible = (f"the best possible has a penalty of at least "
+                             f"{schedule.lowest_possible_penalty:,} "
+                             f"(at most {round(percentage)}% better).")
+
+    return how_it_ended + best_found + best_possible + advice
 
 
 def _say(message: str) -> None:

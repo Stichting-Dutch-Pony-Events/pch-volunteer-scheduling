@@ -1122,8 +1122,8 @@ up to date with `main`):
    **Solver progress design (agreed 2026-11-19):** (1) `Schedule` gets `proven_optimal:
    bool = False`, `penalty: int | None = None` (CP-SAT objective_value),
    `lowest_possible_penalty: int | None = None` (best_objective_bound); the solver fills
-   them (`status == OPTIMAL`). (2) Final message: optimal "Solved, this took 1 min 5 s: the
-   best possible schedule (penalty 1,234)."; limit reached "Time limit reached after 10 min
+   them (`status == OPTIMAL`). (2) Final message: optimal "Solved, this took 1 min 5 s.
+   This is the best possible schedule (penalty 1,234)." (user's wording); limit reached "Time limit reached after 10 min
    8 s. This is the best schedule found (penalty 1,234); the best possible has a penalty
    of at least 1,100 (at most 12% better). A longer --time-limit may find a better one.";
    stopped by Ctrl+C (solving took clearly less than the limit) the same starting "Stopped
