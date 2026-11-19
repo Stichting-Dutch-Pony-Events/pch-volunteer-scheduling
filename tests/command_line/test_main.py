@@ -385,29 +385,35 @@ def test_time_limit_reached_prints_a_clear_message(tmp_path, monkeypatch, capsys
 def test_optimal_schedule_says_it_is_the_best_possible():
     """A proven optimal schedule: "Solved", the time it took and its penalty."""
     # Arrange
-    # Schedule(assignments=set(), proven_optimal=True, penalty=24,
-    #          lowest_possible_penalty=24), 65 seconds, limit 600.
-    # Expected: "Solved, this took 1 min 5 s: the best possible schedule (penalty 24)."
+    schedule = Schedule(assignments=set(), proven_optimal=True,
+                        penalty=24, lowest_possible_penalty=24)
+    expected = "Solved, this took 1 min 5 s: the best possible schedule (penalty 24)."
 
     # Act
+    message = command_line.solved_message(schedule=schedule, solving_seconds=65,
+                                          time_limit_seconds=600)
 
     # Assert
-    pytest.skip("not written yet")
+    assert message == expected
 
 
 def test_time_limit_reached_gives_the_whole_message():
     """Not optimal after the whole time limit: penalty, lowest possible, percentage, advice."""
     # Arrange
-    # Not optimal, penalty 1234, lowest possible 1100, 608 seconds, limit 600.
-    # (1234 - 1100) / 1234 = 10.9%, rounded to 11. Expected: "Time limit reached after
-    # 10 min 8 s. This is the best schedule found (penalty 1,234); the best possible has a
-    # penalty of at least 1,100 (at most 11% better). A longer --time-limit may find a
-    # better one."
+    # Not optimal, 608 seconds with a limit of 600 = the limit was reached.
+    # (1234 - 1100) / 1234 = 10.9%, rounded to 11.
+    schedule = Schedule(assignments=set(), proven_optimal=False,
+                        penalty=1234, lowest_possible_penalty=1100)
+    expected = ("Time limit reached after 10 min 8 s. This is the best schedule found "
+                "(penalty 1,234); the best possible has a penalty of at least 1,100 "
+                "(at most 11% better). A longer --time-limit may find a better one.")
 
     # Act
+    message = command_line.solved_message(schedule=schedule, solving_seconds=608,
+                                          time_limit_seconds=600)
 
     # Assert
-    pytest.skip("not written yet")
+    assert message == expected
 
 
 def test_stopped_before_the_time_limit_says_stopped_without_advice():
@@ -416,44 +422,69 @@ def test_stopped_before_the_time_limit_says_stopped_without_advice():
     # As above, but 182 seconds. Expected: "Stopped after 3 min 2 s. This is the best
     # schedule found (penalty 1,234); the best possible has a penalty of at least 1,100
     # (at most 11% better)."
+    schedule = Schedule(assignments=set(), proven_optimal=False,
+                        penalty=1234, lowest_possible_penalty=1100)
+    expected = ("Stopped after 3 min 2 s. This is the best schedule found (penalty 1,234); "
+                "the best possible has a penalty of at least 1,100 (at most 11% better).")
 
     # Act
+    message = command_line.solved_message(schedule=schedule, solving_seconds=182,
+                                          time_limit_seconds=600)
 
     # Assert
-    pytest.skip("not written yet")
+    assert message == expected
 
 
 def test_solving_exactly_as_long_as_the_time_limit_counts_as_limit_reached():
     """Solving took exactly the time limit: the message starts with "Time limit reached"."""
     # Arrange
     # Not optimal, 600 seconds, limit 600.
+    schedule = Schedule(assignments=set(), proven_optimal=False,
+                        penalty=1234, lowest_possible_penalty=1100)
+    expected = ("Time limit reached after 10 min 0 s. This is the best schedule found "
+                "(penalty 1,234); the best possible has a penalty of at least 1,100 "
+                "(at most 11% better). A longer --time-limit may find a better one.")
 
     # Act
+    message = command_line.solved_message(schedule=schedule, solving_seconds=600,
+                                          time_limit_seconds=600)
 
     # Assert
-    pytest.skip("not written yet")
+    assert message == expected
 
 
 def test_less_than_1_percent_better_is_said_in_words():
     """Below 1%, the message says "less than 1% better" instead of "at most 0% better"."""
     # Arrange
     # Not optimal, penalty 1000, lowest possible 998 (0.2%).
+    schedule = Schedule(assignments=set(), proven_optimal=False,
+                        penalty=1000, lowest_possible_penalty=998)
+    expected = ("Stopped after 3 min 2 s. This is the best schedule found (penalty 1,000); "
+                "the best possible has a penalty of at least 998 (less than 1% better).")
 
     # Act
+    message = command_line.solved_message(schedule=schedule, solving_seconds=182,
+                                          time_limit_seconds=600)
 
     # Assert
-    pytest.skip("not written yet")
+    assert message == expected
 
 
 def test_lowest_possible_penalty_0_gives_no_percentage():
     """A lowest possible penalty of 0 proves nothing yet, so no percentage is shown."""
     # Arrange
-    # Not optimal, penalty 1234, lowest possible 0: "at least 0" and no "%".
+    # Not optimal, penalty 1000, lowest possible 0: "at least 0" and no "%".
+    schedule = Schedule(assignments=set(), proven_optimal=False,
+                        penalty=1000, lowest_possible_penalty=0)
+    expected = ("Stopped after 3 min 2 s. This is the best schedule found (penalty 1,000); "
+                "the best possible has a penalty of at least 0.")
 
     # Act
+    message = command_line.solved_message(schedule=schedule, solving_seconds=182,
+                                          time_limit_seconds=600)
 
     # Assert
-    pytest.skip("not written yet")
+    assert message == expected
 
 
 def test_main_prints_the_message_after_solving(tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
@@ -462,13 +493,24 @@ def test_main_prints_the_message_after_solving(tmp_path: Path, monkeypatch: pyte
     # Arrange
     # Fake solve returns a not proven optimal schedule (penalty 24, lowest possible 20),
     # fake write_output does nothing. The fake returns at once, so the message starts with
-    # "Stopped after"; check only the part every variant has:
-    # "This is the best schedule found (penalty 24)".
+    # "Stopped after"; check only the part every variant has.
+    def fake_solve(problem: Problem, time_limit_seconds: int | None) -> Schedule:
+        return Schedule(assignments=set(), proven_optimal=False,
+                        penalty=24, lowest_possible_penalty=20)
+
+    def fake_write_output(problem: Problem, schedule: Schedule, path: Path) -> None:
+        pass   # nothing to write: only the printed message matters here
+
+    monkeypatch.setattr(command_line, "solve", fake_solve)
+    monkeypatch.setattr(command_line, "write_output", fake_write_output)
+    output = tmp_path / "output.xlsx"
 
     # Act
+    command_line.main([str(TEST_WORKBOOK), str(output)])
 
     # Assert
-    pytest.skip("not written yet")
+    printed = capsys.readouterr().out
+    assert "This is the best schedule found (penalty 24)" in printed
 
 
 # --- debug output ---
