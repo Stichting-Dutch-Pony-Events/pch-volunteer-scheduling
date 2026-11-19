@@ -75,7 +75,10 @@ likes to write tests (and often code) themselves; Claude reviews and explains.
    **Line length: soft limit of 100 characters** (not PEP 8's 79). The user has a
    ruler at 100 in their local `.vscode/settings.json` (not in git), which also sets
    `files.eol` to CRLF and trims trailing whitespace on save.
-6. Files use **Windows line endings (CRLF)**; keep them that way when editing. A
+6. Files use **Windows line endings (CRLF)**; keep them that way when editing. Enforced
+   since 2026-11-19 by `.editorconfig` (CRLF on save, with the "EditorConfig for VS Code"
+   extension) and `.gitattributes` (`* text=auto eol=crlf`: git stores LF, checks out
+   CRLF; xlsx/ods/png binary). A
    Linux-based shell can show line-ending noise in `git status` (e.g. LICENSE) that is
    not a real change; use `git -c core.autocrlf=true status`.
 7. The `.venv` is a Windows venv: the user runs the tests in VS Code
