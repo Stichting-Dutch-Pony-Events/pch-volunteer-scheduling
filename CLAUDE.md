@@ -1135,6 +1135,23 @@ up to date with `main`):
    far." Every improvement: later, behind --verbose. (4) Ctrl+C: CP-SAT's
    `catch_sigint_signal` is on by default (checked, 9.15), it stops like a time limit and
    keeps the best schedule; the user tries it by hand on UKPC (not testable reliably).
+   **Done on `feature/solver-progress` (2026-11-19), 449 green:** step 1 (Schedule fields,
+   filled in by `_solve_and_read_schedule`; tests in tests/solving/test_solver_result.py)
+   and step 2 (`solved_message(schedule, solving_seconds, time_limit_seconds)` in
+   `__main__.py`, called by `main` instead of the old "Solved" line; parts named
+   how_it_ended / best_found / best_possible / advice; 7 tests in test_main.py section "the
+   message after solving"). Last commit `a0f23d8` (includes the comments and renames).
+   **Continue here next session:** step 3, the solution callback: propose the tests first
+   (a `CpSolverSolutionCallback` subclass in solver.py that calls `on_first_schedule` once,
+   with the seconds and penalty; `solve(problem, time_limit_seconds=None,
+   on_first_schedule=None)`; the command line passes a function that `_say`s "Found a first
+   schedule after 12 s (penalty 2,345); now looking for better ones. Press Ctrl+C to stop
+   and keep the best schedule so far."). Then step 4: the two upper-bound constraints in
+   `add_round_times_penalty` (`changes <= before + now`, `changes <= 2 - before - now`) so
+   a non-optimal schedule doesn't show a too-high penalty. Then step 5: the user tries
+   Ctrl+C and the messages on UKPC (real data: permission each time, times in
+   RUN_TIMES.md), README/CLAUDE status, PR into `develop`. After that: back to the soft
+   rules on a new branch (next rule: fewer, longer stretches).
    **Soft rules can be switched on/off (user's idea, option B agreed 2026-11-18):**
    `Settings.soft_rules: frozenset[str] = frozenset()` = the soft rules that are on;
    empty by default, so `Settings()` = hard rules only and every test switches on exactly

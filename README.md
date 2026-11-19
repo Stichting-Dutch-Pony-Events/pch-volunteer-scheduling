@@ -58,8 +58,11 @@ Version 1.1 makes the schedule nicer and easier to read.
 - [x] Tidy the code into smaller parts (reading, solving, writing)
 - [ ] Nicer schedules: shifts start and end on the hour or half hour, staying at one
       post, preferring what people are good at, shifts of preferably at most 2 hours,
-      and a fair spread of work over the volunteers
-- [ ] A nicer command line: progress while solving, a summary after the run
+      and a fair spread of work over the volunteers (done so far: preferring what people
+      are good at, and shifts that start and end on the hour or half hour)
+- [ ] A nicer command line: progress while solving, a summary after the run (done so
+      far: it says whether the schedule is the best possible, and if not, how much
+      better the best possible could be)
 - [ ] Individual schedules in the output: per volunteer their shifts
 
 ### Later
