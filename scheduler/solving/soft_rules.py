@@ -4,7 +4,8 @@ A soft rule may be broken, but each time it costs penalty points; the solver loo
 the schedule with the fewest points in total. Each add_..._penalty function adds the
 helper variables it needs to the model and returns its penalty terms, already multiplied
 by the rule's weight from the settings; solve() adds them all up and asks CP-SAT to
-minimise the sum. Weights are whole points per time block (15 minutes).
+minimise the sum. Weights are whole points: per time block of 15 minutes (skill score)
+or per start or end of a work stretch (round times).
 
 They all take the same arguments as the hard rules: the model, the problem, and the works
 variables made by create_variables (see Works in variables.py). solve() only calls a rule
@@ -62,9 +63,9 @@ def add_round_times_penalty(model: cp_model.CpModel, problem: Problem,
     :45 costs settings.weight_off_round_time, once for the start and once for the end.
     A switch to another post inside a stretch is not a start.
     """
-    # if the rule is not added, then return nothing
-    if ("round_times" not in problem.settings.soft_rules
-        or problem.settings.weight_off_round_time == 0):
+    # if the rule is not added (or costs nothing), then return nothing
+    weight = problem.settings.weight_off_round_time
+    if "round_times" not in problem.settings.soft_rules or weight == 0:
         debug_print("add_round_times_penalty: skipping the rule")
         return []
 
@@ -78,21 +79,21 @@ def add_round_times_penalty(model: cp_model.CpModel, problem: Problem,
             continue
 
         for volunteer in problem.volunteers:
-            # Collect the variables of every post this volunteer could work in this block.
-            # And the variable of the post before
+            # Collect the variables of every post this volunteer could work in this block,
+            # and in the block before.
             works_before = variables_of(lookup, volunteer.name, block - 1, block)
             works_now = variables_of(lookup, volunteer.name, block, block + 1)
             if works_before == [] and works_now == []:
                 continue
 
             # If the previous block was free, but the current block is worked, that means
-            # a start at :15 or :30, and should be penalised.
+            # a start at :15 or :45, and should be penalised.
             # If the previous block was worked, but the current block isnt, that means
-            # a stop at :15 or :30, and should be penalised.
+            # a stop at :15 or :45, and should be penalised.
             changes = model.new_bool_var(f"{volunteer.name} starts or ends at {block}")
             model.add(changes >= sum(works_before) - sum(works_now))
             model.add(changes >= sum(works_now) - sum(works_before))
 
-            penalties.append(changes * problem.settings.weight_off_round_time)
+            penalties.append(changes * weight)
 
     return penalties

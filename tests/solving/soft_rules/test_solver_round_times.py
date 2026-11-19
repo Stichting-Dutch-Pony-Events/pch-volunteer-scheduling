@@ -58,24 +58,27 @@ def test_handover_on_the_half_hour_is_preferred_over_a_quarter_past():
     assert schedule.assignments == expected
 
 
-def test_handover_on_the_hour_is_preferred_over_a_quarter_past():
-    """Of a hand-over at 07:00 or 07:15, the solver picks 07:00 (the hour is round too)."""
+def test_handover_on_the_hour_is_preferred_over_a_quarter_to():
+    """Of a hand-over at 07:45 or 08:00, the solver picks 08:00 (the hour is round too)."""
     # Arrange
-    # Mock Mane available blocks 0-4, Testy Hooves blocks 4-11: hand-over at block 4
-    # (07:00) or 5 (07:15). Expected: Mock Mane 0-3, Testy Hooves 4-11.
+    # Tickets needs 1 in blocks 0-15 (06:00-10:00). Mock Mane available blocks 0-7,
+    # Testy Hooves blocks 7-15: hand-over at block 7 (07:45) or 8 (08:00).
+    # Expected: Mock Mane 0-7, Testy Hooves 8-15.
+    # The off-grid choice comes first on purpose: without an objective CP-SAT takes the
+    # earliest hand-over, so with 07:00 or 07:15 this test was green without the rule.
     volunteers = [Volunteer(name="Mock Mane", skills={"Tickets": 1},
-                            available_blocks=set(range(0, 5))),
+                            available_blocks=set(range(0, 8))),
                   Volunteer(name="Testy Hooves", skills={"Tickets": 1},
-                            available_blocks=set(range(4, 12)))]
+                            available_blocks=set(range(7, 16)))]
 
     demand = {}
-    for block in range(0, 12):
+    for block in range(0, 16):
         demand[("Tickets", block)] = 1
 
     expected = set()
-    for block in range(0, 4):
+    for block in range(0, 8):
         expected.add(("Mock Mane", "Tickets", block))
-    for block in range(4, 12):
+    for block in range(8, 16):
         expected.add(("Testy Hooves", "Tickets", block))
 
     problem = Problem(volunteers=volunteers, posts=[Post("Tickets")],
