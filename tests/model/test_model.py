@@ -70,6 +70,20 @@ def test_volunteer_has_no_hour_limits_unless_given():
     assert (volunteer.max_minutes_per_day, volunteer.max_minutes_total) == (None, None)
 
 
+def test_schedule_made_by_hand_is_not_proven_optimal_and_has_no_penalty():
+    """A Schedule made without the solver's information: not proven optimal, no penalties."""
+    # Arrange
+    # (No arrange needed)
+
+    # Act
+    schedule = Schedule(assignments=set())
+
+    # Assert
+    assert schedule.proven_optimal == False
+    assert schedule.penalty is None
+    assert schedule.lowest_possible_penalty is None
+
+
 def test_consecutive_blocks_form_one_work_stretch():
     """Blocks 0-3 at one post form a single work stretch (0, 4)."""
     # Arrange

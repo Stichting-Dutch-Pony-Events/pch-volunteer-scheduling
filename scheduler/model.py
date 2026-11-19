@@ -111,6 +111,12 @@ class Schedule:
     """The solver's answer: who works where in which block."""
     # (volunteer_name, post, block)
     assignments: set[tuple[str, str, int]]
+    # Filled in by the solver: True when CP-SAT proved no schedule has a lower penalty.
+    proven_optimal: bool = False
+    # The total penalty of this schedule (None = not made by the solver).
+    penalty: int | None = None
+    # No schedule can have a lower penalty than this (CP-SAT's best bound).
+    lowest_possible_penalty: int | None = None
 
     def people_at(self, post: str, block: int) -> set[str]:
         """Names of the volunteers working at this post during this block."""
