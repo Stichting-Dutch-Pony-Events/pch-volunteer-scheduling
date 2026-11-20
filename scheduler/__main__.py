@@ -152,6 +152,14 @@ def format_duration(seconds: float) -> str:
     return f"{minutes} min {rest} s"
 
 
+def first_schedule_message(seconds: float, penalty: int) -> str:
+    """The line printed as soon as CP-SAT finds its first schedule, e.g. "Found a first
+    schedule after 12.0 s (penalty 2,345); now looking for better ones. Press Ctrl+C to stop
+    and keep the best schedule so far." Public because it is tested on its own.
+    """
+    raise NotImplementedError
+
+
 def solved_message(schedule: Schedule, solving_seconds: float, time_limit_seconds: int) -> str:
     """The line printed after solving: how long it took and how good the schedule is.
 

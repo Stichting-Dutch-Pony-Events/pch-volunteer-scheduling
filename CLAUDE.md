@@ -1152,6 +1152,16 @@ up to date with `main`):
    Ctrl+C and the messages on UKPC (real data: permission each time, times in
    RUN_TIMES.md), README/CLAUDE status, PR into `develop`. After that: back to the soft
    rules on a new branch (next rule: fewer, longer stretches).
+   **Step 3 tests written by Claude (2026-11-19, on request):** stubs `solve(...,
+   on_first_schedule: Callable[[float, int], None] | None = None)` (not used yet, TODO) and
+   `first_schedule_message(seconds, penalty)` in `__main__.py` (NotImplementedError); 4 tests
+   in test_solver_result.py section "the first schedule" (once / penalty / seconds / nothing
+   when no schedule, the last a green guard) and 3 in test_main.py (message under and over a
+   minute, main prints it between "Solving" and the solved message). 6 red. The "once" test
+   needs 6 volunteers and 2 posts: with fewer, CP-SAT finds the best schedule at once (tried;
+   this one found >= 5 schedules in 20 of 20 runs). Trial in a scratch copy: all new tests
+   green; red with a reporter that reports every schedule. Expected after implementing: the 5
+   tests with an old fake solve without `on_first_schedule` go red (user fixes them).
    **Soft rules can be switched on/off (user's idea, option B agreed 2026-11-18):**
    `Settings.soft_rules: frozenset[str] = frozenset()` = the soft rules that are on;
    empty by default, so `Settings()` = hard rules only and every test switches on exactly

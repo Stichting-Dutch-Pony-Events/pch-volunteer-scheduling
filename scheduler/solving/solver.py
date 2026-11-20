@@ -1,3 +1,5 @@
+from collections.abc import Callable
+
 from ortools.sat.python import cp_model
 
 from scheduler.debug import debug_print
@@ -6,12 +8,17 @@ from scheduler.model import Problem, Schedule
 from scheduler.solving import checks, hard_rules, soft_rules, variables
 
 
-def solve(problem: Problem, time_limit_seconds: int | None = None) -> Schedule:
+def solve(problem: Problem, time_limit_seconds: int | None = None,
+          on_first_schedule: Callable[[float, int], None] | None = None) -> Schedule:
     """Find a schedule that meets all hard rules, using the OR-Tools CP-SAT solver.
 
     time_limit_seconds: stop CP-SAT after this many seconds (None = no limit); if it found
     nothing by then, TimeLimitReached is raised.
+    on_first_schedule: called once, as soon as CP-SAT finds its first schedule, with the
+    seconds CP-SAT has been searching and that schedule's penalty (None = nobody to tell).
+    solve() itself prints nothing; the caller decides what to do with it.
     """
+    # TODO (step 3): pass on_first_schedule on to CP-SAT via a solution callback.
     # Check problem for obvious unsolvable situations
     checks.check_problem(problem)
 

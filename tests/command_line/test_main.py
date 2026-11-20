@@ -2,6 +2,7 @@ import re
 import shutil
 import subprocess
 import sys
+from collections.abc import Callable
 from pathlib import Path
 
 import openpyxl
@@ -511,6 +512,67 @@ def test_main_prints_the_message_after_solving(tmp_path: Path, monkeypatch: pyte
     # Assert
     printed = capsys.readouterr().out
     assert "This is the best schedule found (penalty 24)" in printed
+
+
+# --- the first schedule ---
+# While CP-SAT searches for better schedules, one line says a first schedule was found and
+# that Ctrl+C stops the search but keeps the best schedule so far.
+
+def test_first_schedule_message_under_a_minute():
+    """Under a minute, the first schedule line gives the seconds with one decimal."""
+    # Arrange
+    # (nothing to arrange: the seconds and the penalty are given straight to the function)
+
+    # Act
+    message = command_line.first_schedule_message(seconds=12.0, penalty=2345)
+
+    # Assert
+    assert message == ("Found a first schedule after 12.0 s (penalty 2,345); now looking for "
+                       "better ones. Press Ctrl+C to stop and keep the best schedule so far.")
+
+
+def test_first_schedule_message_over_a_minute():
+    """From a minute on, the first schedule line gives minutes and seconds."""
+    # Arrange
+    # (nothing to arrange: the seconds and the penalty are given straight to the function)
+
+    # Act
+    message = command_line.first_schedule_message(seconds=75.0, penalty=24)
+
+    # Assert
+    assert message == ("Found a first schedule after 1 min 15 s (penalty 24); now looking for "
+                       "better ones. Press Ctrl+C to stop and keep the best schedule so far.")
+
+
+def test_main_prints_the_first_schedule_line_while_solving(
+        tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]):
+    """main prints the first schedule line after "Solving" and before the solved message."""
+    # Arrange
+    # Fake solve does what CP-SAT would do: report a first schedule (12 s, penalty 2,345)
+    # through the function main gives it, then return a schedule. Fake write_output does
+    # nothing.
+    def fake_solve(problem: Problem, time_limit_seconds: int | None,
+                   on_first_schedule: Callable[[float, int], None]) -> Schedule:
+        on_first_schedule(12.0, 2345)
+        return Schedule(assignments=set(), proven_optimal=True,
+                        penalty=2000, lowest_possible_penalty=2000)
+
+    def fake_write_output(problem: Problem, schedule: Schedule, path: Path) -> None:
+        pass   # nothing to write: only the printed lines matter here
+
+    monkeypatch.setattr(command_line, "solve", fake_solve)
+    monkeypatch.setattr(command_line, "write_output", fake_write_output)
+    output = tmp_path / "output.xlsx"
+
+    # Act
+    command_line.main([str(TEST_WORKBOOK), str(output)])
+
+    # Assert
+    printed = capsys.readouterr().out
+    solving_at = printed.index("Solving")
+    first_schedule_at = printed.index("Found a first schedule after 12.0 s (penalty 2,345)")
+    solved_at = printed.index("This is the best possible schedule (penalty 2,000)")
+    assert solving_at < first_schedule_at < solved_at
 
 
 # --- debug output ---
