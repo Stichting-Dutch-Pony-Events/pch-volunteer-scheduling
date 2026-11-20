@@ -307,7 +307,8 @@ def _remember_time_limit(monkeypatch: pytest.MonkeyPatch) -> dict[str, int | Non
     """
     received = {}
 
-    def fake_solve(problem, time_limit_seconds):
+    def fake_solve(problem: Problem, time_limit_seconds: int | None,
+                   on_first_schedule: Callable[[float, int], None] | None = None) -> Schedule:
         received["time_limit_seconds"] = time_limit_seconds
         raise NoScheduleFound("stop here")   # no need to really solve and write
     monkeypatch.setattr(command_line, "solve", fake_solve)
@@ -363,7 +364,8 @@ def test_time_limit_reached_prints_a_clear_message(tmp_path, monkeypatch, capsys
     """When the time limit is reached, the program says so, suggests --time-limit, exit 1."""
     # Arrange
     # A real timeout is hard to make in a test, so solve pretends.
-    def fake_solve(problem, time_limit_seconds):
+    def fake_solve(problem: Problem, time_limit_seconds: int | None,
+                   on_first_schedule: Callable[[float, int], None] | None = None) -> Schedule:
         raise TimeLimitReached("No schedule found within the time limit of 10 minutes.")
     monkeypatch.setattr(command_line, "solve", fake_solve)
     output = tmp_path / "output.xlsx"
@@ -495,7 +497,8 @@ def test_main_prints_the_message_after_solving(tmp_path: Path, monkeypatch: pyte
     # Fake solve returns a not proven optimal schedule (penalty 24, lowest possible 20),
     # fake write_output does nothing. The fake returns at once, so the message starts with
     # "Stopped after"; check only the part every variant has.
-    def fake_solve(problem: Problem, time_limit_seconds: int | None) -> Schedule:
+    def fake_solve(problem: Problem, time_limit_seconds: int | None,
+                   on_first_schedule: Callable[[float, int], None] | None = None) -> Schedule:
         return Schedule(assignments=set(), proven_optimal=False,
                         penalty=24, lowest_possible_penalty=20)
 
@@ -668,7 +671,8 @@ def test_typo_in_the_workbook_prints_the_workbook_error(tmp_path, capsys):
 def test_no_schedule_possible_prints_a_message(tmp_path, monkeypatch, capsys):
     """When the solver finds no schedule, the program says so with exit code 1."""
     # Arrange
-    def fake_solve(problem, time_limit_seconds):
+    def fake_solve(problem: Problem, time_limit_seconds: int | None,
+                   on_first_schedule: Callable[[float, int], None] | None = None) -> Schedule:
         raise NoScheduleFound("no schedule follows all the rules")
     monkeypatch.setattr(command_line, "solve", fake_solve)
 

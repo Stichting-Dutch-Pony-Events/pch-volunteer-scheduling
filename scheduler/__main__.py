@@ -113,7 +113,8 @@ def main(arguments: list[str]) -> int:
             _say(f"Warning: {line}")
         _say("Solving (this can take a few minutes)")
         solving_started = time.perf_counter()   # a stopwatch: only differences matter
-        schedule = solve(problem=problem, time_limit_seconds=options.time_limit * 60)
+        schedule = solve(problem=problem, time_limit_seconds=options.time_limit * 60,
+                         on_first_schedule=_say_first_schedule_message)
         solving_seconds = time.perf_counter() - solving_started
         _say(solved_message(schedule, solving_seconds, options.time_limit * 60))
         _say(f"Writing {output_path}")
@@ -157,7 +158,14 @@ def first_schedule_message(seconds: float, penalty: int) -> str:
     schedule after 12.0 s (penalty 2,345); now looking for better ones. Press Ctrl+C to stop
     and keep the best schedule so far." Public because it is tested on its own.
     """
-    raise NotImplementedError
+    return (f"Found a first schedule after {format_duration(seconds)} (penalty {penalty:,}); "
+            "now looking for better ones. "
+            "Press Ctrl+C to stop and keep the best schedule so far.")
+
+
+def _say_first_schedule_message(seconds: float, penalty: int) -> None:
+    """Print the first schedule line; solve() calls this while CP-SAT searches on"""
+    _say(first_schedule_message(seconds, penalty))
 
 
 def solved_message(schedule: Schedule, solving_seconds: float, time_limit_seconds: int) -> str:

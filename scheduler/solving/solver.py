@@ -18,7 +18,6 @@ def solve(problem: Problem, time_limit_seconds: int | None = None,
     seconds CP-SAT has been searching and that schedule's penalty (None = nobody to tell).
     solve() itself prints nothing; the caller decides what to do with it.
     """
-    # TODO (step 3): pass on_first_schedule on to CP-SAT via a solution callback.
     # Check problem for obvious unsolvable situations
     checks.check_problem(problem)
 
@@ -42,11 +41,13 @@ def solve(problem: Problem, time_limit_seconds: int | None = None,
     penalties += soft_rules.add_round_times_penalty(model, problem, works)
     model.minimize(cp_model.LinearExpr.sum(penalties))
 
-    return _solve_and_read_schedule(model, works, time_limit_seconds)
+    return _solve_and_read_schedule(model, works, time_limit_seconds, on_first_schedule)
 
 
 def _solve_and_read_schedule(model: cp_model.CpModel, works: variables.Works,
-                             time_limit_seconds: int | None = None) -> Schedule:
+                             time_limit_seconds: int | None = None,
+                             on_first_schedule: Callable[[float, int], None] | None = None
+                             ) -> Schedule:
     """Run the solver and turn every variable set to 1 into an assignment;
     the Schedule also says whether CP-SAT proved it optimal, its penalty
     and lowest penalty possible.
@@ -54,7 +55,8 @@ def _solve_and_read_schedule(model: cp_model.CpModel, works: variables.Works,
     # The gap between this line and the next output is CP-SAT's own search time.
     debug_print("_solve_and_read_schedule: running CP-SAT")
     solver = make_cp_sat_solver(time_limit_seconds=time_limit_seconds)
-    status = solver.solve(model)
+    reporter = _FirstScheduleReporter(on_first_schedule)
+    status = solver.solve(model, solution_callback=reporter)
 
     # Stop here if CP-SAT found no schedule (see raise_if_no_schedule).
     raise_if_no_schedule(status=status, time_limit_seconds=time_limit_seconds)
@@ -98,3 +100,25 @@ def raise_if_no_schedule(status: int, time_limit_seconds: int | None) -> None:
                                f"{time_limit_seconds / 60:g} minutes; one may still exist.")
     else:
         raise NoScheduleFound("No schedule meets all the hard rules.")
+
+
+class _FirstScheduleReporter(cp_model.CpSolverSolutionCallback):
+    """Passes CP-SAT's first schedule on to on_first_schedule; later (better) ones are not
+    reported.
+
+    CP-SAT calls on_solution_callback for every schedule it finds while searching. It wants
+    an object of this kind, not a plain function, so this class sits in between.
+    """
+
+    def __init__(self, on_first_schedule: Callable[[float, int], None] | None) -> None:
+        super().__init__()   # CP-SAT's own part of the object must be set up as well
+        self.on_first_schedule = on_first_schedule
+        self.already_reported = False
+
+    def on_solution_callback(self) -> None:
+        """Called by CP-SAT for every schedule it finds."""
+        if self.on_first_schedule is None or self.already_reported:
+            return
+        self.already_reported = True
+        # wall_time = seconds since CP-SAT started; objective_value = this schedule's penalty.
+        self.on_first_schedule(self.wall_time, round(self.objective_value))
