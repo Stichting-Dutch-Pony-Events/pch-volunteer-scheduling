@@ -12,6 +12,7 @@ from pathlib import Path
 
 from scheduler.debug import set_debug_time
 from scheduler.errors import NoScheduleFound, TimeLimitReached, WorkbookError
+from scheduler.model import Schedule
 from scheduler.reading.workbook import read_problem
 from scheduler.solving.checks import find_warnings
 from scheduler.solving.solver import solve
@@ -110,11 +111,13 @@ def main(arguments: list[str]) -> int:
         # Likely mistakes in the input: shown, but the run carries on.
         for line in find_warnings(problem=problem):
             _say(f"Warning: {line}")
-        _say("Solving (this can take a few minutes)")
+        _say("Solving (this can take a few minutes; press Ctrl+C to stop)")
         solving_started = time.perf_counter()   # a stopwatch: only differences matter
-        schedule = solve(problem=problem, time_limit_seconds=options.time_limit * 60)
+        schedule = solve(problem=problem, time_limit_seconds=options.time_limit * 60,
+                         on_first_schedule=_say_first_schedule_message,
+                         on_stopping=_say_stopping)
         solving_seconds = time.perf_counter() - solving_started
-        _say(f"Solved, this took {format_duration(solving_seconds)}")
+        _say(solved_message(schedule, solving_seconds, options.time_limit * 60))
         _say(f"Writing {output_path}")
         write_output(problem=problem, schedule=schedule, path=output_path)
     except WorkbookError as error:
@@ -133,6 +136,9 @@ def main(arguments: list[str]) -> int:
         print(f"Cannot write {output_path}: is it open in Excel? Close it and try again.",
               file=sys.stderr)
         return 1
+    except KeyboardInterrupt:
+        print("Stopped by Ctrl+C. No schedule written.", file=sys.stderr)
+        return 1
 
     # 5. Done.
     _say(f"Schedule written to {output_path}")
@@ -149,6 +155,73 @@ def format_duration(seconds: float) -> str:
     minutes = whole_seconds // 60
     rest = whole_seconds % 60
     return f"{minutes} min {rest} s"
+
+
+def first_schedule_message(seconds: float, penalty: int) -> str:
+    """The line printed as soon as CP-SAT finds its first schedule, e.g. "Found a first
+    schedule after 12.0 s (penalty 2,345); now looking for better ones. Press Ctrl+C to stop
+    and keep the best schedule so far." Public because it is tested on its own.
+    """
+    return (f"Found a first schedule after {format_duration(seconds)} (penalty {penalty:,}); "
+            "now looking for better ones. "
+            "Press Ctrl+C to stop and keep the best schedule so far.")
+
+
+def _say_first_schedule_message(seconds: float, penalty: int) -> None:
+    """Print the first schedule line; solve() calls this while CP-SAT searches on"""
+    _say(first_schedule_message(seconds, penalty))
+
+
+def _say_stopping() -> None:
+    """Print the stopping line; solve() calls this when Ctrl+C asks CP-SAT to stop."""
+    _say("Stopping the search; this can take a few seconds.")
+
+
+def solved_message(schedule: Schedule, solving_seconds: float, time_limit_seconds: int) -> str:
+    """The line printed after solving: how long it took and how good the schedule is.
+
+    Proven optimal: "Solved, this took .... This is the best possible schedule (penalty N)."
+    Otherwise CP-SAT stopped early: "Time limit reached after ..." when solving took at
+    least the time limit (with the advice to use a longer --time-limit), else "Stopped
+    after ..." (Ctrl+C); then the penalty, the lowest possible penalty and how much better
+    the best possible could be ("less than 1%" below 1%, left out when the lowest possible
+    penalty is 0). Penalties get a thousands separator (1,234). Public because it is tested
+    on its own.
+    """
+    # Proven optimal: a short message, nothing more to say.
+    if schedule.proven_optimal:
+        return (f"Solved, this took {format_duration(solving_seconds)}. "
+                f"This is the best possible schedule (penalty {schedule.penalty:,}).")
+
+    # solving_seconds includes building the model, so a run that reached the time limit
+    # always took at least that long; less means the user stopped it with Ctrl+C.
+    if solving_seconds >= time_limit_seconds:
+        how_it_ended = f"Time limit reached after {format_duration(solving_seconds)}. "
+        advice = " A longer --time-limit may find a better one."
+    else:
+        how_it_ended = f"Stopped after {format_duration(solving_seconds)}. "
+        advice = ""
+
+    best_found = f"This is the best schedule found (penalty {schedule.penalty:,}); "
+
+    # A lowest possible penalty of 0 means CP-SAT has proven nothing yet: no percentage.
+    if schedule.lowest_possible_penalty == 0:
+        best_possible = "the best possible has a penalty of at least 0."
+    else:
+        # How much lower the best possible penalty could be, as a percentage of this one.
+        difference = schedule.penalty - schedule.lowest_possible_penalty
+        percentage = (difference / schedule.penalty) * 100
+
+        # Rounded, this would say "at most 0% better".
+        if percentage < 1.0:
+            best_possible = (f"the best possible has a penalty of at least "
+                             f"{schedule.lowest_possible_penalty:,} (less than 1% better).")
+        else:
+            best_possible = (f"the best possible has a penalty of at least "
+                             f"{schedule.lowest_possible_penalty:,} "
+                             f"(at most {round(percentage)}% better).")
+
+    return how_it_ended + best_found + best_possible + advice
 
 
 def _say(message: str) -> None:

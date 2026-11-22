@@ -2,6 +2,7 @@ import re
 import shutil
 import subprocess
 import sys
+from collections.abc import Callable
 from pathlib import Path
 
 import openpyxl
@@ -10,7 +11,7 @@ import pytest
 import scheduler.__main__ as command_line
 from scheduler import debug
 from scheduler.errors import NoScheduleFound, TimeLimitReached
-from scheduler.model import Problem
+from scheduler.model import Problem, Schedule
 
 
 TEST_WORKBOOK = Path(__file__).parent.parent / "data" / "test_input.xlsx"
@@ -306,7 +307,9 @@ def _remember_time_limit(monkeypatch: pytest.MonkeyPatch) -> dict[str, int | Non
     """
     received = {}
 
-    def fake_solve(problem, time_limit_seconds):
+    def fake_solve(problem: Problem, time_limit_seconds: int | None,
+                   on_first_schedule: Callable[[float, int], None] | None = None,
+                   on_stopping: Callable[[], None] | None = None) -> Schedule:
         received["time_limit_seconds"] = time_limit_seconds
         raise NoScheduleFound("stop here")   # no need to really solve and write
     monkeypatch.setattr(command_line, "solve", fake_solve)
@@ -362,7 +365,9 @@ def test_time_limit_reached_prints_a_clear_message(tmp_path, monkeypatch, capsys
     """When the time limit is reached, the program says so, suggests --time-limit, exit 1."""
     # Arrange
     # A real timeout is hard to make in a test, so solve pretends.
-    def fake_solve(problem, time_limit_seconds):
+    def fake_solve(problem: Problem, time_limit_seconds: int | None,
+                   on_first_schedule: Callable[[float, int], None] | None = None,
+                   on_stopping: Callable[[], None] | None = None) -> Schedule:
         raise TimeLimitReached("No schedule found within the time limit of 10 minutes.")
     monkeypatch.setattr(command_line, "solve", fake_solve)
     output = tmp_path / "output.xlsx"
@@ -375,6 +380,283 @@ def test_time_limit_reached_prints_a_clear_message(tmp_path, monkeypatch, capsys
     assert result == 1
     assert "10 minutes" in printed
     assert "--time-limit" in printed
+
+
+# --- the message after solving ---
+# solved_message gets a Schedule made by hand, so these tests need no solving and no clock.
+# Not proven optimal + solving took at least the time limit = the limit was reached;
+# less than the limit = stopped by hand (Ctrl+C).
+
+def test_optimal_schedule_says_it_is_the_best_possible():
+    """A proven optimal schedule: "Solved", the time it took and its penalty."""
+    # Arrange
+    schedule = Schedule(assignments=set(), proven_optimal=True,
+                        penalty=24, lowest_possible_penalty=24)
+    expected = "Solved, this took 1 min 5 s. This is the best possible schedule (penalty 24)."
+
+    # Act
+    message = command_line.solved_message(schedule=schedule, solving_seconds=65,
+                                          time_limit_seconds=600)
+
+    # Assert
+    assert message == expected
+
+
+def test_time_limit_reached_gives_the_whole_message():
+    """Not optimal after the whole time limit: penalty, lowest possible, percentage, advice."""
+    # Arrange
+    # Not optimal, 608 seconds with a limit of 600 = the limit was reached.
+    # (1234 - 1100) / 1234 = 10.9%, rounded to 11.
+    schedule = Schedule(assignments=set(), proven_optimal=False,
+                        penalty=1234, lowest_possible_penalty=1100)
+    expected = ("Time limit reached after 10 min 8 s. This is the best schedule found "
+                "(penalty 1,234); the best possible has a penalty of at least 1,100 "
+                "(at most 11% better). A longer --time-limit may find a better one.")
+
+    # Act
+    message = command_line.solved_message(schedule=schedule, solving_seconds=608,
+                                          time_limit_seconds=600)
+
+    # Assert
+    assert message == expected
+
+
+def test_stopped_before_the_time_limit_says_stopped_without_advice():
+    """Not optimal before the time limit (Ctrl+C): "Stopped after", no --time-limit advice."""
+    # Arrange
+    # As above, but 182 seconds. Expected: "Stopped after 3 min 2 s. This is the best
+    # schedule found (penalty 1,234); the best possible has a penalty of at least 1,100
+    # (at most 11% better)."
+    schedule = Schedule(assignments=set(), proven_optimal=False,
+                        penalty=1234, lowest_possible_penalty=1100)
+    expected = ("Stopped after 3 min 2 s. This is the best schedule found (penalty 1,234); "
+                "the best possible has a penalty of at least 1,100 (at most 11% better).")
+
+    # Act
+    message = command_line.solved_message(schedule=schedule, solving_seconds=182,
+                                          time_limit_seconds=600)
+
+    # Assert
+    assert message == expected
+
+
+def test_solving_exactly_as_long_as_the_time_limit_counts_as_limit_reached():
+    """Solving took exactly the time limit: the message starts with "Time limit reached"."""
+    # Arrange
+    # Not optimal, 600 seconds, limit 600.
+    schedule = Schedule(assignments=set(), proven_optimal=False,
+                        penalty=1234, lowest_possible_penalty=1100)
+    expected = ("Time limit reached after 10 min 0 s. This is the best schedule found "
+                "(penalty 1,234); the best possible has a penalty of at least 1,100 "
+                "(at most 11% better). A longer --time-limit may find a better one.")
+
+    # Act
+    message = command_line.solved_message(schedule=schedule, solving_seconds=600,
+                                          time_limit_seconds=600)
+
+    # Assert
+    assert message == expected
+
+
+def test_less_than_1_percent_better_is_said_in_words():
+    """Below 1%, the message says "less than 1% better" instead of "at most 0% better"."""
+    # Arrange
+    # Not optimal, penalty 1000, lowest possible 998 (0.2%).
+    schedule = Schedule(assignments=set(), proven_optimal=False,
+                        penalty=1000, lowest_possible_penalty=998)
+    expected = ("Stopped after 3 min 2 s. This is the best schedule found (penalty 1,000); "
+                "the best possible has a penalty of at least 998 (less than 1% better).")
+
+    # Act
+    message = command_line.solved_message(schedule=schedule, solving_seconds=182,
+                                          time_limit_seconds=600)
+
+    # Assert
+    assert message == expected
+
+
+def test_lowest_possible_penalty_0_gives_no_percentage():
+    """A lowest possible penalty of 0 proves nothing yet, so no percentage is shown."""
+    # Arrange
+    # Not optimal, penalty 1000, lowest possible 0: "at least 0" and no "%".
+    schedule = Schedule(assignments=set(), proven_optimal=False,
+                        penalty=1000, lowest_possible_penalty=0)
+    expected = ("Stopped after 3 min 2 s. This is the best schedule found (penalty 1,000); "
+                "the best possible has a penalty of at least 0.")
+
+    # Act
+    message = command_line.solved_message(schedule=schedule, solving_seconds=182,
+                                          time_limit_seconds=600)
+
+    # Assert
+    assert message == expected
+
+
+def test_main_prints_the_message_after_solving(tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+                                               capsys: pytest.CaptureFixture[str]):
+    """main prints solved_message's text after solving."""
+    # Arrange
+    # Fake solve returns a not proven optimal schedule (penalty 24, lowest possible 20),
+    # fake write_output does nothing. The fake returns at once, so the message starts with
+    # "Stopped after"; check only the part every variant has.
+    def fake_solve(problem: Problem, time_limit_seconds: int | None,
+                   on_first_schedule: Callable[[float, int], None] | None = None,
+                   on_stopping: Callable[[], None] | None = None) -> Schedule:
+        return Schedule(assignments=set(), proven_optimal=False,
+                        penalty=24, lowest_possible_penalty=20)
+
+    def fake_write_output(problem: Problem, schedule: Schedule, path: Path) -> None:
+        pass   # nothing to write: only the printed message matters here
+
+    monkeypatch.setattr(command_line, "solve", fake_solve)
+    monkeypatch.setattr(command_line, "write_output", fake_write_output)
+    output = tmp_path / "output.xlsx"
+
+    # Act
+    command_line.main([str(TEST_WORKBOOK), str(output)])
+
+    # Assert
+    printed = capsys.readouterr().out
+    assert "This is the best schedule found (penalty 24)" in printed
+
+
+# --- the first schedule ---
+# While CP-SAT searches for better schedules, one line says a first schedule was found and
+# that Ctrl+C stops the search but keeps the best schedule so far.
+
+def test_first_schedule_message_under_a_minute():
+    """Under a minute, the first schedule line gives the seconds with one decimal."""
+    # Arrange
+    # (nothing to arrange: the seconds and the penalty are given straight to the function)
+
+    # Act
+    message = command_line.first_schedule_message(seconds=12.0, penalty=2345)
+
+    # Assert
+    assert message == ("Found a first schedule after 12.0 s (penalty 2,345); now looking for "
+                       "better ones. Press Ctrl+C to stop and keep the best schedule so far.")
+
+
+def test_first_schedule_message_over_a_minute():
+    """From a minute on, the first schedule line gives minutes and seconds."""
+    # Arrange
+    # (nothing to arrange: the seconds and the penalty are given straight to the function)
+
+    # Act
+    message = command_line.first_schedule_message(seconds=75.0, penalty=24)
+
+    # Assert
+    assert message == ("Found a first schedule after 1 min 15 s (penalty 24); now looking for "
+                       "better ones. Press Ctrl+C to stop and keep the best schedule so far.")
+
+
+def test_main_prints_the_first_schedule_line_while_solving(
+        tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]):
+    """main prints the first schedule line after "Solving" and before the solved message."""
+    # Arrange
+    # Fake solve does what CP-SAT would do: report a first schedule (12 s, penalty 2,345)
+    # through the function main gives it, then return a schedule. Fake write_output does
+    # nothing.
+    def fake_solve(problem: Problem, time_limit_seconds: int | None,
+                   on_first_schedule: Callable[[float, int], None],
+                   on_stopping: Callable[[], None] | None = None) -> Schedule:
+        on_first_schedule(12.0, 2345)
+        return Schedule(assignments=set(), proven_optimal=True,
+                        penalty=2000, lowest_possible_penalty=2000)
+
+    def fake_write_output(problem: Problem, schedule: Schedule, path: Path) -> None:
+        pass   # nothing to write: only the printed lines matter here
+
+    monkeypatch.setattr(command_line, "solve", fake_solve)
+    monkeypatch.setattr(command_line, "write_output", fake_write_output)
+    output = tmp_path / "output.xlsx"
+
+    # Act
+    command_line.main([str(TEST_WORKBOOK), str(output)])
+
+    # Assert
+    printed = capsys.readouterr().out
+    solving_at = printed.index("Solving")
+    first_schedule_at = printed.index("Found a first schedule after 12.0 s (penalty 2,345)")
+    solved_at = printed.index("This is the best possible schedule (penalty 2,000)")
+    assert solving_at < first_schedule_at < solved_at
+
+
+# --- Ctrl+C ---
+# Ctrl+C during the search stops it and keeps the best schedule so far (run_cp_sat in the
+# solver). Before a first schedule, or outside the search (reading, building the model,
+# writing), Ctrl+C is a normal abort: a KeyboardInterrupt that main turns into one line.
+
+def test_solving_line_says_ctrl_c_stops_it(tmp_path: Path, capsys: pytest.CaptureFixture[str]):
+    """The "Solving" line tells the user that Ctrl+C stops the search."""
+    # Arrange
+    output = tmp_path / "output.xlsx"
+
+    # Act
+    command_line.main([str(TEST_WORKBOOK), str(output)])
+
+    # Assert
+    printed = capsys.readouterr().out
+    assert "Solving (this can take a few minutes; press Ctrl+C to stop)" in printed
+
+
+def test_main_prints_the_stopping_line(tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+                                       capsys: pytest.CaptureFixture[str]):
+    """main prints a line right when Ctrl+C asks the search to stop."""
+    # Arrange
+    # Fake solve does what run_cp_sat does on Ctrl+C: call on_stopping, then return the
+    # best schedule so far (not proven optimal). Fake write_output does nothing.
+    def fake_solve(problem: Problem, time_limit_seconds: int | None,
+                   on_first_schedule: Callable[[float, int], None] | None = None,
+                   on_stopping: Callable[[], None] | None = None) -> Schedule:
+        on_stopping()
+        return Schedule(assignments=set(), proven_optimal=False,
+                        penalty=24, lowest_possible_penalty=20)
+
+    def fake_write_output(problem: Problem, schedule: Schedule, path: Path) -> None:
+        pass   # nothing to write: only the printed lines matter here
+
+    monkeypatch.setattr(command_line, "solve", fake_solve)
+    monkeypatch.setattr(command_line, "write_output", fake_write_output)
+    output = tmp_path / "output.xlsx"
+
+    # Act
+    command_line.main([str(TEST_WORKBOOK), str(output)])
+
+    # Assert
+    printed = capsys.readouterr().out
+    solving_at = printed.index("Solving")
+    stopping_at = printed.index("Stopping the search; this can take a few seconds.")
+    solved_at = printed.index("This is the best schedule found (penalty 24)")
+    assert solving_at < stopping_at < solved_at
+
+
+@pytest.mark.parametrize("stopped_in", ["read_problem", "solve"])
+def test_ctrl_c_prints_a_message_and_writes_nothing(
+        stopped_in: str, tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+        capsys: pytest.CaptureFixture[str]):
+    """Ctrl+C while reading, or before a first schedule, gives one line and exit code 1."""
+    # Arrange
+    # The step stopped_in is replaced by a fake that acts as if Ctrl+C was pressed:
+    # it raises KeyboardInterrupt (for solve: what run_cp_sat does before a first schedule).
+    def press_ctrl_c(*arguments, **keywords) -> None:
+        raise KeyboardInterrupt
+
+    monkeypatch.setattr(command_line, stopped_in, press_ctrl_c)
+    output = tmp_path / "output.xlsx"
+
+    # Act
+    # A KeyboardInterrupt that gets out of main would make pytest stop the whole test run;
+    # catching it here turns that into a normal red test.
+    try:
+        result = command_line.main([str(TEST_WORKBOOK), str(output)])
+    except KeyboardInterrupt:
+        pytest.fail("Ctrl+C got out of main: it should print a message instead")
+
+    # Assert
+    assert result == 1
+    assert capsys.readouterr().err == "Stopped by Ctrl+C. No schedule written.\n"
+    assert not output.exists()
 
 
 # --- debug output ---
@@ -470,7 +752,9 @@ def test_typo_in_the_workbook_prints_the_workbook_error(tmp_path, capsys):
 def test_no_schedule_possible_prints_a_message(tmp_path, monkeypatch, capsys):
     """When the solver finds no schedule, the program says so with exit code 1."""
     # Arrange
-    def fake_solve(problem, time_limit_seconds):
+    def fake_solve(problem: Problem, time_limit_seconds: int | None,
+                   on_first_schedule: Callable[[float, int], None] | None = None,
+                   on_stopping: Callable[[], None] | None = None) -> Schedule:
         raise NoScheduleFound("no schedule follows all the rules")
     monkeypatch.setattr(command_line, "solve", fake_solve)
 

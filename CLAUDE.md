@@ -145,6 +145,14 @@ Fixture** for a volunteer who is clearly the preferred one ("star volunteer"; ad
   adding a rule = one new function there + one line in `solve()`. Soft rules will go in
   `solving/soft_rules.py`. Prefer plain loops over comprehensions (the user finds loops
   easier to read).
+- **Helper variables (rule of thumb, agreed 2026-11-22):** a helper variable that goes into
+  a **penalty** needs bounds on both sides, so it always has exactly the meant value (e.g.
+  `changes` in round times: two `>=` and two `<=`). Minimising alone only makes it right at
+  the optimum; a schedule found before the time limit or Ctrl+C would report a penalty
+  that is too high. A helper that only appears in a **hard rule** may have one side, as
+  long as a wrong value can only make that rule stricter, never looser (e.g. `moves`,
+  `stops`, `someone_moves` in stay at post, `escape` in the minimum stretch); say so in a
+  comment next to it.
 - **Decided: no Rule base class for now** (plain functions with the same arguments are
   enough). Revisit later: the user may want to switch rules on/off from the workbook,
   and soft rules need weights. Focus first on a minimal viable scheduler, then expand.
@@ -179,7 +187,8 @@ scheduler/            __main__.py (the command line, run with `python -m schedul
                       (the --debug-time switch and debug_print)
 scheduler/reading/    workbook.py (read_problem), settings.py, volunteers.py, posts.py,
                       skills.py, demand.py (one reader per tab), cells.py (shared helpers)
-scheduler/solving/    solver.py (solve, make_cp_sat_solver, raise_if_no_schedule), checks.py
+scheduler/solving/    solver.py (solve, make_cp_sat_solver, run_cp_sat, raise_if_no_schedule),
+                      checks.py
                       (check_problem, find_warnings), variables.py (Works,
                       create_variables, lookup helpers), hard_rules.py (add_<name>_rule)
 scheduler/writing/    output.py (write_output), schedule_sheet.py (the Schedule tab and
@@ -1112,6 +1121,124 @@ up to date with `main`):
    count a start and an end together, so Claude added
    `test_each_start_and_end_off_the_half_hour_costs_the_weight` (work fixed by hand, only
    this rule, checks `objective_value`; 4 cases): red without either inequality.
+   **Real-data runs with round times (2026-11-19):** PCH 0% off-grid starts/ends (was
+   29%), CP-SAT 62 s (optimal); UKPC hit the 10 min limit (round times is its first real
+   objective). Totals in DATA_NOTES.md, times in RUN_TIMES.md. Side effect: more stretches
+   of exactly 60 min; next soft rule = fewer, longer stretches (a penalty per stretch).
+   **Paused after 2d (user, 2026-11-19):** `feature/soft-rules` merged into `develop` (PR
+   #6). Next: branch **`feature/solver-progress`**, then a new branch from `develop` for the
+   next soft rule.
+   **Solver progress design (agreed 2026-11-19):** (1) `Schedule` gets `proven_optimal:
+   bool = False`, `penalty: int | None = None` (CP-SAT objective_value),
+   `lowest_possible_penalty: int | None = None` (best_objective_bound); the solver fills
+   them (`status == OPTIMAL`). (2) Final message: optimal "Solved, this took 1 min 5 s.
+   This is the best possible schedule (penalty 1,234)." (user's wording); limit reached "Time limit reached after 10 min
+   8 s. This is the best schedule found (penalty 1,234); the best possible has a penalty
+   of at least 1,100 (at most 12% better). A longer --time-limit may find a better one.";
+   stopped by Ctrl+C (solving took clearly less than the limit) the same starting "Stopped
+   after ..." without the advice. Percentage = (penalty - lowest) / penalty, left out when
+   the penalty is 0. (3) A CpSolverSolutionCallback reports only the first schedule:
+   `solve()` gets an optional `on_first_schedule` function (default None, solve() itself
+   stays silent); the command line prints "Found a first schedule after 12 s (penalty
+   2,345); now looking for better ones. Press Ctrl+C to stop and keep the best schedule so
+   far." Every improvement: later, behind --verbose. (4) Ctrl+C: CP-SAT's
+   `catch_sigint_signal` is on by default (checked, 9.15), it stops like a time limit and
+   keeps the best schedule; the user tries it by hand on UKPC (not testable reliably).
+   **Done on `feature/solver-progress` (2026-11-19), 449 green:** step 1 (Schedule fields,
+   filled in by `_solve_and_read_schedule`; tests in tests/solving/test_solver_result.py)
+   and step 2 (`solved_message(schedule, solving_seconds, time_limit_seconds)` in
+   `__main__.py`, called by `main` instead of the old "Solved" line; parts named
+   how_it_ended / best_found / best_possible / advice; 7 tests in test_main.py section "the
+   message after solving"). Last commit `a0f23d8` (includes the comments and renames).
+   **Continue here next session:** step 3, the solution callback: propose the tests first
+   (a `CpSolverSolutionCallback` subclass in solver.py that calls `on_first_schedule` once,
+   with the seconds and penalty; `solve(problem, time_limit_seconds=None,
+   on_first_schedule=None)`; the command line passes a function that `_say`s "Found a first
+   schedule after 12 s (penalty 2,345); now looking for better ones. Press Ctrl+C to stop
+   and keep the best schedule so far."). Then step 4: the two upper-bound constraints in
+   `add_round_times_penalty` (`changes <= before + now`, `changes <= 2 - before - now`) so
+   a non-optimal schedule doesn't show a too-high penalty. Then step 5: the user tries
+   Ctrl+C and the messages on UKPC (real data: permission each time, times in
+   RUN_TIMES.md), README/CLAUDE status, PR into `develop`. After that: back to the soft
+   rules on a new branch (next rule: fewer, longer stretches).
+   **Step 3 tests written by Claude (2026-11-19, on request):** stubs `solve(...,
+   on_first_schedule: Callable[[float, int], None] | None = None)` (not used yet, TODO) and
+   `first_schedule_message(seconds, penalty)` in `__main__.py` (NotImplementedError); 4 tests
+   in test_solver_result.py section "the first schedule" (once / penalty / seconds / nothing
+   when no schedule, the last a green guard) and 3 in test_main.py (message under and over a
+   minute, main prints it between "Solving" and the solved message). 6 red. The "once" test
+   needs 6 volunteers and 2 posts: with fewer, CP-SAT finds the best schedule at once (tried;
+   this one found >= 5 schedules in 20 of 20 runs). Trial in a scratch copy: all new tests
+   green; red with a reporter that reports every schedule. Expected after implementing: the 5
+   tests with an old fake solve without `on_first_schedule` go red (user fixes them).
+   **Step 3 done (2026-11-20):** `_FirstScheduleReporter(cp_model.CpSolverSolutionCallback)`
+   in solver.py (CP-SAT wants such an object, not a plain function; it calls
+   `on_first_schedule(self.wall_time, round(self.objective_value))` once), main passes
+   `_say_first_schedule_message`; Claude added `on_first_schedule` to the 4 old fake solves.
+   456 green. Why a callback and not `_say` in the solver: solve() stays silent, no circular
+   import with `__main__`, simple tests, a window program can pass its own function.
+   **Step 4 (2026-11-22):** the user added the two upper bounds to `add_round_times_penalty`
+   (`changes <= before + now`, `changes <= 2 - before - now`). Claude added
+   `test_penalty_counts_only_real_starts_and_ends_even_when_maximised` (the counting test
+   with `maximize`: the worst case, reliably red without the bounds, all 4 cases checked in
+   a scratch copy). 460 green.
+   **Step 5, Ctrl+C does NOT work on Windows (found 2026-11-22):** on UKPC, Ctrl+C after
+   the first schedule ended the whole program (nothing written, no message). Reproduced by
+   Claude on a made-up 60-volunteer problem (`signal.raise_signal(SIGINT)` from a timer
+   thread): with `catch_sigint_signal` on (the default) the process dies, CP-SAT's log
+   shows no reaction; with it off the process survives, but Python only raises
+   KeyboardInterrupt after CP-SAT returns (the main thread is inside C++). **Working fix
+   (tried in a scratch copy):** `catch_sigint_signal = False`, run `solver.solve(...)` in a
+   `threading.Thread`, the main thread waits with `thread.join(timeout=0.2)` in a loop and
+   on KeyboardInterrupt calls `solver.stop_search()`; solve() then returns normally with
+   the best schedule so far (status FEASIBLE). Still to decide with the user: where it
+   goes (a helper in solver.py), tests, and the message for Ctrl+C before the first
+   schedule (now UNKNOWN -> TimeLimitReached "within the time limit", which is wrong).
+   **Stubs + tests written by Claude (2026-11-22, on request):** `run_cp_sat(solver, model,
+   solution_callback) -> int` in solver.py (NotImplementedError, not yet used);
+   tests/solving/test_solver_ctrl_c.py with 3 tests (catch_sigint_signal off; a real tiny
+   search returns OPTIMAL; a real Ctrl+C via `threading.Timer` + `signal.raise_signal` stops
+   a `_FakeSolver` whose search waits for stop_search, at most 5 s). The Act catches
+   KeyboardInterrupt (`pytest.fail`) and cancels the timer in `finally`, so a broken
+   run_cp_sat gives a red test, never an aborted run. **Second quirk:** a CP-SAT search with
+   catch_sigint_signal on leaves CP-SAT's handler behind for the rest of the process (the
+   round-times tests with a plain `cp_model.CpSolver()` did; the next Ctrl+C killed pytest,
+   exit 3), so test 3 first puts back `signal.default_int_handler`. 3 red, 460 green.
+   Checked in a scratch copy: the planned code 463 green; search in the main thread and
+   "no stop_search" each give exactly test 3 red, the run completes. Still to decide
+   (cosmetic): use make_cp_sat_solver in those two round-times tests too.
+   **Implemented by the user (2026-11-22, the try/except version), 463 green. Then agreed:**
+   "Solving (this can take a few minutes; press Ctrl+C to stop)"; on the first Ctrl+C
+   `on_stopping()` (passed solve -> _solve_and_read_schedule -> run_cp_sat; main `_say`s
+   "Stopping the search; this can take a few seconds."); Ctrl+C before a first schedule
+   (stopped + UNKNOWN) -> run_cp_sat raises KeyboardInterrupt; main catches
+   KeyboardInterrupt (also while reading/building/writing): stderr "Stopped by Ctrl+C. No
+   schedule written.", exit 1. Tests by Claude: 4 more in test_solver_ctrl_c.py (helper
+   `_send_ctrl_c_after`, `_FakeSolver(status_when_stopped)` needing 0.5 s to finish; before
+   a first schedule raises; on_stopping right away; not again on a second Ctrl+C; solve
+   passes on_stopping on, via a monkeypatched run_cp_sat) and 3 in test_main.py (section
+   "Ctrl+C"); the old fakes got `on_stopping=None`. 8 red. **Race found under load:** the
+   try/except version lets a Ctrl+C escape when it arrives at `while thread.is_alive()`
+   (outside the try; ~2 in 100 runs). **Design changed:** during the search our own
+   handler via `signal.signal(SIGINT, on_ctrl_c)` (calls stop_search, on_stopping once,
+   `nonlocal stopped_by_user`), the previous handler put back in a `finally`; no
+   KeyboardInterrupt during the search at all. Trial: 471 green, 0 failures in 100 runs
+   under load, each broken variant reds its own test, real CP-SAT stops ~3.5 s after
+   on_stopping. Note for the window program later: signal.signal only works in the main
+   thread (a window has its own Stop button calling stop_search anyway).
+   **Implemented (2026-11-22, user; Claude fixed the plumbing), 471 green.** Then a refactor
+   by the user (user's idea): `_solve_and_read_schedule` removed, its steps are now in
+   `solve()` (make_cp_sat_solver, _FirstScheduleReporter, run_cp_sat, raise_if_no_schedule)
+   plus a new private `_read_schedule(solver, works, status)`; the "running CP-SAT" debug
+   line moved into run_cp_sat. **Order in solver.py = the order solve() uses them** (table
+   of contents first, then the helpers top to bottom). 471 green.
+   **Step 5 done (2026-11-22):** the user tried Ctrl+C by hand: it works. README Status and
+   "Making a schedule" updated; PR of `feature/solver-progress` into `develop` (471 green).
+   **Continue here next session:** after the merge, a new branch from `develop` for the next
+   soft rule (fewer, longer stretches: a penalty per stretch; its helper variables need
+   bounds on both sides, see "Helper variables"). Small follow-ups noted: the two
+   round-times tests could use make_cp_sat_solver; `--verbose` (every improvement / CP-SAT
+   log) is still on the wish list.
    **Soft rules can be switched on/off (user's idea, option B agreed 2026-11-18):**
    `Settings.soft_rules: frozenset[str] = frozenset()` = the soft rules that are on;
    empty by default, so `Settings()` = hard rules only and every test switches on exactly
