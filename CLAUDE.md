@@ -1232,8 +1232,13 @@ up to date with `main`):
    plus a new private `_read_schedule(solver, works, status)`; the "running CP-SAT" debug
    line moved into run_cp_sat. **Order in solver.py = the order solve() uses them** (table
    of contents first, then the helpers top to bottom). 471 green.
-   **Continue here:** the manual Ctrl+C try (made-up script or UKPC with permission), then
-   README/CLAUDE status and the PR of `feature/solver-progress` into `develop`.
+   **Step 5 done (2026-11-22):** the user tried Ctrl+C by hand: it works. README Status and
+   "Making a schedule" updated; PR of `feature/solver-progress` into `develop` (471 green).
+   **Continue here next session:** after the merge, a new branch from `develop` for the next
+   soft rule (fewer, longer stretches: a penalty per stretch; its helper variables need
+   bounds on both sides, see "Helper variables"). Small follow-ups noted: the two
+   round-times tests could use make_cp_sat_solver; `--verbose` (every improvement / CP-SAT
+   log) is still on the wish list.
    **Soft rules can be switched on/off (user's idea, option B agreed 2026-11-18):**
    `Settings.soft_rules: frozenset[str] = frozenset()` = the soft rules that are on;
    empty by default, so `Settings()` = hard rules only and every test switches on exactly

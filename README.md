@@ -61,8 +61,9 @@ Version 1.1 makes the schedule nicer and easier to read.
       and a fair spread of work over the volunteers (done so far: preferring what people
       are good at, and shifts that start and end on the hour or half hour)
 - [ ] A nicer command line: progress while solving, a summary after the run (done so
-      far: it says whether the schedule is the best possible, and if not, how much
-      better the best possible could be)
+      far: it says when it has found a first schedule, Ctrl+C stops the search and keeps
+      the best schedule so far, and at the end it says whether the schedule is the best
+      possible, and if not, how much better the best possible could be)
 - [ ] Individual schedules in the output: per volunteer their shifts
 
 ### Later
@@ -172,8 +173,11 @@ Reads the input workbook, makes a schedule and writes it to `output.xlsx` (tab
 "Schedule": one column per post, one row per 15 minutes). If the output already
 exists you are asked before it is overwritten; add `--overwrite` to skip that
 question. The solver stops after 10 minutes; give it more (or less) time with e.g.
-`--time-limit 30` (in minutes). `python -m scheduler --help` shows the options. Keep real input and output
-outside the repository: they contain volunteer names.
+`--time-limit 30` (in minutes). As soon as it has found a first schedule it says so and
+keeps looking for better ones; press Ctrl+C to stop it then and write the best schedule
+found so far (Ctrl+C before that stops without writing anything). At the end it says
+whether the schedule is the best possible. `python -m scheduler --help` shows the
+options. Keep real input and output outside the repository: they contain volunteer names.
 
 ### Running the tests
 
