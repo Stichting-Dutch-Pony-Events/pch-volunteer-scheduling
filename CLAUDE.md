@@ -1234,11 +1234,24 @@ up to date with `main`):
    of contents first, then the helpers top to bottom). 471 green.
    **Step 5 done (2026-11-22):** the user tried Ctrl+C by hand: it works. README Status and
    "Making a schedule" updated; PR of `feature/solver-progress` into `develop` (471 green).
-   **Continue here next session:** after the merge, a new branch from `develop` for the next
+   **Continue here next session:** PR #7 merged into `develop` (2026-11-22); a new branch from `develop` for the next
    soft rule (fewer, longer stretches: a penalty per stretch; its helper variables need
    bounds on both sides, see "Helper variables"). Small follow-ups noted: the two
    round-times tests could use make_cp_sat_solver; `--verbose` (every improvement / CP-SAT
    log) is still on the wish list.
+   **Stretch length design (agreed 2026-11-22), one branch, two steps:** (1) a fixed cost
+   per work stretch, `add_fewer_stretches_penalty`, switch `"fewer_stretches"`,
+   `Settings.weight_work_stretch` (suggested default 20, per stretch, not per block); a
+   bool `starts` per volunteer per block with `starts >= now - before`, `starts <= now`,
+   `starts <= 1 - before` (now/before = sum of their variables in that block). A post
+   switch inside a stretch is not a start. (2) Then a penalty per block beyond the
+   preferred maximum (workbook row "Preferred maximum shift length", 120 min). Together:
+   rule 1 pushes stretches up, rule 2 stops them at the ideal; the weights only set how
+   far past it CP-SAT may go (it splits a stretch x blocks too long when E * x > S).
+   Planned tests for step 1 (stubs first): one person takes a 2-hour opening instead of
+   two splitting it; a guard with a gap in the demand; each stretch costs the weight
+   (objective_value, incl. a post switch); the same under maximize; the weight decides
+   against skill score; off returns []; the default in test_model.py.
    **Soft rules can be switched on/off (user's idea, option B agreed 2026-11-18):**
    `Settings.soft_rules: frozenset[str] = frozenset()` = the soft rules that are on;
    empty by default, so `Settings()` = hard rules only and every test switches on exactly

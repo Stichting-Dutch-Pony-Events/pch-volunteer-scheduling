@@ -5,7 +5,7 @@ the schedule with the fewest points in total. Each add_..._penalty function adds
 helper variables it needs to the model and returns its penalty terms, already multiplied
 by the rule's weight from the settings; solve() adds them all up and asks CP-SAT to
 minimise the sum. Weights are whole points: per time block of 15 minutes (skill score)
-or per start or end of a work stretch (round times).
+per start or end of a work stretch (round times) or per work stretch (fewer stretches).
 
 They all take the same arguments as the hard rules: the model, the problem, and the works
 variables made by create_variables (see Works in variables.py). solve() only calls a rule
@@ -103,3 +103,15 @@ def add_round_times_penalty(model: cp_model.CpModel, problem: Problem,
             penalties.append(changes * weight)
 
     return penalties
+
+
+def add_fewer_stretches_penalty(model: cp_model.CpModel, problem: Problem,
+                                works: Works) -> list[cp_model.LinearExpr]:
+    """Soft rule: fewer, longer work stretches.
+
+    Every work stretch (continuous work, also across posts) costs
+    settings.weight_work_stretch, once, however long it is. A switch to another post
+    inside a stretch is not a new stretch.
+    """
+    # TODO: not yet called from solve(); add the line there once this works.
+    raise NotImplementedError
