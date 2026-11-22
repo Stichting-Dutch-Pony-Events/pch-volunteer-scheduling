@@ -100,7 +100,6 @@ def add_round_times_penalty(model: cp_model.CpModel, problem: Problem,
             model.add(changes <= sum(works_before) + sum(works_now))
             model.add(changes <= 2 - sum(works_before) - sum(works_now))
 
-
             penalties.append(changes * weight)
 
     return penalties
