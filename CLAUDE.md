@@ -1177,7 +1177,10 @@ up to date with `main`):
    456 green. Why a callback and not `_say` in the solver: solve() stays silent, no circular
    import with `__main__`, simple tests, a window program can pass its own function.
    **Step 4 (2026-11-22):** the user added the two upper bounds to `add_round_times_penalty`
-   (`changes <= before + now`, `changes <= 2 - before - now`); 456 green.
+   (`changes <= before + now`, `changes <= 2 - before - now`). Claude added
+   `test_penalty_counts_only_real_starts_and_ends_even_when_maximised` (the counting test
+   with `maximize`: the worst case, reliably red without the bounds, all 4 cases checked in
+   a scratch copy). 460 green.
    **Soft rules can be switched on/off (user's idea, option B agreed 2026-11-18):**
    `Settings.soft_rules: frozenset[str] = frozenset()` = the soft rules that are on;
    empty by default, so `Settings()` = hard rules only and every test switches on exactly

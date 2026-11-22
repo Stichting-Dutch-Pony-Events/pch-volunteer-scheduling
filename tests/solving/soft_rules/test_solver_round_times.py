@@ -262,6 +262,49 @@ def test_each_start_and_end_off_the_half_hour_costs_the_weight(
     assert solver.objective_value == expected_penalty
 
 
+# The penalty must be exact for every schedule, not only the best one: a schedule found
+# before the time limit or Ctrl+C reports its penalty too. So the same stretches again,
+# but now CP-SAT tries to make the penalty as HIGH as possible. Only exact helper
+# variables (bounded on both sides) keep it at the real count.
+
+@pytest.mark.parametrize("first_block, block_after_last, expected_penalty",
+                         [(2, 6, 0),     # 06:30-07:30: start and end round
+                          (1, 6, 10),    # 06:15-07:30: only the start off the half hour
+                          (2, 7, 10),    # 06:30-07:45: only the end off the half hour
+                          (1, 7, 20)])   # 06:15-07:45: both
+def test_penalty_counts_only_real_starts_and_ends_even_when_maximised(
+        first_block: int, block_after_last: int, expected_penalty: int):
+    """Even when the solver makes the penalty as high as it can, it is the real count."""
+    # Arrange
+    # The same scenario as the test above: Tickets open in blocks 0-11, Mock Mane works the
+    # stretch and nothing else. The only difference is maximize instead of minimize.
+    demand = {}
+    for block in range(0, 12):
+        demand[("Tickets", block)] = 1
+
+    problem = Problem(volunteers=[Volunteer(name="Mock Mane", skills={"Tickets": 1},
+                                            available_blocks=ALL_DAYS)],
+                      posts=[Post("Tickets")], demand=demand, settings=RULES)
+    model = cp_model.CpModel()
+    works = create_variables(model, problem)
+
+    for (volunteer_name, post, block), variable in works.items():
+        if first_block <= block < block_after_last:
+            model.add(variable == 1)
+        else:
+            model.add(variable == 0)
+
+    penalties = add_round_times_penalty(model, problem, works)
+    model.maximize(cp_model.LinearExpr.sum(penalties))
+    solver = cp_model.CpSolver()
+
+    # Act
+    solver.solve(model)
+
+    # Assert
+    assert solver.objective_value == expected_penalty
+
+
 # Switching the rule on and off. The rule checks settings.soft_rules itself, so these
 # tests call it directly (no solving needed); the tests above show that solve() uses it.
 
