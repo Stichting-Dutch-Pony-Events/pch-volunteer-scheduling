@@ -111,10 +111,11 @@ def main(arguments: list[str]) -> int:
         # Likely mistakes in the input: shown, but the run carries on.
         for line in find_warnings(problem=problem):
             _say(f"Warning: {line}")
-        _say("Solving (this can take a few minutes)")
+        _say("Solving (this can take a few minutes; press Ctrl+C to stop)")
         solving_started = time.perf_counter()   # a stopwatch: only differences matter
         schedule = solve(problem=problem, time_limit_seconds=options.time_limit * 60,
-                         on_first_schedule=_say_first_schedule_message)
+                         on_first_schedule=_say_first_schedule_message,
+                         on_stopping=_say_stopping)
         solving_seconds = time.perf_counter() - solving_started
         _say(solved_message(schedule, solving_seconds, options.time_limit * 60))
         _say(f"Writing {output_path}")
@@ -134,6 +135,9 @@ def main(arguments: list[str]) -> int:
     except PermissionError:
         print(f"Cannot write {output_path}: is it open in Excel? Close it and try again.",
               file=sys.stderr)
+        return 1
+    except KeyboardInterrupt:
+        print("Stopped by Ctrl+C. No schedule written.", file=sys.stderr)
         return 1
 
     # 5. Done.
@@ -166,6 +170,11 @@ def first_schedule_message(seconds: float, penalty: int) -> str:
 def _say_first_schedule_message(seconds: float, penalty: int) -> None:
     """Print the first schedule line; solve() calls this while CP-SAT searches on"""
     _say(first_schedule_message(seconds, penalty))
+
+
+def _say_stopping() -> None:
+    """Print the stopping line; solve() calls this when Ctrl+C asks CP-SAT to stop."""
+    _say("Stopping the search; this can take a few seconds.")
 
 
 def solved_message(schedule: Schedule, solving_seconds: float, time_limit_seconds: int) -> str:

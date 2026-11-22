@@ -1,3 +1,4 @@
+import signal
 import threading
 from collections.abc import Callable
 
@@ -22,7 +23,6 @@ def solve(problem: Problem, time_limit_seconds: int | None = None,
     seconds to finish). A Ctrl+C before any schedule was found raises KeyboardInterrupt.
     solve() itself prints nothing; the caller decides what to do with it.
     """
-    # TODO: pass on_stopping on to run_cp_sat (via _solve_and_read_schedule).
     # Check problem for obvious unsolvable situations
     checks.check_problem(problem)
 
@@ -46,13 +46,14 @@ def solve(problem: Problem, time_limit_seconds: int | None = None,
     penalties += soft_rules.add_round_times_penalty(model, problem, works)
     model.minimize(cp_model.LinearExpr.sum(penalties))
 
-    return _solve_and_read_schedule(model, works, time_limit_seconds, on_first_schedule)
+    return _solve_and_read_schedule(model, works, time_limit_seconds,
+                                    on_first_schedule, on_stopping)
 
 
 def _solve_and_read_schedule(model: cp_model.CpModel, works: variables.Works,
                              time_limit_seconds: int | None = None,
-                             on_first_schedule: Callable[[float, int], None] | None = None
-                             ) -> Schedule:
+                             on_first_schedule: Callable[[float, int], None] | None = None,
+                             on_stopping: Callable[[], None] | None = None) -> Schedule:
     """Run the solver and turn every variable set to 1 into an assignment;
     the Schedule also says whether CP-SAT proved it optimal, its penalty
     and lowest penalty possible.
@@ -61,7 +62,7 @@ def _solve_and_read_schedule(model: cp_model.CpModel, works: variables.Works,
     debug_print("_solve_and_read_schedule: running CP-SAT")
     solver = make_cp_sat_solver(time_limit_seconds=time_limit_seconds)
     reporter = _FirstScheduleReporter(on_first_schedule)
-    status = run_cp_sat(solver, model, reporter)
+    status = run_cp_sat(solver, model, reporter, on_stopping)
 
     # Stop here if CP-SAT found no schedule (see raise_if_no_schedule).
     raise_if_no_schedule(status=status, time_limit_seconds=time_limit_seconds)
@@ -109,8 +110,6 @@ def run_cp_sat(solver: cp_model.CpSolver, model: cp_model.CpModel,
     before it found any schedule (UNKNOWN), KeyboardInterrupt is raised: a normal abort.
     A building block of solve(); public because it is tested on its own.
     """
-    # TODO: our own Ctrl+C handler during the search (signal.signal, put the previous one
-    # back in a finally), on_stopping once, KeyboardInterrupt when stopped and nothing found.
     # A thread can't return a value, so the search puts CP-SAT's status in this dict.
     result = {}
 
@@ -119,19 +118,35 @@ def run_cp_sat(solver: cp_model.CpSolver, model: cp_model.CpModel,
         result["status"] = solver.solve(model, solution_callback)
 
     thread = threading.Thread(target=search)
-    thread.start()
 
-    # Wait in short steps of 0.2 s, so the main thread keeps coming back to Python code,
-    # where a Ctrl+C reaches it as KeyboardInterrupt. Then ask CP-SAT to stop: it finishes
-    # as if the time limit was reached, with the best schedule so far.
-    while thread.is_alive():
-        try:
+    stopped_by_user = False
+
+    def on_ctrl_c(signal_number: int, frame: object) -> None:
+        """Our Ctrl+C handler during the search: ask CP-SAT to stop."""
+        nonlocal stopped_by_user   # change the variable of run_cp_sat, not make a new one
+        solver.stop_search()
+        if not stopped_by_user:
+            stopped_by_user = True
+            if on_stopping is not None:
+                on_stopping()
+
+    # During the search Ctrl+C calls on_ctrl_c instead of raising KeyboardInterrupt;
+    # finally puts the previous handler back, whatever happens.
+    previous_handler = signal.signal(signal.SIGINT, on_ctrl_c)
+    try:
+        thread.start()
+        # Wait in short steps, so the main thread regularly runs Python code: Python only
+        # runs a Ctrl+C handler there.
+        while thread.is_alive():
             thread.join(timeout=0.2)
-        except KeyboardInterrupt:
-            solver.stop_search()
+    finally:
+        signal.signal(signal.SIGINT, previous_handler)
 
-    return result["status"]
-
+    status = result["status"]
+    # Stopped before any schedule was found: nothing to keep, a normal abort.
+    if stopped_by_user and status == cp_model.UNKNOWN:
+        raise KeyboardInterrupt
+    return status
 
 
 def raise_if_no_schedule(status: int, time_limit_seconds: int | None) -> None:
