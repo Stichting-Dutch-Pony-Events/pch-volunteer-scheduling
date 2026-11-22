@@ -187,7 +187,8 @@ scheduler/            __main__.py (the command line, run with `python -m schedul
                       (the --debug-time switch and debug_print)
 scheduler/reading/    workbook.py (read_problem), settings.py, volunteers.py, posts.py,
                       skills.py, demand.py (one reader per tab), cells.py (shared helpers)
-scheduler/solving/    solver.py (solve, make_cp_sat_solver, raise_if_no_schedule), checks.py
+scheduler/solving/    solver.py (solve, make_cp_sat_solver, run_cp_sat, raise_if_no_schedule),
+                      checks.py
                       (check_problem, find_warnings), variables.py (Works,
                       create_variables, lookup helpers), hard_rules.py (add_<name>_rule)
 scheduler/writing/    output.py (write_output), schedule_sheet.py (the Schedule tab and
@@ -1225,6 +1226,14 @@ up to date with `main`):
    under load, each broken variant reds its own test, real CP-SAT stops ~3.5 s after
    on_stopping. Note for the window program later: signal.signal only works in the main
    thread (a window has its own Stop button calling stop_search anyway).
+   **Implemented (2026-11-22, user; Claude fixed the plumbing), 471 green.** Then a refactor
+   by the user (user's idea): `_solve_and_read_schedule` removed, its steps are now in
+   `solve()` (make_cp_sat_solver, _FirstScheduleReporter, run_cp_sat, raise_if_no_schedule)
+   plus a new private `_read_schedule(solver, works, status)`; the "running CP-SAT" debug
+   line moved into run_cp_sat. **Order in solver.py = the order solve() uses them** (table
+   of contents first, then the helpers top to bottom). 471 green.
+   **Continue here:** the manual Ctrl+C try (made-up script or UKPC with permission), then
+   README/CLAUDE status and the PR of `feature/solver-progress` into `develop`.
    **Soft rules can be switched on/off (user's idea, option B agreed 2026-11-18):**
    `Settings.soft_rules: frozenset[str] = frozenset()` = the soft rules that are on;
    empty by default, so `Settings()` = hard rules only and every test switches on exactly
