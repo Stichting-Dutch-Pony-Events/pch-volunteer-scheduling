@@ -145,6 +145,14 @@ Fixture** for a volunteer who is clearly the preferred one ("star volunteer"; ad
   adding a rule = one new function there + one line in `solve()`. Soft rules will go in
   `solving/soft_rules.py`. Prefer plain loops over comprehensions (the user finds loops
   easier to read).
+- **Helper variables (rule of thumb, agreed 2026-11-22):** a helper variable that goes into
+  a **penalty** needs bounds on both sides, so it always has exactly the meant value (e.g.
+  `changes` in round times: two `>=` and two `<=`). Minimising alone only makes it right at
+  the optimum; a schedule found before the time limit or Ctrl+C would report a penalty
+  that is too high. A helper that only appears in a **hard rule** may have one side, as
+  long as a wrong value can only make that rule stricter, never looser (e.g. `moves`,
+  `stops`, `someone_moves` in stay at post, `escape` in the minimum stretch); say so in a
+  comment next to it.
 - **Decided: no Rule base class for now** (plain functions with the same arguments are
   enough). Revisit later: the user may want to switch rules on/off from the workbook,
   and soft rules need weights. Focus first on a minimal viable scheduler, then expand.
@@ -1162,6 +1170,14 @@ up to date with `main`):
    this one found >= 5 schedules in 20 of 20 runs). Trial in a scratch copy: all new tests
    green; red with a reporter that reports every schedule. Expected after implementing: the 5
    tests with an old fake solve without `on_first_schedule` go red (user fixes them).
+   **Step 3 done (2026-11-20):** `_FirstScheduleReporter(cp_model.CpSolverSolutionCallback)`
+   in solver.py (CP-SAT wants such an object, not a plain function; it calls
+   `on_first_schedule(self.wall_time, round(self.objective_value))` once), main passes
+   `_say_first_schedule_message`; Claude added `on_first_schedule` to the 4 old fake solves.
+   456 green. Why a callback and not `_say` in the solver: solve() stays silent, no circular
+   import with `__main__`, simple tests, a window program can pass its own function.
+   **Step 4 (2026-11-22):** the user added the two upper bounds to `add_round_times_penalty`
+   (`changes <= before + now`, `changes <= 2 - before - now`); 456 green.
    **Soft rules can be switched on/off (user's idea, option B agreed 2026-11-18):**
    `Settings.soft_rules: frozenset[str] = frozenset()` = the soft rules that are on;
    empty by default, so `Settings()` = hard rules only and every test switches on exactly

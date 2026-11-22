@@ -86,13 +86,20 @@ def add_round_times_penalty(model: cp_model.CpModel, problem: Problem,
             if works_before == [] and works_now == []:
                 continue
 
-            # If the previous block was free, but the current block is worked, that means
-            # a start at :15 or :45, and should be penalised.
-            # If the previous block was worked, but the current block isnt, that means
-            # a stop at :15 or :45, and should be penalised.
+            # changes = 1 exactly when this volunteer starts or stops working at this
+            # block (on :15 or :45). Each sum is 0 or 1 (nobody works two posts at once).
+            # The two >= lines force changes to 1 on a start (free before, working now) or
+            # an end (working before, free now).
+            # The two <= lines force changes to 0 when nothing changes (free-free or
+            # working-working). Minimising would do that anyway at the best schedule, but
+            # a schedule found earlier (time limit, Ctrl+C) would otherwise report a
+            # penalty that is too high.
             changes = model.new_bool_var(f"{volunteer.name} starts or ends at {block}")
             model.add(changes >= sum(works_before) - sum(works_now))
             model.add(changes >= sum(works_now) - sum(works_before))
+            model.add(changes <= sum(works_before) + sum(works_now))
+            model.add(changes <= 2 - sum(works_before) - sum(works_now))
+
 
             penalties.append(changes * weight)
 
