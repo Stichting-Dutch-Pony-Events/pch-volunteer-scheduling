@@ -1206,6 +1206,25 @@ up to date with `main`):
    Checked in a scratch copy: the planned code 463 green; search in the main thread and
    "no stop_search" each give exactly test 3 red, the run completes. Still to decide
    (cosmetic): use make_cp_sat_solver in those two round-times tests too.
+   **Implemented by the user (2026-11-22, the try/except version), 463 green. Then agreed:**
+   "Solving (this can take a few minutes; press Ctrl+C to stop)"; on the first Ctrl+C
+   `on_stopping()` (passed solve -> _solve_and_read_schedule -> run_cp_sat; main `_say`s
+   "Stopping the search; this can take a few seconds."); Ctrl+C before a first schedule
+   (stopped + UNKNOWN) -> run_cp_sat raises KeyboardInterrupt; main catches
+   KeyboardInterrupt (also while reading/building/writing): stderr "Stopped by Ctrl+C. No
+   schedule written.", exit 1. Tests by Claude: 4 more in test_solver_ctrl_c.py (helper
+   `_send_ctrl_c_after`, `_FakeSolver(status_when_stopped)` needing 0.5 s to finish; before
+   a first schedule raises; on_stopping right away; not again on a second Ctrl+C; solve
+   passes on_stopping on, via a monkeypatched run_cp_sat) and 3 in test_main.py (section
+   "Ctrl+C"); the old fakes got `on_stopping=None`. 8 red. **Race found under load:** the
+   try/except version lets a Ctrl+C escape when it arrives at `while thread.is_alive()`
+   (outside the try; ~2 in 100 runs). **Design changed:** during the search our own
+   handler via `signal.signal(SIGINT, on_ctrl_c)` (calls stop_search, on_stopping once,
+   `nonlocal stopped_by_user`), the previous handler put back in a `finally`; no
+   KeyboardInterrupt during the search at all. Trial: 471 green, 0 failures in 100 runs
+   under load, each broken variant reds its own test, real CP-SAT stops ~3.5 s after
+   on_stopping. Note for the window program later: signal.signal only works in the main
+   thread (a window has its own Stop button calling stop_search anyway).
    **Soft rules can be switched on/off (user's idea, option B agreed 2026-11-18):**
    `Settings.soft_rules: frozenset[str] = frozenset()` = the soft rules that are on;
    empty by default, so `Settings()` = hard rules only and every test switches on exactly

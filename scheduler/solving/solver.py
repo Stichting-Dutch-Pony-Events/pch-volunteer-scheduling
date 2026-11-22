@@ -1,3 +1,4 @@
+import threading
 from collections.abc import Callable
 
 from ortools.sat.python import cp_model
@@ -9,15 +10,19 @@ from scheduler.solving import checks, hard_rules, soft_rules, variables
 
 
 def solve(problem: Problem, time_limit_seconds: int | None = None,
-          on_first_schedule: Callable[[float, int], None] | None = None) -> Schedule:
+          on_first_schedule: Callable[[float, int], None] | None = None,
+          on_stopping: Callable[[], None] | None = None) -> Schedule:
     """Find a schedule that meets all hard rules, using the OR-Tools CP-SAT solver.
 
     time_limit_seconds: stop CP-SAT after this many seconds (None = no limit); if it found
     nothing by then, TimeLimitReached is raised.
     on_first_schedule: called once, as soon as CP-SAT finds its first schedule, with the
     seconds CP-SAT has been searching and that schedule's penalty (None = nobody to tell).
+    on_stopping: called once, right when Ctrl+C asks CP-SAT to stop (it may need a few
+    seconds to finish). A Ctrl+C before any schedule was found raises KeyboardInterrupt.
     solve() itself prints nothing; the caller decides what to do with it.
     """
+    # TODO: pass on_stopping on to run_cp_sat (via _solve_and_read_schedule).
     # Check problem for obvious unsolvable situations
     checks.check_problem(problem)
 
@@ -56,7 +61,7 @@ def _solve_and_read_schedule(model: cp_model.CpModel, works: variables.Works,
     debug_print("_solve_and_read_schedule: running CP-SAT")
     solver = make_cp_sat_solver(time_limit_seconds=time_limit_seconds)
     reporter = _FirstScheduleReporter(on_first_schedule)
-    status = solver.solve(model, solution_callback=reporter)
+    status = run_cp_sat(solver, model, reporter)
 
     # Stop here if CP-SAT found no schedule (see raise_if_no_schedule).
     raise_if_no_schedule(status=status, time_limit_seconds=time_limit_seconds)
@@ -81,20 +86,52 @@ def make_cp_sat_solver(time_limit_seconds: int | None) -> cp_model.CpSolver:
     solver = cp_model.CpSolver()
     if time_limit_seconds is not None:
         solver.parameters.max_time_in_seconds = time_limit_seconds
+
+    # CP-SAT's own Ctrl+C handling ends the whole program on Windows (and stays behind
+    # after the search); run_cp_sat handles Ctrl+C instead.
+    solver.parameters.catch_sigint_signal = False
+
     return solver
 
 
 def run_cp_sat(solver: cp_model.CpSolver, model: cp_model.CpModel,
-               solution_callback: cp_model.CpSolverSolutionCallback | None) -> int:
+               solution_callback: cp_model.CpSolverSolutionCallback | None,
+               on_stopping: Callable[[], None] | None = None) -> int:
     """Run CP-SAT so that Ctrl+C stops the search but keeps the best schedule so far.
 
     Returns CP-SAT's status. CP-SAT searches in a background thread while the main thread
-    waits. Python only gives Ctrl+C to the main thread (as KeyboardInterrupt); then we ask
-    CP-SAT to stop, and it returns as if the time limit was reached. (CP-SAT's own Ctrl+C
-    handling ends the whole program on Windows, so make_cp_sat_solver switches it off.)
+    waits. During the search, Ctrl+C runs our own handler instead of raising
+    KeyboardInterrupt: it asks CP-SAT to stop, and CP-SAT returns as if the time limit was
+    reached. (A KeyboardInterrupt could pop up at any line, also outside a try; and CP-SAT's
+    own Ctrl+C handling ends the whole program on Windows, so make_cp_sat_solver switches it
+    off.) on_stopping is called on the first Ctrl+C, right away (CP-SAT may need a few
+    seconds to stop); a second Ctrl+C doesn't call it again. If the search was stopped
+    before it found any schedule (UNKNOWN), KeyboardInterrupt is raised: a normal abort.
     A building block of solve(); public because it is tested on its own.
     """
-    raise NotImplementedError
+    # TODO: our own Ctrl+C handler during the search (signal.signal, put the previous one
+    # back in a finally), on_stopping once, KeyboardInterrupt when stopped and nothing found.
+    # A thread can't return a value, so the search puts CP-SAT's status in this dict.
+    result = {}
+
+    def search() -> None:
+        """Run CP-SAT; this runs in the background thread."""
+        result["status"] = solver.solve(model, solution_callback)
+
+    thread = threading.Thread(target=search)
+    thread.start()
+
+    # Wait in short steps of 0.2 s, so the main thread keeps coming back to Python code,
+    # where a Ctrl+C reaches it as KeyboardInterrupt. Then ask CP-SAT to stop: it finishes
+    # as if the time limit was reached, with the best schedule so far.
+    while thread.is_alive():
+        try:
+            thread.join(timeout=0.2)
+        except KeyboardInterrupt:
+            solver.stop_search()
+
+    return result["status"]
+
 
 
 def raise_if_no_schedule(status: int, time_limit_seconds: int | None) -> None:

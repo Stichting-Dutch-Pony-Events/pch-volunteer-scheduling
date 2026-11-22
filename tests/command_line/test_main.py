@@ -308,7 +308,8 @@ def _remember_time_limit(monkeypatch: pytest.MonkeyPatch) -> dict[str, int | Non
     received = {}
 
     def fake_solve(problem: Problem, time_limit_seconds: int | None,
-                   on_first_schedule: Callable[[float, int], None] | None = None) -> Schedule:
+                   on_first_schedule: Callable[[float, int], None] | None = None,
+                   on_stopping: Callable[[], None] | None = None) -> Schedule:
         received["time_limit_seconds"] = time_limit_seconds
         raise NoScheduleFound("stop here")   # no need to really solve and write
     monkeypatch.setattr(command_line, "solve", fake_solve)
@@ -365,7 +366,8 @@ def test_time_limit_reached_prints_a_clear_message(tmp_path, monkeypatch, capsys
     # Arrange
     # A real timeout is hard to make in a test, so solve pretends.
     def fake_solve(problem: Problem, time_limit_seconds: int | None,
-                   on_first_schedule: Callable[[float, int], None] | None = None) -> Schedule:
+                   on_first_schedule: Callable[[float, int], None] | None = None,
+                   on_stopping: Callable[[], None] | None = None) -> Schedule:
         raise TimeLimitReached("No schedule found within the time limit of 10 minutes.")
     monkeypatch.setattr(command_line, "solve", fake_solve)
     output = tmp_path / "output.xlsx"
@@ -498,7 +500,8 @@ def test_main_prints_the_message_after_solving(tmp_path: Path, monkeypatch: pyte
     # fake write_output does nothing. The fake returns at once, so the message starts with
     # "Stopped after"; check only the part every variant has.
     def fake_solve(problem: Problem, time_limit_seconds: int | None,
-                   on_first_schedule: Callable[[float, int], None] | None = None) -> Schedule:
+                   on_first_schedule: Callable[[float, int], None] | None = None,
+                   on_stopping: Callable[[], None] | None = None) -> Schedule:
         return Schedule(assignments=set(), proven_optimal=False,
                         penalty=24, lowest_possible_penalty=20)
 
@@ -555,7 +558,8 @@ def test_main_prints_the_first_schedule_line_while_solving(
     # through the function main gives it, then return a schedule. Fake write_output does
     # nothing.
     def fake_solve(problem: Problem, time_limit_seconds: int | None,
-                   on_first_schedule: Callable[[float, int], None]) -> Schedule:
+                   on_first_schedule: Callable[[float, int], None],
+                   on_stopping: Callable[[], None] | None = None) -> Schedule:
         on_first_schedule(12.0, 2345)
         return Schedule(assignments=set(), proven_optimal=True,
                         penalty=2000, lowest_possible_penalty=2000)
@@ -576,6 +580,83 @@ def test_main_prints_the_first_schedule_line_while_solving(
     first_schedule_at = printed.index("Found a first schedule after 12.0 s (penalty 2,345)")
     solved_at = printed.index("This is the best possible schedule (penalty 2,000)")
     assert solving_at < first_schedule_at < solved_at
+
+
+# --- Ctrl+C ---
+# Ctrl+C during the search stops it and keeps the best schedule so far (run_cp_sat in the
+# solver). Before a first schedule, or outside the search (reading, building the model,
+# writing), Ctrl+C is a normal abort: a KeyboardInterrupt that main turns into one line.
+
+def test_solving_line_says_ctrl_c_stops_it(tmp_path: Path, capsys: pytest.CaptureFixture[str]):
+    """The "Solving" line tells the user that Ctrl+C stops the search."""
+    # Arrange
+    output = tmp_path / "output.xlsx"
+
+    # Act
+    command_line.main([str(TEST_WORKBOOK), str(output)])
+
+    # Assert
+    printed = capsys.readouterr().out
+    assert "Solving (this can take a few minutes; press Ctrl+C to stop)" in printed
+
+
+def test_main_prints_the_stopping_line(tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+                                       capsys: pytest.CaptureFixture[str]):
+    """main prints a line right when Ctrl+C asks the search to stop."""
+    # Arrange
+    # Fake solve does what run_cp_sat does on Ctrl+C: call on_stopping, then return the
+    # best schedule so far (not proven optimal). Fake write_output does nothing.
+    def fake_solve(problem: Problem, time_limit_seconds: int | None,
+                   on_first_schedule: Callable[[float, int], None] | None = None,
+                   on_stopping: Callable[[], None] | None = None) -> Schedule:
+        on_stopping()
+        return Schedule(assignments=set(), proven_optimal=False,
+                        penalty=24, lowest_possible_penalty=20)
+
+    def fake_write_output(problem: Problem, schedule: Schedule, path: Path) -> None:
+        pass   # nothing to write: only the printed lines matter here
+
+    monkeypatch.setattr(command_line, "solve", fake_solve)
+    monkeypatch.setattr(command_line, "write_output", fake_write_output)
+    output = tmp_path / "output.xlsx"
+
+    # Act
+    command_line.main([str(TEST_WORKBOOK), str(output)])
+
+    # Assert
+    printed = capsys.readouterr().out
+    solving_at = printed.index("Solving")
+    stopping_at = printed.index("Stopping the search; this can take a few seconds.")
+    solved_at = printed.index("This is the best schedule found (penalty 24)")
+    assert solving_at < stopping_at < solved_at
+
+
+@pytest.mark.parametrize("stopped_in", ["read_problem", "solve"])
+def test_ctrl_c_prints_a_message_and_writes_nothing(
+        stopped_in: str, tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+        capsys: pytest.CaptureFixture[str]):
+    """Ctrl+C while reading, or before a first schedule, gives one line and exit code 1."""
+    # Arrange
+    # The step stopped_in is replaced by a fake that acts as if Ctrl+C was pressed:
+    # it raises KeyboardInterrupt (for solve: what run_cp_sat does before a first schedule).
+    def press_ctrl_c(*arguments, **keywords) -> None:
+        raise KeyboardInterrupt
+
+    monkeypatch.setattr(command_line, stopped_in, press_ctrl_c)
+    output = tmp_path / "output.xlsx"
+
+    # Act
+    # A KeyboardInterrupt that gets out of main would make pytest stop the whole test run;
+    # catching it here turns that into a normal red test.
+    try:
+        result = command_line.main([str(TEST_WORKBOOK), str(output)])
+    except KeyboardInterrupt:
+        pytest.fail("Ctrl+C got out of main: it should print a message instead")
+
+    # Assert
+    assert result == 1
+    assert capsys.readouterr().err == "Stopped by Ctrl+C. No schedule written.\n"
+    assert not output.exists()
 
 
 # --- debug output ---
@@ -672,7 +753,8 @@ def test_no_schedule_possible_prints_a_message(tmp_path, monkeypatch, capsys):
     """When the solver finds no schedule, the program says so with exit code 1."""
     # Arrange
     def fake_solve(problem: Problem, time_limit_seconds: int | None,
-                   on_first_schedule: Callable[[float, int], None] | None = None) -> Schedule:
+                   on_first_schedule: Callable[[float, int], None] | None = None,
+                   on_stopping: Callable[[], None] | None = None) -> Schedule:
         raise NoScheduleFound("no schedule follows all the rules")
     monkeypatch.setattr(command_line, "solve", fake_solve)
 
