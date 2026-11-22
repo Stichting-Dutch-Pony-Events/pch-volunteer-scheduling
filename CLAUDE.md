@@ -1181,6 +1181,31 @@ up to date with `main`):
    `test_penalty_counts_only_real_starts_and_ends_even_when_maximised` (the counting test
    with `maximize`: the worst case, reliably red without the bounds, all 4 cases checked in
    a scratch copy). 460 green.
+   **Step 5, Ctrl+C does NOT work on Windows (found 2026-11-22):** on UKPC, Ctrl+C after
+   the first schedule ended the whole program (nothing written, no message). Reproduced by
+   Claude on a made-up 60-volunteer problem (`signal.raise_signal(SIGINT)` from a timer
+   thread): with `catch_sigint_signal` on (the default) the process dies, CP-SAT's log
+   shows no reaction; with it off the process survives, but Python only raises
+   KeyboardInterrupt after CP-SAT returns (the main thread is inside C++). **Working fix
+   (tried in a scratch copy):** `catch_sigint_signal = False`, run `solver.solve(...)` in a
+   `threading.Thread`, the main thread waits with `thread.join(timeout=0.2)` in a loop and
+   on KeyboardInterrupt calls `solver.stop_search()`; solve() then returns normally with
+   the best schedule so far (status FEASIBLE). Still to decide with the user: where it
+   goes (a helper in solver.py), tests, and the message for Ctrl+C before the first
+   schedule (now UNKNOWN -> TimeLimitReached "within the time limit", which is wrong).
+   **Stubs + tests written by Claude (2026-11-22, on request):** `run_cp_sat(solver, model,
+   solution_callback) -> int` in solver.py (NotImplementedError, not yet used);
+   tests/solving/test_solver_ctrl_c.py with 3 tests (catch_sigint_signal off; a real tiny
+   search returns OPTIMAL; a real Ctrl+C via `threading.Timer` + `signal.raise_signal` stops
+   a `_FakeSolver` whose search waits for stop_search, at most 5 s). The Act catches
+   KeyboardInterrupt (`pytest.fail`) and cancels the timer in `finally`, so a broken
+   run_cp_sat gives a red test, never an aborted run. **Second quirk:** a CP-SAT search with
+   catch_sigint_signal on leaves CP-SAT's handler behind for the rest of the process (the
+   round-times tests with a plain `cp_model.CpSolver()` did; the next Ctrl+C killed pytest,
+   exit 3), so test 3 first puts back `signal.default_int_handler`. 3 red, 460 green.
+   Checked in a scratch copy: the planned code 463 green; search in the main thread and
+   "no stop_search" each give exactly test 3 red, the run completes. Still to decide
+   (cosmetic): use make_cp_sat_solver in those two round-times tests too.
    **Soft rules can be switched on/off (user's idea, option B agreed 2026-11-18):**
    `Settings.soft_rules: frozenset[str] = frozenset()` = the soft rules that are on;
    empty by default, so `Settings()` = hard rules only and every test switches on exactly

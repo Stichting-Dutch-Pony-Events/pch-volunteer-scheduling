@@ -84,6 +84,19 @@ def make_cp_sat_solver(time_limit_seconds: int | None) -> cp_model.CpSolver:
     return solver
 
 
+def run_cp_sat(solver: cp_model.CpSolver, model: cp_model.CpModel,
+               solution_callback: cp_model.CpSolverSolutionCallback | None) -> int:
+    """Run CP-SAT so that Ctrl+C stops the search but keeps the best schedule so far.
+
+    Returns CP-SAT's status. CP-SAT searches in a background thread while the main thread
+    waits. Python only gives Ctrl+C to the main thread (as KeyboardInterrupt); then we ask
+    CP-SAT to stop, and it returns as if the time limit was reached. (CP-SAT's own Ctrl+C
+    handling ends the whole program on Windows, so make_cp_sat_solver switches it off.)
+    A building block of solve(); public because it is tested on its own.
+    """
+    raise NotImplementedError
+
+
 def raise_if_no_schedule(status: int, time_limit_seconds: int | None) -> None:
     """Raise if CP-SAT's status means it found no schedule; do nothing if it found one.
 
