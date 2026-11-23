@@ -50,7 +50,7 @@ def _good_workbook() -> Workbook:
     workbook.remove(workbook.active)   # a new workbook starts with a tab "Sheet"
     _add_sheet(workbook, "Settings", [
         ("Setting", "Value"),
-        ("Workbook format version", 1),
+        ("Workbook format version", 2),
         ("Time step", 15),
         ("Day boundary", "06:00"),
         ("Days", "Friday, Saturday"),
