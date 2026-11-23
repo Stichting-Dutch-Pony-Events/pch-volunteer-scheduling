@@ -1252,6 +1252,13 @@ up to date with `main`):
    two splitting it; a guard with a gap in the demand; each stretch costs the weight
    (objective_value, incl. a post switch); the same under maximize; the weight decides
    against skill score; off returns []; the default in test_model.py.
+   **Step 1 done (2026-11-23), branch `feature/soft_rules`:** tests filled in and rule
+   implemented by the user, one line in solve(); 486 green. Test 1 first used 2 volunteers
+   and 2 hours and was green by luck (CP-SAT gave it to one person 8 of 8 seeds without the
+   rule); now 4 volunteers and 3 hours (split 8 of 8 without the rule). Seed check in a
+   scratch copy (seeds 0-4): without the line in solve() tests 1 and 3 go red; without `>=`
+   also the counting test; without either `<=` exactly the maximise test.
+   **Next:** step 2, the penalty per block beyond the preferred maximum stretch.
    **Soft rules can be switched on/off (user's idea, option B agreed 2026-11-18):**
    `Settings.soft_rules: frozenset[str] = frozenset()` = the soft rules that are on;
    empty by default, so `Settings()` = hard rules only and every test switches on exactly

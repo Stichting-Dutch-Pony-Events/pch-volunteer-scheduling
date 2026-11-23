@@ -113,5 +113,30 @@ def add_fewer_stretches_penalty(model: cp_model.CpModel, problem: Problem,
     settings.weight_work_stretch, once, however long it is. A switch to another post
     inside a stretch is not a new stretch.
     """
-    # TODO: not yet called from solve(); add the line there once this works.
-    raise NotImplementedError
+    # if the rule is not added (or costs nothing), then return nothing
+    weight = problem.settings.weight_work_stretch
+    if "fewer_stretches" not in problem.settings.soft_rules or weight == 0:
+        debug_print("add_fewer_stretches_penalty: skipping the rule")
+        return []
+
+    debug_print("add_fewer_stretches_penalty: adding the rule")
+
+    lookup = variables_by_volunteer_and_block(works)
+
+    penalties = []
+    for block in blocks_of_convention(problem):
+        for volunteer in problem.volunteers:
+            works_before = variables_of(lookup, volunteer.name, block - 1, block)
+            works_now = variables_of(lookup, volunteer.name, block, block + 1)
+            if works_before == [] and works_now == []:
+                continue
+
+            # Counting the number of starts of stretches
+            starts = model.new_bool_var(f"{volunteer.name} starts at block {block}")
+            model.add(starts >= sum(works_now) - sum(works_before))  # forced 1 at start stretch
+            model.add(starts <= sum(works_now))  # forced 0 if not working now
+            model.add(starts <= 1 - sum(works_before))  # forced 0 if working before
+
+            penalties.append(starts * weight)
+
+    return penalties
