@@ -45,6 +45,42 @@ def test_default_round_times_weight_is_10_per_start_or_end():
     assert settings.weight_off_round_time == 10
 
 
+def test_default_work_stretch_weight_is_20_per_stretch():
+    """The default penalty for each work stretch is 20 points."""
+    # Arrange
+    # (nothing to arrange: we look at a fresh Settings with all defaults)
+
+    # Act
+    settings = Settings()
+
+    # Assert
+    assert settings.weight_work_stretch == 20
+
+
+def test_default_preferred_maximum_stretch_is_120_minutes():
+    """The default preferred maximum work stretch is 120 minutes."""
+    # Arrange
+    # (nothing to arrange: we look at a fresh Settings with all defaults)
+
+    # Act
+    settings = Settings()
+
+    # Assert
+    assert settings.preferred_max_stretch_minutes == 120
+
+
+def test_default_weight_over_the_preferred_stretch_is_6_per_block():
+    """The default penalty for each block beyond the preferred maximum stretch is 6 points."""
+    # Arrange
+    # (nothing to arrange: we look at a fresh Settings with all defaults)
+
+    # Act
+    settings = Settings()
+
+    # Assert
+    assert settings.weight_over_preferred_stretch == 6
+
+
 def test_unknown_soft_rule_name_raises_value_error():
     """A name in Settings.soft_rules that is not a soft rule raises ValueError."""
     # Arrange

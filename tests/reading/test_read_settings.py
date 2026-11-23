@@ -14,7 +14,7 @@ HEADER = ("Setting", "Value", "Unit", "Meaning")
 # A complete, correct Settings tab. The values differ from the defaults in model.py, so a
 # test can't pass by accident through those defaults.
 GOOD_ROWS = [
-    ("Workbook format version", 1),
+    ("Workbook format version", 2),
     ("Time step", 15),
     ("Day boundary", "06:00"),
     ("Days", "Friday, Saturday"),
@@ -27,17 +27,23 @@ GOOD_ROWS = [
     ("Weight: skill score 2", 3),
     ("Weight: skill score 3", 1),
     ("Weight: start or end off the half hour", 7),
+    ("Weight: work stretch", 19),
+    ("Weight: work stretch longer than preferred", 5),
+    ("Preferred maximum work stretch", 105),
 ]
 
 # The reader switches every soft rule on; update this when a soft rule is added.
-ALL_SOFT_RULES = frozenset({"round_times", "skill_score"})
+ALL_SOFT_RULES = frozenset({"fewer_stretches", "preferred_max_stretch", "round_times",
+                            "skill_score"})
 
 # What GOOD_ROWS should give.
 GOOD_SETTINGS = Settings(min_stretch_minutes=45, max_stretch_minutes=150,
                          min_break_minutes=20, days=("Friday", "Saturday"),
                          default_max_minutes_per_day=360, default_max_minutes_total=720,
+                         preferred_max_stretch_minutes=105,
                          weight_skill_score_1=5, weight_skill_score_2=3, weight_skill_score_3=1,
-                         weight_off_round_time=7,
+                         weight_off_round_time=7, weight_work_stretch=19,
+                         weight_over_preferred_stretch=5,
                          soft_rules=ALL_SOFT_RULES)
 
 # The settings that must be there with a value (missing or empty = error).
@@ -50,7 +56,11 @@ REQUIRED_SETTINGS = ["Workbook format version", "Time step", "Day boundary", "Da
 OPTIONAL_SETTINGS = [("Weight: skill score 1", "weight_skill_score_1", 6),
                      ("Weight: skill score 2", "weight_skill_score_2", 2),
                      ("Weight: skill score 3", "weight_skill_score_3", 0),
-                     ("Weight: start or end off the half hour", "weight_off_round_time", 10)]
+                     ("Weight: start or end off the half hour", "weight_off_round_time", 10),
+                     ("Weight: work stretch", "weight_work_stretch", 20),
+                     ("Weight: work stretch longer than preferred",
+                      "weight_over_preferred_stretch", 6),
+                     ("Preferred maximum work stretch", "preferred_max_stretch_minutes", 120)]
 
 
 def _settings_sheet(rows: list[tuple], header: tuple[str, ...] = HEADER) -> Worksheet:
@@ -243,7 +253,7 @@ def test_empty_optional_setting_gets_the_default(empty_setting: str, field: str,
 def test_other_workbook_format_version_raises_workbook_error():
     """A workbook made for another layout (another format version) is an error."""
     # Arrange
-    sheet = _settings_sheet(_rows_with("Workbook format version", 2))
+    sheet = _settings_sheet(_rows_with("Workbook format version", 1))
 
     # Act
     # (Act and Assert are combined, pytest.raises checks the exception while the call runs.)

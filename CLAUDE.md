@@ -1234,11 +1234,77 @@ up to date with `main`):
    of contents first, then the helpers top to bottom). 471 green.
    **Step 5 done (2026-11-22):** the user tried Ctrl+C by hand: it works. README Status and
    "Making a schedule" updated; PR of `feature/solver-progress` into `develop` (471 green).
-   **Continue here next session:** after the merge, a new branch from `develop` for the next
+   **Continue here next session:** PR #7 merged into `develop` (2026-11-22); a new branch from `develop` for the next
    soft rule (fewer, longer stretches: a penalty per stretch; its helper variables need
    bounds on both sides, see "Helper variables"). Small follow-ups noted: the two
    round-times tests could use make_cp_sat_solver; `--verbose` (every improvement / CP-SAT
    log) is still on the wish list.
+   **Stretch length design (agreed 2026-11-22), one branch, two steps:** (1) a fixed cost
+   per work stretch, `add_fewer_stretches_penalty`, switch `"fewer_stretches"`,
+   `Settings.weight_work_stretch` (suggested default 20, per stretch, not per block); a
+   bool `starts` per volunteer per block with `starts >= now - before`, `starts <= now`,
+   `starts <= 1 - before` (now/before = sum of their variables in that block). A post
+   switch inside a stretch is not a start. (2) Then a penalty per block beyond the
+   preferred maximum (workbook row "Preferred maximum shift length", 120 min). Together:
+   rule 1 pushes stretches up, rule 2 stops them at the ideal; the weights only set how
+   far past it CP-SAT may go (it splits a stretch x blocks too long when E * x > S).
+   Planned tests for step 1 (stubs first): one person takes a 2-hour opening instead of
+   two splitting it; a guard with a gap in the demand; each stretch costs the weight
+   (objective_value, incl. a post switch); the same under maximize; the weight decides
+   against skill score; off returns []; the default in test_model.py.
+   **Step 1 done (2026-11-23), branch `feature/soft_rules`:** tests filled in and rule
+   implemented by the user, one line in solve(); 486 green. Test 1 first used 2 volunteers
+   and 2 hours and was green by luck (CP-SAT gave it to one person 8 of 8 seeds without the
+   rule); now 4 volunteers and 3 hours (split 8 of 8 without the rule). Seed check in a
+   scratch copy (seeds 0-4): without the line in solve() tests 1 and 3 go red; without `>=`
+   also the counting test; without either `<=` exactly the maximise test.
+   **Step 2 done (2026-11-23):** `add_preferred_max_stretch_penalty` (switch
+   `"preferred_max_stretch"`, renamed from "long_stretches": names say what is preferred),
+   `Settings.preferred_max_stretch_minutes` (120) and `weight_over_preferred_stretch` (6 per
+   block). One bool `over` per volunteer per block where they could work: `over >= now +
+   (P blocks before) - P`, `over <= now`, `P * over <= (P blocks before)` (one line instead
+   of P). Tests in test_solver_preferred_max_stretch.py with `STRETCH_CASES` and the helper
+   `_model_with_fixed_work` (the min/max tests differ only in minimize/maximize). 504 green;
+   seed check (0-4) as in step 1: each broken variant reds its own tests.
+   test_solver_fewer_stretches.py refactored to the same `STRETCH_CASES` + helper (Claude,
+   on request; the same 14 tests pass).
+   **Still to do after step 2 (user, 2026-11-23): read both rules' settings from the
+   workbook in one step** (like 2b), before the real-data run. Fewer stretches: no row
+   yet, so a new optional row (e.g. "Weight: work stretch") in `KNOWN_SETTINGS`, the
+   template, the test workbook and both real workbooks (backups first). Preferred maximum stretch (`preferred_max_stretch`):
+   "Preferred maximum shift length" and "Weight: shift longer than preferred" are already
+   known names but ignored; read them (decide whether to rename them, e.g. "Preferred
+   maximum work stretch", to match "Minimum/Maximum work stretch"; renaming a required row
+   may need the workbook format version). Tests in test_read_settings.py: rows in
+   GOOD_SETTINGS and the OPTIONAL_SETTINGS table. Round times is already read ("Weight:
+   start or end off the half hour").
+   **Decided (user, 2026-11-23): rename and raise the workbook format version to 2.** Rows
+   "Preferred maximum work stretch" (was "... shift length"; optional, default 120, minutes,
+   minimum 1), "Weight: work stretch longer than preferred" (was "Weight: shift longer than
+   preferred"; optional, default 6 per time step), new "Weight: work stretch" (optional,
+   default 20 per stretch). All three via `_optional_whole_number_setting`; checks on the
+   values (15-minute grid, preferred <= maximum) stay with `__post_init__`.
+   **Workbooks done by Claude (2026-11-23):** all four (template, test workbook, PCH draft,
+   UKPC) have version 2, the two renamed rows with new Meaning texts, the new row before
+   "Weight: work stretch longer than preferred" (value 6, was 10 "per 30 minutes"); other
+   tabs and conditional formatting checked identical. Backups
+   `..._before_stretch_rows.xlsx` for the two real ones. Until the code follows
+   (`WORKBOOK_FORMAT_VERSION = 2`, KNOWN_SETTINGS, reading the three rows, GOOD_ROWS
+   version 2 + the three rows, GOOD_SETTINGS, OPTIONAL_SETTINGS), the 28 tests that read
+   the test workbook are red.
+   **Reader done (2026-11-23, user):** the three rows read, version 2, 510 green. A typo in
+   a row name in the code ("Weight: Work stretch") silently gave the default; only
+   GOOD_SETTINGS with non-default values caught it.
+   **Real-data runs done (2026-11-23, user's permission, 3 runs each):** both hit the 10 min
+   limit every time (PCH was optimal in 62 s with round times alone). The stretch rules
+   work (far fewer 60-minute stretches), but the maximum hours per volunteer went up.
+   Totals in DATA_NOTES.md, times in RUN_TIMES.md.
+   **Options noted (user, 2026-11-23), not planned yet:** (a) a run with a longer
+   `--time-limit` on PCH (e.g. 30 or 60 min) to see whether the penalty keeps dropping;
+   (b) tune the weights 20 (per stretch) / 6 (per block over the preferred maximum), e.g.
+   against the hours spread; (c) the large gap (PCH 54%) may just be a weak lower bound,
+   not a bad schedule: keep an eye on it as rules are added. Next: merge
+   `feature/soft_rules` into `develop`, then fair spread of hours on a new branch.
    **Soft rules can be switched on/off (user's idea, option B agreed 2026-11-18):**
    `Settings.soft_rules: frozenset[str] = frozenset()` = the soft rules that are on;
    empty by default, so `Settings()` = hard rules only and every test switches on exactly
@@ -1393,7 +1459,10 @@ After the minimal viable scheduler:
       `50 // 15` = 3 blocks = 45 minutes, a *weaker* rule than typed (hard_rules.py
       divides with `//`); (2) Minimum/Maximum work stretch 0 are accepted (the reader
       uses minimum 0 for all three minute settings, kept as it was in the 2c refactor);
-      (3) Maximum work stretch below the minimum is accepted. All three now end in a
+      (3) Maximum work stretch below the minimum is accepted; (4) Preferred maximum work
+      stretch 0 is accepted (every block of every stretch would cost the weight; user,
+      2026-11-23: check it here, not with a minimum in the reader), and one above the
+      maximum work stretch (harmless, the rule never fires). All three now end in a
       vague NoScheduleFound or a silently different rule instead of a clear input error.
 - [ ] **Small tidy-up (user, 2026-11-18; after 2c):** read_demand still has its own
       `int()` with `needed = -1` as a trick; let it use `parse_whole_number(post, text, 0)`

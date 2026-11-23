@@ -5,7 +5,8 @@ the schedule with the fewest points in total. Each add_..._penalty function adds
 helper variables it needs to the model and returns its penalty terms, already multiplied
 by the rule's weight from the settings; solve() adds them all up and asks CP-SAT to
 minimise the sum. Weights are whole points: per time block of 15 minutes (skill score)
-or per start or end of a work stretch (round times).
+per start or end of a work stretch (round times), per work stretch (fewer stretches) or
+per time block beyond the preferred maximum stretch (preferred maximum stretch).
 
 They all take the same arguments as the hard rules: the model, the problem, and the works
 variables made by create_variables (see Works in variables.py). solve() only calls a rule
@@ -14,7 +15,7 @@ when its name is in settings.soft_rules; the valid names are SOFT_RULE_NAMES in 
 from ortools.sat.python import cp_model
 
 from scheduler.debug import debug_print
-from scheduler.model import Problem
+from scheduler.model import Problem, MINUTES_PER_BLOCK
 from scheduler.solving.variables import (Works, blocks_of_convention,
                                          variables_by_volunteer_and_block, variables_of)
 
@@ -101,5 +102,89 @@ def add_round_times_penalty(model: cp_model.CpModel, problem: Problem,
             model.add(changes <= 2 - sum(works_before) - sum(works_now))
 
             penalties.append(changes * weight)
+
+    return penalties
+
+
+def add_fewer_stretches_penalty(model: cp_model.CpModel, problem: Problem,
+                                works: Works) -> list[cp_model.LinearExpr]:
+    """Soft rule: fewer, longer work stretches.
+
+    Every work stretch (continuous work, also across posts) costs
+    settings.weight_work_stretch, once, however long it is. A switch to another post
+    inside a stretch is not a new stretch.
+    """
+    # if the rule is not added (or costs nothing), then return nothing
+    weight = problem.settings.weight_work_stretch
+    if "fewer_stretches" not in problem.settings.soft_rules or weight == 0:
+        debug_print("add_fewer_stretches_penalty: skipping the rule")
+        return []
+
+    debug_print("add_fewer_stretches_penalty: adding the rule")
+
+    lookup = variables_by_volunteer_and_block(works)
+
+    penalties = []
+    for block in blocks_of_convention(problem):
+        for volunteer in problem.volunteers:
+            works_before = variables_of(lookup, volunteer.name, block - 1, block)
+            works_now = variables_of(lookup, volunteer.name, block, block + 1)
+            if works_now == []:
+                continue
+
+            # Counting the number of starts of stretches
+            starts = model.new_bool_var(f"{volunteer.name} starts at block {block}")
+            model.add(starts >= sum(works_now) - sum(works_before))  # forced 1 at start stretch
+            model.add(starts <= sum(works_now))  # forced 0 if not working now
+            model.add(starts <= 1 - sum(works_before))  # forced 0 if working before
+
+            penalties.append(starts * weight)
+
+    return penalties
+
+
+def add_preferred_max_stretch_penalty(model: cp_model.CpModel, problem: Problem,
+                                      works: Works) -> list[cp_model.LinearExpr]:
+    """Soft rule: work stretches of at most the preferred length.
+
+    Every time block of a work stretch (continuous work, also across posts) beyond
+    settings.preferred_max_stretch_minutes costs settings.weight_over_preferred_stretch.
+    A stretch of 3 hours with a preferred maximum of 2 hours costs 4 times the weight.
+    """
+    # if the rule is not added (or costs nothing), then return nothing
+    weight = problem.settings.weight_over_preferred_stretch
+    if "preferred_max_stretch" not in problem.settings.soft_rules or weight == 0:
+        debug_print("add_preferred_max_stretch_penalty: skipping the rule")
+        return []
+
+    debug_print("add_preferred_max_stretch_penalty: adding the rule")
+
+    lookup = variables_by_volunteer_and_block(works)
+
+    preferred_blocks = problem.settings.preferred_max_stretch_minutes // MINUTES_PER_BLOCK
+
+    penalties = []
+    for block in blocks_of_convention(problem):
+        for volunteer in problem.volunteers:
+            works_before = variables_of(lookup, volunteer.name, block - preferred_blocks, block)
+            works_now = variables_of(lookup, volunteer.name, block, block + 1)
+
+            # Cheap test, if the volunteer can't work now, no penalty is required.
+            if works_now == []:
+                continue
+
+            # Anytime now and all blocks in preferred length before are working, thats over
+            over = model.new_bool_var((f"{volunteer.name} worked longer than prefered length "
+                                       f"{problem.settings.preferred_max_stretch_minutes} "
+                                       f"minutes at block {block}"))
+
+            # Force 1 if all blocks before and now are worked
+            model.add(over >= sum(works_now) + sum(works_before) - preferred_blocks)
+            # Force 0 if not working now
+            model.add(over <= sum(works_now))
+            # Force 0 if not working ALL of the works before
+            model.add(over * preferred_blocks <= sum(works_before))
+
+            penalties.append(over * weight)
 
     return penalties
