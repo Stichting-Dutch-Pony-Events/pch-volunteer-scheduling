@@ -188,3 +188,15 @@ def add_preferred_max_stretch_penalty(model: cp_model.CpModel, problem: Problem,
             penalties.append(over * weight)
 
     return penalties
+
+
+def fair_share_targets(problem: Problem) -> dict[str, int]:
+    """Every volunteer's fair share of the work, in blocks: {volunteer name: target}.
+
+    A convention day lasts from its first to its last block with demand (gaps included). A
+    volunteer's weight is the sum of the lengths of the days on which they are available
+    during those hours, however long; the total demand (in person-blocks) is divided in
+    proportion to the weights, rounded to whole blocks, and at most their total hour
+    limit. Without any demand every target is 0. Used by add_fair_spread_penalty (later).
+    """
+    raise NotImplementedError
