@@ -116,11 +116,15 @@ def test_being_available_later_in_the_day_does_not_raise_the_target():
                       demand=demand,
                       settings=RULES)
 
+    expected = {}
+    for volunteer in volunteers:
+        expected[volunteer.name] = 32
+
     # Act
     result = fair_share_targets(problem)
 
     # Assert
-    assert result["Mock Mane"] == result["Testy Hooves"]
+    assert result == expected
 
 
 def test_availability_outside_the_convention_hours_of_a_day_does_not_count():
@@ -142,15 +146,11 @@ def test_availability_outside_the_convention_hours_of_a_day_does_not_count():
                       demand=demand,
                       settings=RULES)
 
-    expected = {}
-    for volunteer in volunteers:
-        expected[volunteer.name] = 32
-
     # Act
     result = fair_share_targets(problem)
 
     # Assert
-    assert result == expected
+    assert result == {"Mock Mane": 8, "Testy Hooves": 0}
 
 
 def test_day_length_runs_from_the_first_to_the_last_demand_including_gaps():

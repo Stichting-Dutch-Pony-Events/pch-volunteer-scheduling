@@ -15,7 +15,7 @@ when its name is in settings.soft_rules; the valid names are SOFT_RULE_NAMES in 
 from ortools.sat.python import cp_model
 
 from scheduler.debug import debug_print
-from scheduler.model import Problem, MINUTES_PER_BLOCK
+from scheduler.model import BLOCKS_PER_DAY, MINUTES_PER_BLOCK, Problem
 from scheduler.solving.variables import (Works, blocks_of_convention,
                                          variables_by_volunteer_and_block, variables_of)
 
@@ -199,4 +199,45 @@ def fair_share_targets(problem: Problem) -> dict[str, int]:
     proportion to the weights, rounded to whole blocks, and at most their total hour
     limit. Without any demand every target is 0. Used by add_fair_spread_penalty (later).
     """
-    raise NotImplementedError
+    # 1. The convention hours of each day: its first and last block with demand.
+    #    The day of a block is block // BLOCKS_PER_DAY (night blocks already belong to the
+    #    day before, so Saturday 01:00 counts as Saturday).
+    first_and_last = {}  # day number -> (first block, last block)
+    for (post, block) in problem.demand:
+        day = block // BLOCKS_PER_DAY
+        if day not in first_and_last:
+            first_and_last[day] = (block, block)
+        else:
+            first_block, last_block = first_and_last[day]
+            first_and_last[day] = (min(first_block, block), max(last_block, block))
+
+    # 2. Each volunteer's weight: the lengths of the days on which they are there during the
+    #    convention hours, for however short a time.
+    weights = {}  # volunteer name -> weight in blocks
+    for volunteer in problem.volunteers:
+        weights[volunteer.name] = 0
+        for (first_block, last_block) in first_and_last.values():
+            convention_hours = set(range(first_block, last_block + 1))
+            if volunteer.available_blocks & convention_hours:  # at least one block in common
+                weights[volunteer.name] += last_block - first_block + 1
+
+    # 3. Without any weight (no demand, or nobody there) everyone's target is 0; this also
+    #    avoids dividing by zero below.
+    total_weight = sum(weights.values())
+    targets = {}  # volunteer name -> target in blocks
+    if total_weight == 0:
+        for volunteer in problem.volunteers:
+            targets[volunteer.name] = 0
+        return targets
+
+    # 4. Share the total demand (in person-blocks) in proportion to the weights, rounded to
+    #    whole blocks; a total hour limit caps the target (the rest is not shared out again).
+    total_demand = sum(problem.demand.values())
+    for volunteer in problem.volunteers:
+        targets[volunteer.name] = round(total_demand * weights[volunteer.name] / total_weight)
+
+        if volunteer.max_minutes_total is not None:
+            limit_in_blocks = volunteer.max_minutes_total // MINUTES_PER_BLOCK
+            targets[volunteer.name] = min(targets[volunteer.name], limit_in_blocks)
+
+    return targets
