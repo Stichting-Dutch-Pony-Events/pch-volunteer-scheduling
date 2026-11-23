@@ -60,21 +60,25 @@ def test_default_work_stretch_weight_is_20_per_stretch():
 def test_default_preferred_maximum_stretch_is_120_minutes():
     """The default preferred maximum work stretch is 120 minutes."""
     # Arrange
+    # (nothing to arrange: we look at a fresh Settings with all defaults)
 
     # Act
+    settings = Settings()
 
     # Assert
-    pytest.skip("not written yet")
+    assert settings.preferred_max_stretch_minutes == 120
 
 
 def test_default_weight_over_the_preferred_stretch_is_6_per_block():
     """The default penalty for each block beyond the preferred maximum stretch is 6 points."""
     # Arrange
+    # (nothing to arrange: we look at a fresh Settings with all defaults)
 
     # Act
+    settings = Settings()
 
     # Assert
-    pytest.skip("not written yet")
+    assert settings.weight_over_preferred_stretch == 6
 
 
 def test_unknown_soft_rule_name_raises_value_error():

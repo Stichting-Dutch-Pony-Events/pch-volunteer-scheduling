@@ -255,7 +255,7 @@ def test_penalty_counts_only_real_stretches_even_when_maximised(pieces: list[tup
             model.add(variable == 0)
 
     penalties = add_fewer_stretches_penalty(model, problem, works)
-    model.maximize(cp_model.LinearExpr.sum(penalties))  # Maximise instead of minimise
+    model.maximize(cp_model.LinearExpr.sum(penalties))
     solver = cp_model.CpSolver()
 
     # Act
