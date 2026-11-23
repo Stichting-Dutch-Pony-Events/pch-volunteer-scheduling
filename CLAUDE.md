@@ -1266,7 +1266,8 @@ up to date with `main`):
    of P). Tests in test_solver_preferred_max_stretch.py with `STRETCH_CASES` and the helper
    `_model_with_fixed_work` (the min/max tests differ only in minimize/maximize). 504 green;
    seed check (0-4) as in step 1: each broken variant reds its own tests.
-   Small follow-up: test_solver_fewer_stretches.py could get the same constant + helper.
+   test_solver_fewer_stretches.py refactored to the same `STRETCH_CASES` + helper (Claude,
+   on request; the same 14 tests pass).
    **Still to do after step 2 (user, 2026-11-23): read both rules' settings from the
    workbook in one step** (like 2b), before the real-data run. Fewer stretches: no row
    yet, so a new optional row (e.g. "Weight: work stretch") in `KNOWN_SETTINGS`, the

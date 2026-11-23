@@ -6,7 +6,7 @@ from ortools.sat.python import cp_model
 from scheduler.model import Post, Problem, Settings, Volunteer, all_blocks
 from scheduler.solving.soft_rules import add_fewer_stretches_penalty
 from scheduler.solving.solver import solve
-from scheduler.solving.variables import create_variables
+from scheduler.solving.variables import Works, create_variables
 
 
 # Passed explicitly instead of relying on the defaults in model.py. Only the fewer
@@ -162,18 +162,18 @@ def test_skill_score_wins_over_fewer_stretches_with_a_low_weight():
 # hand and only this rule is added (no hard rules), so the lowest penalty CP-SAT can reach
 # is exactly what the rule counts. Each case lists the pieces Mock Mane works as
 # (post, first block, block after the last); Tickets and Infobooth are open in blocks 0-15.
+# The weight is 20 per stretch.
+STRETCH_CASES = [([], 0),                          # no work, no stretch
+                 ([("Tickets", 0, 6)], 20),        # one stretch, from block 0
+                 ([("Tickets", 0, 4),
+                   ("Tickets", 8, 12)], 40),       # two stretches with a gap
+                 ([("Tickets", 0, 4),
+                   ("Infobooth", 4, 8)], 20)]      # post switch: still one stretch
 
-@pytest.mark.parametrize("pieces, expected_penalty",
-                         [([], 0),                          # no work, no stretch
-                          ([("Tickets", 0, 6)], 20),        # one stretch, from block 0
-                          ([("Tickets", 0, 4),
-                            ("Tickets", 8, 12)], 40),       # two stretches with a gap
-                          ([("Tickets", 0, 4),
-                            ("Infobooth", 4, 8)], 20)])     # post switch: still one stretch
-def test_each_work_stretch_costs_the_weight(pieces: list[tuple[str, int, int]],
-                                            expected_penalty: int):
-    """Each work stretch costs the weight once, also when it switches post halfway."""
-    # Arrange
+
+def _model_with_fixed_work(pieces: list[tuple[str, int, int]]
+                           ) -> tuple[cp_model.CpModel, Problem, Works]:
+    """A model with only Mock Mane's variables, each fixed to 1 inside the pieces, else 0."""
     demand = {}
     for block in range(0, 16):
         demand[("Tickets", block)] = 1
@@ -201,6 +201,15 @@ def test_each_work_stretch_costs_the_weight(pieces: list[tuple[str, int, int]],
         else:
             model.add(variable == 0)
 
+    return (model, problem, works)
+
+
+@pytest.mark.parametrize("pieces, expected_penalty", STRETCH_CASES)
+def test_each_work_stretch_costs_the_weight(pieces: list[tuple[str, int, int]],
+                                            expected_penalty: int):
+    """Each work stretch costs the weight once, also when it switches post halfway."""
+    # Arrange
+    model, problem, works = _model_with_fixed_work(pieces=pieces)
     penalties = add_fewer_stretches_penalty(model, problem, works)
     model.minimize(cp_model.LinearExpr.sum(penalties))
     solver = cp_model.CpSolver()
@@ -216,46 +225,14 @@ def test_each_work_stretch_costs_the_weight(pieces: list[tuple[str, int, int]],
 # CP-SAT tries to make the penalty as HIGH as possible. Only helper variables bounded on
 # both sides keep it at the real count.
 
-@pytest.mark.parametrize("pieces, expected_penalty",
-                         [([], 0),                          # no work, no stretch
-                          ([("Tickets", 0, 6)], 20),        # one stretch, from block 0
-                          ([("Tickets", 0, 4),
-                            ("Tickets", 8, 12)], 40),       # two stretches with a gap
-                          ([("Tickets", 0, 4),
-                            ("Infobooth", 4, 8)], 20)])     # post switch: still one stretch
-def test_penalty_counts_only_real_stretches_even_when_maximised(pieces: list[tuple[str, int, int]],
-                                                                expected_penalty: int):
+@pytest.mark.parametrize("pieces, expected_penalty", STRETCH_CASES)
+def test_penalty_counts_only_real_stretches_even_when_maximised(
+        pieces: list[tuple[str, int, int]], expected_penalty: int):
     """Even when the solver makes the penalty as high as it can, it is the real count."""
     # Arrange
-    demand = {}
-    for block in range(0, 16):
-        demand[("Tickets", block)] = 1
-        demand[("Infobooth", block)] = 1
-
-    problem = Problem(volunteers=[Volunteer(name="Mock Mane",
-                                            skills={"Tickets": 1, "Infobooth": 1},
-                                            available_blocks=ALL_DAYS)],
-                      posts=[Post("Tickets"), Post("Infobooth")],
-                      demand=demand, settings=RULES)
-    model = cp_model.CpModel()
-    works = create_variables(model, problem)
-
-    # Fix every variable by hand: 1 for the (post, block) pairs in the pieces, 0 for all
-    # others. CP-SAT then has no choice left about the work, only about the helper
-    # variables the rule makes.
-    worked = set()
-    for (post, first_block, block_after_last) in pieces:
-        for block in range(first_block, block_after_last):
-            worked.add((post, block))
-
-    for (volunteer_name, post, block), variable in works.items():
-        if (post, block) in worked:
-            model.add(variable == 1)
-        else:
-            model.add(variable == 0)
-
+    model, problem, works = _model_with_fixed_work(pieces=pieces)
     penalties = add_fewer_stretches_penalty(model, problem, works)
-    model.maximize(cp_model.LinearExpr.sum(penalties))
+    model.maximize(cp_model.LinearExpr.sum(penalties))  # maximise instead of minimise
     solver = cp_model.CpSolver()
 
     # Act
