@@ -15,7 +15,7 @@ when its name is in settings.soft_rules; the valid names are SOFT_RULE_NAMES in 
 from ortools.sat.python import cp_model
 
 from scheduler.debug import debug_print
-from scheduler.model import Problem
+from scheduler.model import Problem, MINUTES_PER_BLOCK
 from scheduler.solving.variables import (Works, blocks_of_convention,
                                          variables_by_volunteer_and_block, variables_of)
 
@@ -151,5 +151,40 @@ def add_preferred_max_stretch_penalty(model: cp_model.CpModel, problem: Problem,
     settings.preferred_max_stretch_minutes costs settings.weight_over_preferred_stretch.
     A stretch of 3 hours with a preferred maximum of 2 hours costs 4 times the weight.
     """
-    # TODO: not yet called from solve(); add the line there once this works.
-    raise NotImplementedError
+    # if the rule is not added (or costs nothing), then return nothing
+    weight = problem.settings.weight_over_preferred_stretch
+    if "preferred_max_stretch" not in problem.settings.soft_rules or weight == 0:
+        debug_print("add_preferred_max_stretch_penalty: skipping the rule")
+        return []
+
+    debug_print("add_preferred_max_stretch_penalty: adding the rule")
+
+    lookup = variables_by_volunteer_and_block(works)
+
+    preferred_blocks = problem.settings.preferred_max_stretch_minutes // MINUTES_PER_BLOCK
+
+    penalties = []
+    for block in blocks_of_convention(problem):
+        for volunteer in problem.volunteers:
+            works_before = variables_of(lookup, volunteer.name, block - preferred_blocks, block)
+            works_now = variables_of(lookup, volunteer.name, block, block + 1)
+
+            # Cheap test, if the volunteer can't work now, no penalty is required.
+            if works_now == []:
+                continue
+
+            # Anytime now and all blocks in preferred length before are working, thats over
+            over = model.new_bool_var((f"{volunteer.name} worked longer than prefered length "
+                                       f"{problem.settings.preferred_max_stretch_minutes} "
+                                       f"minutes at block {block}"))
+
+            # Force 1 if all blocks before and now are worked
+            model.add(over >= sum(works_now) + sum(works_before) - preferred_blocks)
+            # Force 0 if not working now
+            model.add(over <= sum(works_now))
+            # Force 0 if not working ALL of the works before
+            model.add(over * preferred_blocks <= sum(works_before))
+
+            penalties.append(over * weight)
+
+    return penalties

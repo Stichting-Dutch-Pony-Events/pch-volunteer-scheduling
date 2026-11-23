@@ -1258,7 +1258,15 @@ up to date with `main`):
    rule); now 4 volunteers and 3 hours (split 8 of 8 without the rule). Seed check in a
    scratch copy (seeds 0-4): without the line in solve() tests 1 and 3 go red; without `>=`
    also the counting test; without either `<=` exactly the maximise test.
-   **Next:** step 2, the penalty per block beyond the preferred maximum stretch.
+   **Step 2 done (2026-11-23):** `add_preferred_max_stretch_penalty` (switch
+   `"preferred_max_stretch"`, renamed from "long_stretches": names say what is preferred),
+   `Settings.preferred_max_stretch_minutes` (120) and `weight_over_preferred_stretch` (6 per
+   block). One bool `over` per volunteer per block where they could work: `over >= now +
+   (P blocks before) - P`, `over <= now`, `P * over <= (P blocks before)` (one line instead
+   of P). Tests in test_solver_preferred_max_stretch.py with `STRETCH_CASES` and the helper
+   `_model_with_fixed_work` (the min/max tests differ only in minimize/maximize). 504 green;
+   seed check (0-4) as in step 1: each broken variant reds its own tests.
+   Small follow-up: test_solver_fewer_stretches.py could get the same constant + helper.
    **Still to do after step 2 (user, 2026-11-23): read both rules' settings from the
    workbook in one step** (like 2b), before the real-data run. Fewer stretches: no row
    yet, so a new optional row (e.g. "Weight: work stretch") in `KNOWN_SETTINGS`, the
