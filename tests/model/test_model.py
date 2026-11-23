@@ -48,11 +48,13 @@ def test_default_round_times_weight_is_10_per_start_or_end():
 def test_default_work_stretch_weight_is_20_per_stretch():
     """The default penalty for each work stretch is 20 points."""
     # Arrange
+    # (nothing to arrange: we look at a fresh Settings with all defaults)
 
     # Act
+    settings = Settings()
 
     # Assert
-    pytest.skip("not written yet")
+    assert settings.weight_work_stretch == 20
 
 
 def test_unknown_soft_rule_name_raises_value_error():
