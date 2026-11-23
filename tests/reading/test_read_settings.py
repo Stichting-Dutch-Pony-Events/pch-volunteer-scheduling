@@ -14,7 +14,7 @@ HEADER = ("Setting", "Value", "Unit", "Meaning")
 # A complete, correct Settings tab. The values differ from the defaults in model.py, so a
 # test can't pass by accident through those defaults.
 GOOD_ROWS = [
-    ("Workbook format version", 2),
+    ("Workbook format version", 3),
     ("Time step", 15),
     ("Day boundary", "06:00"),
     ("Days", "Friday, Saturday"),
@@ -29,12 +29,13 @@ GOOD_ROWS = [
     ("Weight: start or end off the half hour", 7),
     ("Weight: work stretch", 19),
     ("Weight: work stretch longer than preferred", 5),
+    ("Weight: work above fair share", 3),
     ("Preferred maximum work stretch", 105),
 ]
 
 # The reader switches every soft rule on; update this when a soft rule is added.
-ALL_SOFT_RULES = frozenset({"fewer_stretches", "preferred_max_stretch", "round_times",
-                            "skill_score"})
+ALL_SOFT_RULES = frozenset({"fair_spread", "fewer_stretches", "preferred_max_stretch",
+                            "round_times", "skill_score"})
 
 # What GOOD_ROWS should give.
 GOOD_SETTINGS = Settings(min_stretch_minutes=45, max_stretch_minutes=150,
@@ -43,7 +44,7 @@ GOOD_SETTINGS = Settings(min_stretch_minutes=45, max_stretch_minutes=150,
                          preferred_max_stretch_minutes=105,
                          weight_skill_score_1=5, weight_skill_score_2=3, weight_skill_score_3=1,
                          weight_off_round_time=7, weight_work_stretch=19,
-                         weight_over_preferred_stretch=5,
+                         weight_over_preferred_stretch=5, weight_over_fair_share=3,
                          soft_rules=ALL_SOFT_RULES)
 
 # The settings that must be there with a value (missing or empty = error).
@@ -60,6 +61,7 @@ OPTIONAL_SETTINGS = [("Weight: skill score 1", "weight_skill_score_1", 6),
                      ("Weight: work stretch", "weight_work_stretch", 20),
                      ("Weight: work stretch longer than preferred",
                       "weight_over_preferred_stretch", 6),
+                     ("Weight: work above fair share", "weight_over_fair_share", 4),
                      ("Preferred maximum work stretch", "preferred_max_stretch_minutes", 120)]
 
 

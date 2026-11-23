@@ -10,8 +10,8 @@ from scheduler.reading.workbook import read_problem
 from scheduler.solving.solver import solve
 
 # The reader switches every soft rule on; update this when a soft rule is added.
-ALL_SOFT_RULES = frozenset({"fewer_stretches", "preferred_max_stretch", "round_times",
-                            "skill_score"})
+ALL_SOFT_RULES = frozenset({"fair_spread", "fewer_stretches", "preferred_max_stretch",
+                            "round_times", "skill_score"})
 
 # The made-up workbook in tests/data, used by the end-to-end tests.
 TEST_WORKBOOK = Path(__file__).parent.parent / "data" / "test_input.xlsx"
@@ -50,7 +50,7 @@ def _good_workbook() -> Workbook:
     workbook.remove(workbook.active)   # a new workbook starts with a tab "Sheet"
     _add_sheet(workbook, "Settings", [
         ("Setting", "Value"),
-        ("Workbook format version", 2),
+        ("Workbook format version", 3),
         ("Time step", 15),
         ("Day boundary", "06:00"),
         ("Days", "Friday, Saturday"),

@@ -6,7 +6,8 @@ helper variables it needs to the model and returns its penalty terms, already mu
 by the rule's weight from the settings; solve() adds them all up and asks CP-SAT to
 minimise the sum. Weights are whole points: per time block of 15 minutes (skill score)
 per start or end of a work stretch (round times), per work stretch (fewer stretches) or
-per time block beyond the preferred maximum stretch (preferred maximum stretch).
+per time block beyond the preferred maximum stretch (preferred maximum stretch) or per
+time block above a volunteer's fair share of the work (fair spread).
 
 They all take the same arguments as the hard rules: the model, the problem, and the works
 variables made by create_variables (see Works in variables.py). solve() only calls a rule
@@ -15,7 +16,7 @@ when its name is in settings.soft_rules; the valid names are SOFT_RULE_NAMES in 
 from ortools.sat.python import cp_model
 
 from scheduler.debug import debug_print
-from scheduler.model import Problem, MINUTES_PER_BLOCK
+from scheduler.model import BLOCKS_PER_DAY, MINUTES_PER_BLOCK, Problem
 from scheduler.solving.variables import (Works, blocks_of_convention,
                                          variables_by_volunteer_and_block, variables_of)
 
@@ -186,5 +187,102 @@ def add_preferred_max_stretch_penalty(model: cp_model.CpModel, problem: Problem,
             model.add(over * preferred_blocks <= sum(works_before))
 
             penalties.append(over * weight)
+
+    return penalties
+
+
+def fair_share_targets(problem: Problem) -> dict[str, int]:
+    """Every volunteer's fair share of the work, in blocks: {volunteer name: target}.
+
+    A convention day lasts from its first to its last block with demand (gaps included). A
+    volunteer's weight is the sum of the lengths of the days on which they are available
+    during those hours, however long; the total demand (in person-blocks) is divided in
+    proportion to the weights, rounded to whole blocks, and at most their total hour
+    limit. Without any demand every target is 0. Used by add_fair_spread_penalty.
+    """
+    # 1. The convention hours of each day: its first and last block with demand.
+    #    The day of a block is block // BLOCKS_PER_DAY (night blocks already belong to the
+    #    day before, so Saturday 01:00 counts as Saturday).
+    first_and_last = {}  # day number -> (first block, last block)
+    for (post, block) in problem.demand:
+        day = block // BLOCKS_PER_DAY
+        if day not in first_and_last:
+            first_and_last[day] = (block, block)
+        else:
+            first_block, last_block = first_and_last[day]
+            first_and_last[day] = (min(first_block, block), max(last_block, block))
+
+    # 2. Each volunteer's weight: the lengths of the days on which they are there during the
+    #    convention hours, for however short a time.
+    weights = {}  # volunteer name -> weight in blocks
+    for volunteer in problem.volunteers:
+        weights[volunteer.name] = 0
+        for (first_block, last_block) in first_and_last.values():
+            convention_hours = set(range(first_block, last_block + 1))
+            if volunteer.available_blocks & convention_hours:  # at least one block in common
+                weights[volunteer.name] += last_block - first_block + 1
+
+    # 3. Without any weight (no demand, or nobody there) everyone's target is 0; this also
+    #    avoids dividing by zero below.
+    total_weight = sum(weights.values())
+    targets = {}  # volunteer name -> target in blocks
+    if total_weight == 0:
+        for volunteer in problem.volunteers:
+            targets[volunteer.name] = 0
+        return targets
+
+    # 4. Share the total demand (in person-blocks) in proportion to the weights, rounded to
+    #    whole blocks; a total hour limit caps the target (the rest is not shared out again).
+    total_demand = sum(problem.demand.values())
+    for volunteer in problem.volunteers:
+        targets[volunteer.name] = round(total_demand * weights[volunteer.name] / total_weight)
+
+        if volunteer.max_minutes_total is not None:
+            limit_in_blocks = volunteer.max_minutes_total // MINUTES_PER_BLOCK
+            targets[volunteer.name] = min(targets[volunteer.name], limit_in_blocks)
+
+    return targets
+
+
+def add_fair_spread_penalty(model: cp_model.CpModel, problem: Problem,
+                            works: Works) -> list[cp_model.LinearExpr]:
+    """Soft rule: spread the work fairly over the volunteers.
+
+    Every time block a volunteer works above their fair share (fair_share_targets) costs
+    settings.weight_over_fair_share. Working less than the fair share costs nothing: the
+    total work is fixed by the demand, so less above the target for one means more for
+    the others below theirs.
+    """
+    # if the rule is not added (or costs nothing), then return nothing
+    weight = problem.settings.weight_over_fair_share
+    if "fair_spread" not in problem.settings.soft_rules or weight == 0:
+        debug_print("add_fair_spread_penalty: skipping the rule")
+        return []
+
+    debug_print("add_fair_spread_penalty: adding the rule")
+
+    fair_shares = fair_share_targets(problem)
+    lookup = variables_by_volunteer_and_block(works)
+    # The block after the last one of the convention, so variables_of looks at every block.
+    final_block = len(problem.settings.days) * BLOCKS_PER_DAY
+
+    penalties = []
+    for volunteer in problem.volunteers:
+        all_works = variables_of(lookup=lookup, volunteer_name=volunteer.name,
+                                 first_block=0, block_after_last=final_block)
+        target = fair_shares[volunteer.name]
+
+        # No variables at all: this volunteer can never work, so there is nothing to count.
+        if all_works == []:
+            continue
+
+        # over = the blocks worked above the target, never below 0: max(worked - target, 0).
+        # Each block counts once (nobody works two posts at once). add_max_equality is an
+        # equality, so over always has exactly this value, also in a schedule found before the
+        # best one (see "Helper variables" in CLAUDE.md).
+        over = model.new_int_var(0, len(all_works), f"{volunteer.name} blocks above fair share")
+        model.add_max_equality(over, [sum(all_works) - target, 0])
+
+        penalties.append(over * weight)
 
     return penalties

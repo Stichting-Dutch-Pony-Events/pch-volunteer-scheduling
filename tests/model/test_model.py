@@ -81,6 +81,18 @@ def test_default_weight_over_the_preferred_stretch_is_6_per_block():
     assert settings.weight_over_preferred_stretch == 6
 
 
+def test_default_weight_over_the_fair_share_is_4_per_block():
+    """The default penalty for each block above a volunteer's fair share is 4 points."""
+    # Arrange
+    # (nothing to arrange: we look at a fresh Settings with all defaults)
+
+    # Act
+    settings = Settings()
+
+    # Assert
+    assert settings.weight_over_fair_share == 4
+
+
 def test_unknown_soft_rule_name_raises_value_error():
     """A name in Settings.soft_rules that is not a soft rule raises ValueError."""
     # Arrange

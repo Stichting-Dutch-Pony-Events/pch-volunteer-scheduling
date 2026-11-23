@@ -46,6 +46,7 @@ def solve(problem: Problem, time_limit_seconds: int | None = None,
     penalties += soft_rules.add_round_times_penalty(model, problem, works)
     penalties += soft_rules.add_fewer_stretches_penalty(model, problem, works)
     penalties += soft_rules.add_preferred_max_stretch_penalty(model, problem, works)
+    penalties += soft_rules.add_fair_spread_penalty(model, problem, works)
     model.minimize(cp_model.LinearExpr.sum(penalties))
 
     # Run CP-SAT (Ctrl+C stops it and keeps the best schedule so far)

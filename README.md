@@ -59,8 +59,8 @@ Version 1.1 makes the schedule nicer and easier to read.
 - [ ] Nicer schedules: shifts start and end on the hour or half hour, staying at one
       post, preferring what people are good at, shifts of preferably at most 2 hours,
       and a fair spread of work over the volunteers (done so far: preferring what people
-      are good at, shifts that start and end on the hour or half hour, and fewer, longer
-      shifts of preferably at most 2 hours)
+      are good at, shifts that start and end on the hour or half hour, fewer, longer
+      shifts of preferably at most 2 hours, and a fair spread of work)
 - [ ] A nicer command line: progress while solving, a summary after the run (done so
       far: it says when it has found a first schedule, Ctrl+C stops the search and keeps
       the best schedule so far, and at the end it says whether the schedule is the best
