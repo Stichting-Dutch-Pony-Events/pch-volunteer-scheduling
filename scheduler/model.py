@@ -12,7 +12,7 @@ DAY_STARTS_AT_HOUR = 6
 # The names that may be used in Settings.soft_rules to switch a soft rule on (each one is
 # a function in solving/soft_rules.py). Settings refuses any other name, so a typo can't
 # silently switch nothing on. Add the name here when adding a soft rule.
-SOFT_RULE_NAMES = {"fewer_stretches", "round_times", "skill_score"}
+SOFT_RULE_NAMES = {"fewer_stretches", "preferred_max_stretch", "round_times", "skill_score"}
 
 
 def runs_of_consecutive_blocks(blocks) -> list[tuple[int, int]]:
@@ -90,6 +90,10 @@ class Settings:
     # Penalty points for each work stretch, so the solver prefers fewer, longer stretches.
     # Per stretch, not per block.
     weight_work_stretch: int = 20
+    # A work stretch longer than this costs weight_over_preferred_stretch for every time
+    # block (15 minutes) beyond it.
+    preferred_max_stretch_minutes: int = 120
+    weight_over_preferred_stretch: int = 6
 
     def __post_init__(self) -> None:
         """Check the settings right after initialisation."""

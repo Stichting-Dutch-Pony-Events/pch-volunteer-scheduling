@@ -1259,6 +1259,16 @@ up to date with `main`):
    scratch copy (seeds 0-4): without the line in solve() tests 1 and 3 go red; without `>=`
    also the counting test; without either `<=` exactly the maximise test.
    **Next:** step 2, the penalty per block beyond the preferred maximum stretch.
+   **Still to do after step 2 (user, 2026-11-23): read both rules' settings from the
+   workbook in one step** (like 2b), before the real-data run. Fewer stretches: no row
+   yet, so a new optional row (e.g. "Weight: work stretch") in `KNOWN_SETTINGS`, the
+   template, the test workbook and both real workbooks (backups first). Preferred maximum stretch (`preferred_max_stretch`):
+   "Preferred maximum shift length" and "Weight: shift longer than preferred" are already
+   known names but ignored; read them (decide whether to rename them, e.g. "Preferred
+   maximum work stretch", to match "Minimum/Maximum work stretch"; renaming a required row
+   may need the workbook format version). Tests in test_read_settings.py: rows in
+   GOOD_SETTINGS and the OPTIONAL_SETTINGS table. Round times is already read ("Weight:
+   start or end off the half hour").
    **Soft rules can be switched on/off (user's idea, option B agreed 2026-11-18):**
    `Settings.soft_rules: frozenset[str] = frozenset()` = the soft rules that are on;
    empty by default, so `Settings()` = hard rules only and every test switches on exactly

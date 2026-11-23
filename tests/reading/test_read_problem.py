@@ -10,7 +10,8 @@ from scheduler.reading.workbook import read_problem
 from scheduler.solving.solver import solve
 
 # The reader switches every soft rule on; update this when a soft rule is added.
-ALL_SOFT_RULES = frozenset({"fewer_stretches", "round_times", "skill_score"})
+ALL_SOFT_RULES = frozenset({"fewer_stretches", "preferred_max_stretch", "round_times",
+                            "skill_score"})
 
 # The made-up workbook in tests/data, used by the end-to-end tests.
 TEST_WORKBOOK = Path(__file__).parent.parent / "data" / "test_input.xlsx"
