@@ -198,7 +198,7 @@ def fair_share_targets(problem: Problem) -> dict[str, int]:
     volunteer's weight is the sum of the lengths of the days on which they are available
     during those hours, however long; the total demand (in person-blocks) is divided in
     proportion to the weights, rounded to whole blocks, and at most their total hour
-    limit. Without any demand every target is 0. Used by add_fair_spread_penalty (later).
+    limit. Without any demand every target is 0. Used by add_fair_spread_penalty.
     """
     # 1. The convention hours of each day: its first and last block with demand.
     #    The day of a block is block // BLOCKS_PER_DAY (night blocks already belong to the
@@ -253,5 +253,36 @@ def add_fair_spread_penalty(model: cp_model.CpModel, problem: Problem,
     total work is fixed by the demand, so less above the target for one means more for
     the others below theirs.
     """
-    # TODO: not yet called from solve(); add the line there once this works.
-    raise NotImplementedError
+    # if the rule is not added (or costs nothing), then return nothing
+    weight = problem.settings.weight_over_fair_share
+    if "fair_spread" not in problem.settings.soft_rules or weight == 0:
+        debug_print("add_fair_spread_penalty: skipping the rule")
+        return []
+
+    debug_print("add_fair_spread_penalty: adding the rule")
+
+    fair_shares = fair_share_targets(problem)
+    lookup = variables_by_volunteer_and_block(works)
+    # The block after the last one of the convention, so variables_of looks at every block.
+    final_block = len(problem.settings.days) * BLOCKS_PER_DAY
+
+    penalties = []
+    for volunteer in problem.volunteers:
+        all_works = variables_of(lookup=lookup, volunteer_name=volunteer.name,
+                                 first_block=0, block_after_last=final_block)
+        target = fair_shares[volunteer.name]
+
+        # No variables at all: this volunteer can never work, so there is nothing to count.
+        if all_works == []:
+            continue
+
+        # over = the blocks worked above the target, never below 0: max(worked - target, 0).
+        # Each block counts once (nobody works two posts at once). add_max_equality is an
+        # equality, so over always has exactly this value, also in a schedule found before the
+        # best one (see "Helper variables" in CLAUDE.md).
+        over = model.new_int_var(0, len(all_works), f"{volunteer.name} blocks above fair share")
+        model.add_max_equality(over, [sum(all_works) - target, 0])
+
+        penalties.append(over * weight)
+
+    return penalties
