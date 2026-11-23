@@ -9,7 +9,7 @@ from scheduler.reading.cells import cell_text, find_columns, parse_hour_limits, 
 # The layout of the input workbook this scheduler reads (the "Workbook format version"
 # setting). Raise it only when the workbook layout changes, e.g. a renamed setting or a
 # new required column, not for every new version of the scheduler.
-WORKBOOK_FORMAT_VERSION = 2
+WORKBOOK_FORMAT_VERSION = 3
 
 KNOWN_SETTINGS = {"Workbook format version", "Time step", "Day boundary", "Days",
                   "Shift start step", "Minimum work stretch", "Preferred maximum work stretch",
@@ -19,7 +19,7 @@ KNOWN_SETTINGS = {"Workbook format version", "Time step", "Day boundary", "Days"
                   "Default maximum hours total", "Weight: miss a REALLY-want event",
                   "Weight: miss a like-to-attend event", "Weight: skill score 3",
                   "Weight: skill score 2", "Weight: skill score 1",
-                  "Weight: work stretch longer than preferred", "Weight: unfair spread of hours",
+                  "Weight: work stretch longer than preferred", "Weight: work above fair share",
                   "Weight: start or end off the half hour", "Weight: work stretch"}
 
 REQUIRED_SETTINGS = {"Workbook format version", "Time step", "Day boundary", "Days",
@@ -38,7 +38,8 @@ def read_settings(sheet: Worksheet) -> Settings:
     per day not more than the total). Optional: Weight: skill score 1, 2 and 3 (points
     per time step), Weight: start or end off the half hour (points per start or end),
     Weight: work stretch (points per stretch), Weight: work stretch longer than preferred
-    (points per time step beyond the preferred maximum) and Preferred maximum work stretch
+    (points per time step beyond the preferred maximum), Weight: work above fair share
+    (points per time step above a volunteer's fair share) and Preferred maximum work stretch
     (minutes); whole numbers of at least 0, a missing row or empty Value gives the default
     in Settings. Every soft rule is switched on. Settings the scheduler does not
     use yet (meals, the other weights) are accepted and ignored. Raises WorkbookError for
@@ -97,6 +98,8 @@ def read_settings(sheet: Worksheet) -> Settings:
         weight_over_preferred_stretch = _optional_whole_number_setting(
             unparsed_settings, "Weight: work stretch longer than preferred",
             defaults.weight_over_preferred_stretch)
+        weight_over_fair_share = _optional_whole_number_setting(
+            unparsed_settings, "Weight: work above fair share", defaults.weight_over_fair_share)
     except ValueError as error:
         # Put the tab in front of the message from the parse function.
         raise WorkbookError(f"Settings, {error}") from None
@@ -112,6 +115,7 @@ def read_settings(sheet: Worksheet) -> Settings:
                     weight_off_round_time=weight_off_round_time,
                     weight_work_stretch=weight_work_stretch,
                     weight_over_preferred_stretch=weight_over_preferred_stretch,
+                    weight_over_fair_share=weight_over_fair_share,
                     soft_rules=frozenset(SOFT_RULE_NAMES))
 
 

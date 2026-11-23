@@ -1309,6 +1309,24 @@ up to date with `main`):
    weak bound; the 10-minute default stays. Graph of the progress over time: a future
    item, together with `--verbose` (user). Next: merge
    `feature/soft_rules` into `develop`, then fair spread of hours on a new branch.
+   **Fair spread (agreed 2026-11-23), branch `feature/fair-spraid` (typo in the name):**
+   `fair_share_targets(problem) -> dict[str, int]` in soft_rules.py (tests in
+   test_fair_share_targets.py): a day lasts from its first to its last block with demand
+   (gaps included); a volunteer's weight = the lengths of the days on which they are
+   available at least once in those hours (aim "50% work, 50% play", so later
+   availability doesn't raise it); the total demand in person-blocks is shared in
+   proportion, `round()`ed, capped at the total hour limit; no weight = all 0.
+   `add_fair_spread_penalty` (switch `"fair_spread"`, `Settings.weight_over_fair_share` =
+   4 per block): per volunteer an int var `over` with
+   `add_max_equality(over, [worked - target, 0])` (exact, both sides); below the target
+   costs nothing. Seed check (0-4): not called from solve(), one-sided `>=`, target
+   ignored and no switch check each red their own tests. Workbook row "Weight: unfair
+   spread of hours" renamed **"Weight: work above fair share"** (optional, default 4, new
+   Meaning), **workbook format version 3**, all four workbooks (backups
+   `..._before_fair_share_row.xlsx` for the real ones); reader, GOOD_ROWS (3),
+   GOOD_SETTINGS and OPTIONAL_SETTINGS updated by Claude (on request). 538 green.
+   **Next:** a real-data run (permission!) to see the effect on the hours spread and run
+   time, then merge into `develop`.
    **Soft rules can be switched on/off (user's idea, option B agreed 2026-11-18):**
    `Settings.soft_rules: frozenset[str] = frozenset()` = the soft rules that are on;
    empty by default, so `Settings()` = hard rules only and every test switches on exactly
@@ -1491,7 +1509,7 @@ After the minimal viable scheduler:
 - [ ] Event wishes (includes reading the form CSV). Then also revisit the Events tab
       columns: the template still has the header "Name in 2026 sheet" (user, 2026-11-08:
       change it when this functionality is added).
-- [ ] Fair spread of hours (soft rule; maximum hours moved into version 1.0)
+- [x] Fair spread of hours (soft rule; done 2026-11-23, see step 2 of version 1.1)
 - [ ] Output: with the stay-at-post rule, a gap can appear between slot columns when a
       post needs fewer people (see the stay-at-post item; cosmetic, the right people are
       in the schedule).
