@@ -129,7 +129,7 @@ def add_fewer_stretches_penalty(model: cp_model.CpModel, problem: Problem,
         for volunteer in problem.volunteers:
             works_before = variables_of(lookup, volunteer.name, block - 1, block)
             works_now = variables_of(lookup, volunteer.name, block, block + 1)
-            if works_before == [] and works_now == []:
+            if works_now == []:
                 continue
 
             # Counting the number of starts of stretches
