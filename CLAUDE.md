@@ -1294,7 +1294,17 @@ up to date with `main`):
    the test workbook are red.
    **Reader done (2026-11-23, user):** the three rows read, version 2, 510 green. A typo in
    a row name in the code ("Weight: Work stretch") silently gave the default; only
-   GOOD_SETTINGS with non-default values caught it. **Next:** a real-data run (permission!).
+   GOOD_SETTINGS with non-default values caught it.
+   **Real-data runs done (2026-11-23, user's permission, 3 runs each):** both hit the 10 min
+   limit every time (PCH was optimal in 62 s with round times alone). The stretch rules
+   work (far fewer 60-minute stretches), but the maximum hours per volunteer went up.
+   Totals in DATA_NOTES.md, times in RUN_TIMES.md.
+   **Options noted (user, 2026-11-23), not planned yet:** (a) a run with a longer
+   `--time-limit` on PCH (e.g. 30 or 60 min) to see whether the penalty keeps dropping;
+   (b) tune the weights 20 (per stretch) / 6 (per block over the preferred maximum), e.g.
+   against the hours spread; (c) the large gap (PCH 54%) may just be a weak lower bound,
+   not a bad schedule: keep an eye on it as rules are added. Next: merge
+   `feature/soft_rules` into `develop`, then fair spread of hours on a new branch.
    **Soft rules can be switched on/off (user's idea, option B agreed 2026-11-18):**
    `Settings.soft_rules: frozenset[str] = frozenset()` = the soft rules that are on;
    empty by default, so `Settings()` = hard rules only and every test switches on exactly
