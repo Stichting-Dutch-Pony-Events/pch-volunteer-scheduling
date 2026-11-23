@@ -28,26 +28,67 @@ ALL_DAYS = all_blocks(RULES)
 def test_work_is_shared_by_volunteers_below_their_fair_share():
     """Two equal volunteers each work their fair share, not one of them everything."""
     # Arrange
-    # Idea: Tickets needs 1 in blocks 0-7 (2 hours), Mock Mane and Testy Hooves both all
+    # Tickets needs 1 in blocks 0-7 (2 hours), Mock Mane and Testy Hooves both all
     # weekend -> targets 4 and 4. Expected: each works exactly 4 blocks (without the rule
     # CP-SAT gave this to one person in every seed tried).
+    names = ["Mock Mane", "Testy Hooves"]
+    volunteers = []
+    for name in names:
+        volunteers.append(Volunteer(name=name, skills={"Tickets": 1},
+                                    available_blocks=ALL_DAYS))
+
+    demand = {}
+    for block in range(0, 8):
+        demand[("Tickets", block)] = 1
+
+    problem = Problem(volunteers=volunteers,
+                      posts=[Post("Tickets")],
+                      demand=demand,
+                      settings=RULES)
 
     # Act
+    schedule = solve(problem)
 
     # Assert
-    pytest.skip("not written yet")
+    for name in names:
+        blocks = 0
+
+        for (volunteer_name, post, block) in schedule.assignments:
+            if volunteer_name == name:
+                blocks += 1
+
+        assert blocks == 4, name
 
 
 def test_work_above_the_fair_share_that_cannot_be_avoided_still_gives_a_schedule():
     """When only one volunteer is qualified, they still get all the work."""
     # Arrange
-    # Idea: Tickets needs 1 in blocks 0-7, Mock Mane qualified, Testy Hooves available but
+    # Tickets needs 1 in blocks 0-7, Mock Mane qualified, Testy Hooves available but
     # not qualified (skills={"Infobooth": 1}) -> targets 4 and 4, but Mock Mane works all 8.
+    volunteers = [Volunteer(name="Mock Mane", skills={"Tickets": 1},
+                            available_blocks=ALL_DAYS),
+                  Volunteer(name="Testy Hooves", skills={"Infobooth": 1},
+                            available_blocks=ALL_DAYS)]
+
+    demand = {}
+    for block in range(0, 8):
+        demand[("Tickets", block)] = 1
+
+    problem = Problem(volunteers=volunteers,
+                      posts=[Post("Tickets"), Post("Infobooth")],
+                      demand=demand,
+                      settings=RULES)
 
     # Act
+    schedule = solve(problem)
 
     # Assert
-    pytest.skip("not written yet")
+    blocks_per_volunteer = {"Mock Mane": 0, "Testy Hooves": 0}
+    for (volunteer_name, post, block) in schedule.assignments:
+        blocks_per_volunteer[volunteer_name] += 1
+
+    assert blocks_per_volunteer["Mock Mane"] == 8
+    assert blocks_per_volunteer["Testy Hooves"] == 0
 
 
 # Together with the fewer stretches rule: the weights decide which preference wins.
@@ -61,21 +102,62 @@ def test_work_above_the_fair_share_that_cannot_be_avoided_still_gives_a_schedule
 def test_fair_spread_wins_over_fewer_stretches_with_a_high_weight():
     """With weight 4 per block above the fair share, the 3-hour opening is split."""
     # Arrange
+    volunteers = [Volunteer(name="Mock Mane", skills={"Tickets": 1},
+                            available_blocks=ALL_DAYS),
+                  Volunteer(name="Testy Hooves", skills={"Tickets": 1},
+                            available_blocks=ALL_DAYS)]
+
+    demand = {}
+    for block in range(0, 12):
+        demand[("Tickets", block)] = 1
+
+    new_rules = replace(RULES, soft_rules=frozenset({"fair_spread", "fewer_stretches"}))
+
+    problem = Problem(volunteers=volunteers,
+                      posts=[Post("Tickets")],
+                      demand=demand,
+                      settings=new_rules)
 
     # Act
+    schedule = solve(problem)
 
     # Assert
-    pytest.skip("not written yet")
+    work_stretches = 0
+    for volunteer in volunteers:
+        work_stretches += len(schedule.work_stretches_of(volunteer.name))
+
+    assert work_stretches == 2
 
 
 def test_fewer_stretches_win_over_fair_spread_with_a_low_weight():
     """With weight 2 per block above the fair share, one volunteer works all 3 hours."""
     # Arrange
+    volunteers = [Volunteer(name="Mock Mane", skills={"Tickets": 1},
+                            available_blocks=ALL_DAYS),
+                  Volunteer(name="Testy Hooves", skills={"Tickets": 1},
+                            available_blocks=ALL_DAYS)]
+
+    demand = {}
+    for block in range(0, 12):
+        demand[("Tickets", block)] = 1
+
+    new_rules = replace(RULES, soft_rules=frozenset({"fair_spread", "fewer_stretches"}),
+                        weight_over_fair_share=2)
+
+    problem = Problem(volunteers=volunteers,
+                      posts=[Post("Tickets")],
+                      demand=demand,
+                      settings=new_rules)
 
     # Act
+    schedule = solve(problem)
 
     # Assert
-    pytest.skip("not written yet")
+    work_stretches = 0
+    for volunteer in volunteers:
+        work_stretches += len(schedule.work_stretches_of(volunteer.name))
+
+    assert work_stretches == 1
 
 
 # Counting blocks above the fair share. Like in the stretch rule tests: the work is fixed
@@ -94,7 +176,36 @@ FAIR_SHARE_CASES = [([], 0),                       # no work
 def _model_with_fixed_work(pieces: list[tuple[str, int, int]]
                            ) -> tuple[cp_model.CpModel, Problem, Works]:
     """A model with Mock Mane's variables fixed to 1 inside the pieces, all others to 0."""
-    raise NotImplementedError
+    demand = {}
+    for block in range(0, 32):
+        demand[("Tickets", block)] = 1
+
+    problem = Problem(volunteers=[Volunteer(name="Mock Mane",
+                                            skills={"Tickets": 1},
+                                            available_blocks=ALL_DAYS),
+                                  Volunteer(name="Testy Hooves",
+                                            skills={"Tickets": 1},
+                                            available_blocks=ALL_DAYS)],
+                      posts=[Post("Tickets")],
+                      demand=demand, settings=RULES)
+    model = cp_model.CpModel()
+    works = create_variables(model, problem)
+
+    # Fix every variable by hand: 1 for the (post, block) pairs in the pieces, 0 for all
+    # others. CP-SAT then has no choice left about the work, only about the helper
+    # variables the rule makes.
+    worked = set()
+    for (post, first_block, block_after_last) in pieces:
+        for block in range(first_block, block_after_last):
+            worked.add((post, block))
+
+    for (volunteer_name, post, block), variable in works.items():
+        if (post, block) in worked and volunteer_name == "Mock Mane":
+            model.add(variable == 1)
+        else:
+            model.add(variable == 0)
+
+    return (model, problem, works)
 
 
 @pytest.mark.parametrize("pieces, expected_penalty", FAIR_SHARE_CASES)
@@ -102,11 +213,16 @@ def test_each_block_above_the_fair_share_costs_the_weight(
         pieces: list[tuple[str, int, int]], expected_penalty: int):
     """Each block a volunteer works above their fair share costs the weight."""
     # Arrange
+    model, problem, works = _model_with_fixed_work(pieces=pieces)
+    penalties = add_fair_spread_penalty(model, problem, works)
+    model.minimize(cp_model.LinearExpr.sum(penalties))
+    solver = cp_model.CpSolver()
 
     # Act
+    solver.solve(model)
 
     # Assert
-    pytest.skip("not written yet")
+    assert solver.objective_value == expected_penalty
 
 
 @pytest.mark.parametrize("pieces, expected_penalty", FAIR_SHARE_CASES)
@@ -114,11 +230,16 @@ def test_penalty_counts_only_real_blocks_above_even_when_maximised(
         pieces: list[tuple[str, int, int]], expected_penalty: int):
     """Even when the solver makes the penalty as high as it can, it is the real count."""
     # Arrange
+    model, problem, works = _model_with_fixed_work(pieces=pieces)
+    penalties = add_fair_spread_penalty(model, problem, works)
+    model.maximize(cp_model.LinearExpr.sum(penalties))
+    solver = cp_model.CpSolver()
 
     # Act
+    solver.solve(model)
 
     # Assert
-    pytest.skip("not written yet")
+    assert solver.objective_value == expected_penalty
 
 
 # Switching the rule on and off. The rule checks settings.soft_rules itself, so these
@@ -127,18 +248,50 @@ def test_penalty_counts_only_real_blocks_above_even_when_maximised(
 def test_fair_spread_penalty_that_is_off_returns_nothing():
     """With the rule switched off, add_fair_spread_penalty returns []."""
     # Arrange
+    volunteers = [Volunteer(name="Star Fixture", skills={"Tickets": 3},
+                            available_blocks=ALL_DAYS)]
+
+    demand = {}
+    for block in range(0, 8):
+        demand[("Tickets", block)] = 1
+
+    no_rules = replace(RULES, soft_rules=frozenset())
+
+    problem = Problem(volunteers=volunteers,
+                      posts=[Post("Tickets")],
+                      demand=demand,
+                      settings=no_rules)
+
+    model = cp_model.CpModel()
+    works = create_variables(model, problem)
 
     # Act
+    penalties = add_fair_spread_penalty(model, problem, works)
 
     # Assert
-    pytest.skip("not written yet")
+    assert penalties == []
 
 
 def test_fair_spread_penalty_that_is_on_returns_terms():
     """With the rule on, a volunteer who could work above their fair share gives terms."""
     # Arrange
+    volunteers = [Volunteer(name="Star Fixture", skills={"Tickets": 3},
+                            available_blocks=ALL_DAYS)]
+
+    demand = {}
+    for block in range(0, 8):
+        demand[("Tickets", block)] = 1
+
+    problem = Problem(volunteers=volunteers,
+                      posts=[Post("Tickets")],
+                      demand=demand,
+                      settings=RULES)
+
+    model = cp_model.CpModel()
+    works = create_variables(model, problem)
 
     # Act
+    penalties = add_fair_spread_penalty(model, problem, works)
 
     # Assert
-    pytest.skip("not written yet")
+    assert len(penalties) > 0
