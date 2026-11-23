@@ -1325,8 +1325,10 @@ up to date with `main`):
    Meaning), **workbook format version 3**, all four workbooks (backups
    `..._before_fair_share_row.xlsx` for the real ones); reader, GOOD_ROWS (3),
    GOOD_SETTINGS and OPTIONAL_SETTINGS updated by Claude (on request). 538 green.
-   **Next:** a real-data run (permission!) to see the effect on the hours spread and run
-   time, then merge into `develop`.
+   **Real-data runs done (2026-11-23, user's permission, 3 each):** all hit the 10 min
+   limit; the rule builds in ~0.2-0.6 s; the spread of hours roughly halved in both, at
+   the cost of a few more, shorter stretches (totals in DATA_NOTES.md, times in
+   RUN_TIMES.md). **Next:** merge into `develop`.
    **Soft rules can be switched on/off (user's idea, option B agreed 2026-11-18):**
    `Settings.soft_rules: frozenset[str] = frozenset()` = the soft rules that are on;
    empty by default, so `Settings()` = hard rules only and every test switches on exactly
