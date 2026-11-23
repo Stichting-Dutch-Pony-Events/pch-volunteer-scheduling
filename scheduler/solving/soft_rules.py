@@ -6,7 +6,8 @@ helper variables it needs to the model and returns its penalty terms, already mu
 by the rule's weight from the settings; solve() adds them all up and asks CP-SAT to
 minimise the sum. Weights are whole points: per time block of 15 minutes (skill score)
 per start or end of a work stretch (round times), per work stretch (fewer stretches) or
-per time block beyond the preferred maximum stretch (preferred maximum stretch).
+per time block beyond the preferred maximum stretch (preferred maximum stretch) or per
+time block above a volunteer's fair share of the work (fair spread).
 
 They all take the same arguments as the hard rules: the model, the problem, and the works
 variables made by create_variables (see Works in variables.py). solve() only calls a rule
@@ -241,3 +242,16 @@ def fair_share_targets(problem: Problem) -> dict[str, int]:
             targets[volunteer.name] = min(targets[volunteer.name], limit_in_blocks)
 
     return targets
+
+
+def add_fair_spread_penalty(model: cp_model.CpModel, problem: Problem,
+                            works: Works) -> list[cp_model.LinearExpr]:
+    """Soft rule: spread the work fairly over the volunteers.
+
+    Every time block a volunteer works above their fair share (fair_share_targets) costs
+    settings.weight_over_fair_share. Working less than the fair share costs nothing: the
+    total work is fixed by the demand, so less above the target for one means more for
+    the others below theirs.
+    """
+    # TODO: not yet called from solve(); add the line there once this works.
+    raise NotImplementedError
