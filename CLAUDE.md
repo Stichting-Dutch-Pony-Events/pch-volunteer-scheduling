@@ -1303,7 +1303,11 @@ up to date with `main`):
    `--time-limit` on PCH (e.g. 30 or 60 min) to see whether the penalty keeps dropping;
    (b) tune the weights 20 (per stretch) / 6 (per block over the preferred maximum), e.g.
    against the hours spread; (c) the large gap (PCH 54%) may just be a weak lower bound,
-   not a bad schedule: keep an eye on it as rules are added. Next: merge
+   not a bad schedule: keep an eye on it as rules are added. **(a) done (2026-11-23):** a
+   30-minute PCH run gains only 3% after minute 10 (penalty 4,776 -> 4,636; most of the
+   gain is in the first 7.5 min) and the lower bound rises slowly, so the gap is mostly a
+   weak bound; the 10-minute default stays. Graph of the progress over time: a future
+   item, together with `--verbose` (user). Next: merge
    `feature/soft_rules` into `develop`, then fair spread of hours on a new branch.
    **Soft rules can be switched on/off (user's idea, option B agreed 2026-11-18):**
    `Settings.soft_rules: frozenset[str] = frozenset()` = the soft rules that are on;
