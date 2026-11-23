@@ -30,7 +30,7 @@ GOOD_ROWS = [
 ]
 
 # The reader switches every soft rule on; update this when a soft rule is added.
-ALL_SOFT_RULES = frozenset({"fewer_stretches","round_times", "skill_score"})
+ALL_SOFT_RULES = frozenset({"fewer_stretches", "round_times", "skill_score"})
 
 # What GOOD_ROWS should give.
 GOOD_SETTINGS = Settings(min_stretch_minutes=45, max_stretch_minutes=150,
