@@ -75,6 +75,8 @@ Version 1.1 makes the schedule nicer and easier to read.
 - [ ] Maybe: check any schedule against the rules, also one changed by hand afterwards
 - [ ] Event wishes (REALLY want / would like to attend), read from the form answers
 - [ ] More output: a "no double booking" check tab
+- [ ] More output: an "Assignments" tab, one row per shift with room for notes; later
+      also read back in, to check or change an existing schedule
 - [ ] Choose the times the schedule shows (e.g. 08:00-02:00), instead of only the open hours
 - [ ] More command line options
 - [ ] All input errors shown at once, instead of stopping at the first one

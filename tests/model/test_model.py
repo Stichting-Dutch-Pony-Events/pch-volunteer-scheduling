@@ -195,6 +195,128 @@ def test_volunteer_without_assignments_has_no_stretches():
     assert stretches == []
 
 
+def test_consecutive_blocks_at_one_post_form_one_shift():
+    """Blocks 0-3 at Tickets form a single shift ("Tickets", 0, 4)."""
+    # Arrange
+    assignments = set()
+    for block in range(0, 4):
+        assignments.add(("Mock Mane", "Tickets", block))
+
+    schedule = Schedule(assignments=assignments)
+
+    # Act
+    shifts = schedule.shifts_of("Mock Mane")
+
+    # Assert
+    assert shifts == [("Tickets", 0, 4)]
+
+
+def test_a_gap_splits_work_at_one_post_into_two_shifts():
+    """Blocks 0-3 and 6-9 at Tickets, with a gap in between, form two shifts."""
+    # Arrange
+    assignments = set()
+    # The * unpacks each range into one list: [0, 1, 2, 3, 6, 7, 8, 9]
+    for block in [*range(0, 4), *range(6, 10)]:
+        assignments.add(("Mock Mane", "Tickets", block))
+
+    schedule = Schedule(assignments=assignments)
+
+    # Act
+    shifts = schedule.shifts_of("Mock Mane")
+
+    # Assert
+    assert shifts == [("Tickets", 0, 4), ("Tickets", 6, 10)]
+
+
+def test_switching_post_starts_a_new_shift():
+    """Tickets 0-3 and straight on Infobooth 4-7 form two shifts, without a gap."""
+    # Arrange
+    assignments = set()
+    for block in range(0, 4):
+        assignments.add(("Mock Mane", "Tickets", block))
+    for block in range(4, 8):
+        assignments.add(("Mock Mane", "Infobooth", block))
+
+    schedule = Schedule(assignments=assignments)
+
+    # Act
+    shifts = schedule.shifts_of("Mock Mane")
+
+    # Assert
+    assert shifts == [("Tickets", 0, 4), ("Infobooth", 4, 8)]
+
+
+def test_shifts_at_different_posts_are_in_time_order():
+    """Tickets 0-3, Infobooth 4-7, Tickets 8-11 come out in that order, not grouped per post."""
+    # Arrange
+    assignments = set()
+    # The * unpacks each range into one list: [0, 1, 2, 3, 8, 9, 10, 11]
+    for block in [*range(0, 4), *range(8, 12)]:
+        assignments.add(("Mock Mane", "Tickets", block))
+    for block in range(4, 8):
+        assignments.add(("Mock Mane", "Infobooth", block))
+
+    schedule = Schedule(assignments=assignments)
+
+    # Act
+    shifts = schedule.shifts_of("Mock Mane")
+
+    # Assert
+    assert shifts == [("Tickets", 0, 4), ("Infobooth", 4, 8), ("Tickets", 8, 12)]
+
+
+def test_shifts_of_other_volunteers_are_left_out():
+    """Only the asked volunteer's shifts come out, not those of someone else."""
+    # Arrange
+    assignments = set()
+    for block in range(0, 4):
+        assignments.add(("Mock Mane", "Tickets", block))
+    for block in range(4, 8):
+        assignments.add(("Testy Hooves", "Infobooth", block))
+
+    schedule = Schedule(assignments=assignments)
+
+    # Act
+    shifts = schedule.shifts_of("Mock Mane")
+
+    # Assert
+    assert shifts == [("Tickets", 0, 4)]
+
+
+def test_volunteer_without_assignments_has_no_shifts():
+    """A volunteer who is not scheduled at all has no shifts."""
+    # Arrange
+    assignments = set()
+    for block in range(0, 4):
+        assignments.add(("Mock Mane", "Tickets", block))
+    for block in range(4, 8):
+        assignments.add(("Mock Mane", "Infobooth", block))
+
+    schedule = Schedule(assignments=assignments)
+
+    # Act
+    shifts = schedule.shifts_of("Testy Hooves")
+
+    # Assert
+    assert shifts == []
+
+
+def test_a_shift_continues_across_the_day_boundary():
+    """Saturday night 05:30 to Sunday 06:30 (blocks 190-193) at one post is one shift."""
+    # Arrange
+    assignments = set()
+    for block in range(190, 194):
+        assignments.add(("Mock Mane", "Tickets", block))
+
+    schedule = Schedule(assignments=assignments)
+
+    # Act
+    shifts = schedule.shifts_of("Mock Mane")
+
+    # Assert
+    assert shifts == [("Tickets", 190, 194)]
+
+
 def test_unsorted_blocks_are_split_into_runs_in_time_order():
     """Blocks given in any order still come out as runs sorted by time."""
     # Arrange

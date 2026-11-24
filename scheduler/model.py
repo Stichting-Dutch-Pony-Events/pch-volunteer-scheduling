@@ -151,6 +151,15 @@ class Schedule:
 
         return runs_of_consecutive_blocks(blocks)
 
+    def shifts_of(self, volunteer_name: str) -> list[tuple[str, int, int]]:
+        """Shifts of this volunteer: runs of consecutive blocks at one post.
+
+        Each shift is (post, first_block, block_after_last), sorted by time. Unlike a work
+        stretch, moving straight on to another post starts a new shift.
+        Example: Tickets 0-3, then Infobooth 4-6 -> [("Tickets", 0, 4), ("Infobooth", 4, 7)]
+        """
+        raise NotImplementedError
+
 
 def block_of(day: str, time: str, settings: Settings) -> int:
     """The block that starts at this time on this convention day, e.g. ("Saturday", "13:30").

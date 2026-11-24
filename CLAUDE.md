@@ -1359,7 +1359,8 @@ up to date with `main`):
    run, `--verbose` (CP-SAT log), maybe more from the wish list.
 4. Output: individual schedules tab (user: very much needed for usability, the
    Schedule tab is hard to read). Independent of the solver, so it can move forward if
-   needed.
+   needed. **Started 2026-11-24** (branch `feature/individual-schedules`); design under
+   the individual schedules item below.
 Not in 1.1: one-off event shifts (user wants to discuss it with another volunteer lead
 first), meal breaks, event wishes and the rest of the list below.
 
@@ -1392,6 +1393,56 @@ After the minimal viable scheduler:
       reader then also reads Group and Colour). Showing the colour on the Posts tab
       itself was considered and skipped for now (options: fixed fills, or conditional
       formatting with a fixed palette of group colours).
+      **Layout (user, 2026-11-24): a 2D grid.** One row per 30 minutes, one column per
+      volunteer. Each shift (a run of consecutive blocks at one post) is one block of
+      cells in the volunteer's column, in the post's colour with an outside border: the
+      top row holds the post name, the bottom row the times written out ("8:00-10:00"),
+      so a start or end on :15/:45 is still shown exactly although the rows are 30 min.
+      Example: Mock Mane, Ticketing 08:00-10:00 = rows 08:00, 08:30, 09:00, 09:30. The
+      user will show the hand-made PCH example later (from the usual computer).
+      **Decided (user, 2026-11-24):**
+      - Tab name "Individual schedules". Columns A/B = Day and Time (like the Schedule
+        tab, day on every row, times "08:00" with leading zeros everywhere); rows every
+        30 minutes, per day from the half hour of the first to the half hour of the last
+        demand (like `rows_to_show`, rounded to half hours).
+      - A shift covers every row it touches (08:15-10:00 = rows 08:00 to 09:30); the
+        bottom row says "08:15-10:00".
+      - Two shifts in one row (a post switch on :15/:45 inside a work stretch; breaks are
+        >= 30 min, so separate stretches never collide): the **second shift starts one
+        row later**.
+      - **Bold:** the start time and the end time each separately, only when it does not
+        line up with the rows of its box: a start or end on :15/:45, and a start pushed
+        one row down by the shift before it.
+      - A one-row shift: post and times in one cell ("Tickets 08:00-08:30").
+      - Volunteer columns in **alphabetical order**; under the nickname (a second header
+        row) their group (team). **Team colours: later, not important** (user: the post
+        colours matter more); a team without a colour = white.
+      - Free cells: **white** when the volunteer is available for at least part of the
+        half hour and it is within convention hours; **grey** otherwise. Convention hours
+        = a half-hour row with demand at some post in at least one of its blocks. No
+        event wishes on this tab (the solver already took them into account).
+        Maybe later (user): light grey for shifts before the doors open (usually 10:00).
+      - Order of work: plain blocks first (borders and text, no colour), then reading
+        Group and Colour from Posts and colouring the shifts and the group cells.
+      Branch `feature/individual-schedules` made by the user (2026-11-24).
+      **Step 1 (agreed 2026-11-24): `Schedule.shifts_of(volunteer_name) -> list[tuple[str,
+      int, int]]`** in model.py, (post, first_block, block_after_last) in time order, next
+      to `work_stretches_of` (a post switch starts a new shift, unlike a stretch). Stub
+      plus 7 test stubs in tests/model/test_model.py written by Claude; filled in by the
+      user (2026-11-24), all 7 red. Test 4 became an A-B-A case (Tickets, Infobooth,
+      Tickets: catches "runs per post, not sorted by time"); the user likes
+      `[*range(0, 4), *range(8, 12)]` for several ranges of the same kind (with a short
+      comment on what `*` does). **Next:** the user implements `shifts_of`.
+- [ ] **Output: an "Assignments" tab (user, 2026-11-24; idea, not planned yet).** A flat
+      table, one row per shift (a run of consecutive blocks at one post), sorted by
+      nickname then time: Nickname, Day, From, To, Post, Hours, **Notes** (empty, for the
+      user's own explanations). A post switch inside a work stretch = two rows; night
+      shifts under their convention day; a shift to the very end of the convention ends
+      at "06:00". Filter on a nickname = that person's schedule. **Later use: read it
+      back in** from an existing (hand-edited) schedule, to double-check it against the
+      rules (see `check_schedule` below) or to make changes and re-run (see fixed
+      shifts). Shares the helper that turns a schedule into shifts with the individual
+      schedules tab.
 - [ ] Output: a set time window for the Schedule rows (agreed 2026-11-05, postponed by
       the user; version 1.0 fits the rows to the demand). Optional Settings row, e.g.
       `Schedule shows` = `08:00-02:00`, same format and rules as an availability range
