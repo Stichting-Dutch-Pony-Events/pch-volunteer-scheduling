@@ -1465,8 +1465,11 @@ After the minimal viable scheduler:
         `shift_boxes`, then the sheet itself.
       - **Refactor done (2026-11-24, Claude, on request):** `end_time_of` in model.py
         right after `day_and_time_of` (code unchanged), `_end_time` removed from
-        checks.py (`Settings` no longer imported there). 545 green. Next: 2 direct tests
-        in tests/model/test_time_blocks.py.
+        checks.py (`Settings` no longer imported there). 545 green. 2 direct tests in
+        tests/model/test_time_blocks.py written by the user (with a `RULES` of three days),
+        547 green; each goes red when its branch of `end_time_of` is broken (checked by
+        Claude in a scratch copy). **Next:** `half_hour_rows`, `shift_times`,
+        `free_cell_is_white` (tests first).
 - [ ] **Output: an "Assignments" tab (user, 2026-11-24; idea, not planned yet).** A flat
       table, one row per shift (a run of consecutive blocks at one post), sorted by
       nickname then time: Nickname, Day, From, To, Post, Hours, **Notes** (empty, for the
