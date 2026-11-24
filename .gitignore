@@ -33,3 +33,6 @@ desktop.ini
 # LibreOffice / Excel lock files while a sheet is open
 .~lock.*#
 ~$*
+
+# --- Other Local Stuff ----------------------------------------
+LOCAL*
