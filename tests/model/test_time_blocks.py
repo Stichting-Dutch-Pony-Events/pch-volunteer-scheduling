@@ -1,7 +1,8 @@
 import pytest
 
-from scheduler.model import Settings, all_blocks, block_of, day_and_time_of, day_of
+from scheduler.model import Settings, all_blocks, block_of, day_and_time_of, day_of, end_time_of
 
+RULES = Settings(days=("Friday","Saturday","Sunday"))
 
 def test_first_day_at_six_is_block_0():
     """06:00 on the first convention day is block 0."""
@@ -97,6 +98,30 @@ def test_day_of_gives_the_convention_day_of_a_block():
 
     # Assert
     assert day == "Saturday"
+
+
+def test_end_time_is_the_time_of_the_block_after_the_range():
+    """A range that stops just before block 8 ends at 08:00, the time of block 8."""
+    # Arrange
+    # (Nothing to arrange)
+
+    # Act
+    result = end_time_of(block_after_last=8, settings=RULES)
+
+    # Assert
+    assert result == "08:00"
+
+
+def test_range_to_the_very_end_of_the_convention_ends_at_06_00():
+    """With three days, block_after_last 288 does not exist; the range ends at 06:00."""
+    # Arrange
+    # (Nothing to arrange)
+
+    # Act
+    result = end_time_of(block_after_last=288, settings=RULES)
+
+    # Assert
+    assert result == "06:00"
 
 
 def test_unknown_day_raises_value_error():
