@@ -54,7 +54,7 @@ likes to write tests (and often code) themselves; Claude reviews and explains.
 4. **The user handles version control** in VS Code / Sourcetree.
    Do not commit, push, branch or run other git commands that change state, unless the
    user specifically asks for that one action (confirmed 2026-11-05). Suggest a
-   commit message when a step is done. Read-only git commands (status, log, branch) are fine.
+   commit message when a step is done: **one line only** (user, 2026-11-24). Read-only git commands (status, log, branch) are fine.
    **Branches (agreed 2026-11-01):** `main` = working versions (merge at milestones such
    as version 1.0, maybe tag `v1.0`). `develop` = everyday work; small one-session steps
    go straight on it. Bigger steps that take several sessions get a short-lived feature
@@ -1359,7 +1359,7 @@ up to date with `main`):
    run, `--verbose` (CP-SAT log), maybe more from the wish list.
 4. Output: individual schedules tab (user: very much needed for usability, the
    Schedule tab is hard to read). Independent of the solver, so it can move forward if
-   needed. **Started 2026-11-24** (branch `feature/individual-schedules`); design under
+   needed. **Started 2026-11-24** (branch `feature/individual_schedules`); design under
    the individual schedules item below.
 Not in 1.1: one-off event shifts (user wants to discuss it with another volunteer lead
 first), meal breaks, event wishes and the rest of the list below.
@@ -1424,7 +1424,7 @@ After the minimal viable scheduler:
         Maybe later (user): light grey for shifts before the doors open (usually 10:00).
       - Order of work: plain blocks first (borders and text, no colour), then reading
         Group and Colour from Posts and colouring the shifts and the group cells.
-      Branch `feature/individual-schedules` made by the user (2026-11-24).
+      Branch `feature/individual_schedules` made by the user (2026-11-24).
       **Step 1 (agreed 2026-11-24): `Schedule.shifts_of(volunteer_name) -> list[tuple[str,
       int, int]]`** in model.py, (post, first_block, block_after_last) in time order, next
       to `work_stretches_of` (a post switch starts a new shift, unlike a stretch). Stub
@@ -1432,7 +1432,11 @@ After the minimal viable scheduler:
       user (2026-11-24), all 7 red. Test 4 became an A-B-A case (Tickets, Infobooth,
       Tickets: catches "runs per post, not sorted by time"); the user likes
       `[*range(0, 4), *range(8, 12)]` for several ranges of the same kind (with a short
-      comment on what `*` does). **Next:** the user implements `shifts_of`.
+      comment on what `*` does). **Done (2026-11-24, user):** blocks per post, runs per
+      post via `runs_of_consecutive_blocks`, one list sorted with
+      `key=lambda shift: (shift[1], shift[0])` (start, then post; not a dict keyed on the
+      start block, which would silently drop a double-booked shift in a hand-edited
+      schedule read back later). 545 green.
 - [ ] **Output: an "Assignments" tab (user, 2026-11-24; idea, not planned yet).** A flat
       table, one row per shift (a run of consecutive blocks at one post), sorted by
       nickname then time: Nickname, Day, From, To, Post, Hours, **Notes** (empty, for the
