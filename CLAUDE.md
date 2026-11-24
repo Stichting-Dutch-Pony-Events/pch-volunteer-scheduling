@@ -1468,8 +1468,19 @@ After the minimal viable scheduler:
         checks.py (`Settings` no longer imported there). 545 green. 2 direct tests in
         tests/model/test_time_blocks.py written by the user (with a `RULES` of three days),
         547 green; each goes red when its branch of `end_time_of` is broken (checked by
-        Claude in a scratch copy). **Next:** `half_hour_rows`, `shift_times`,
-        `free_cell_is_white` (tests first).
+        Claude in a scratch copy). `shift_times` dropped (only `day_and_time_of` +
+        `end_time_of`, both tested; `_write_box` calls them itself).
+      - **Margin rows (user, 2026-11-24), first:** `rows_to_show` (so both sheets) gets
+        half an hour (`MARGIN_BLOCKS = 2`, a constant in schedule_sheet.py) before the
+        first and after the last demand of each day, so the days are separated by rows
+        without demand (grey on the individual tab, empty on Schedule). Not before block
+        0 or after the last block of the convention; overlapping margins of two days give
+        each row once. 5 tests written by Claude at the end of the rows_to_show section of
+        test_write_helpers.py (3 red, the two boundary guards green until implemented).
+        A trial in a scratch copy makes all 5 green and turns 11 old tests red (6 in
+        test_write_helpers.py, 4 in test_create_schedule_sheet.py, 1 in
+        test_write_output.py) for the user to update. Then `half_hour_rows` and
+        `free_cell_is_white` (9 tests, 10 cases, agreed).
 - [ ] **Output: an "Assignments" tab (user, 2026-11-24; idea, not planned yet).** A flat
       table, one row per shift (a run of consecutive blocks at one post), sorted by
       nickname then time: Nickname, Day, From, To, Post, Hours, **Notes** (empty, for the
