@@ -158,7 +158,24 @@ class Schedule:
         stretch, moving straight on to another post starts a new shift.
         Example: Tickets 0-3, then Infobooth 4-6 -> [("Tickets", 0, 4), ("Infobooth", 4, 7)]
         """
-        raise NotImplementedError
+        # Isolate what posts the volunteer is assigned, and what blocks
+        blocks_per_post = {}  # dict(postname) -> set() blocks assigned
+        for assigned_volunteer_name, assigned_post, assigned_block in self.assignments:
+            if assigned_volunteer_name == volunteer_name:
+                if assigned_post not in blocks_per_post:
+                    blocks_per_post[assigned_post] = set()
+
+                blocks_per_post[assigned_post].add(assigned_block)
+
+        # Generate the shifts from those
+        shifts = []  # [(post, first_block, block_after_last), ...]
+        for post, blocks in blocks_per_post.items():
+            for first_block, block_after_last in runs_of_consecutive_blocks(blocks):
+                shifts.append((post, first_block, block_after_last))
+
+        # Soft by the first block (time order), then by post name when two start together.
+        shifts.sort(key=lambda shift: (shift[1], shift[0]))
+        return shifts
 
 
 def block_of(day: str, time: str, settings: Settings) -> int:
