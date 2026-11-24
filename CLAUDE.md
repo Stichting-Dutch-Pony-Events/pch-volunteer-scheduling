@@ -5,6 +5,8 @@ before doing anything.
 
 **Also read `ReferenceDocuments/DATA_NOTES.md` if it exists.** It holds notes about the
 real volunteer data and is kept out of git for privacy.
+**And read `LOCAL_CLAUDE.md` if it exists** (not in git, `LOCAL*` in .gitignore): notes
+about that particular clone/computer, e.g. a second machine without ReferenceDocuments.
 
 ## What this is
 
@@ -1328,7 +1330,7 @@ up to date with `main`):
    **Real-data runs done (2026-11-23, user's permission, 3 each):** all hit the 10 min
    limit; the rule builds in ~0.2-0.6 s; the spread of hours roughly halved in both, at
    the cost of a few more, shorter stretches (totals in DATA_NOTES.md, times in
-   RUN_TIMES.md). **Next:** merge into `develop`.
+   RUN_TIMES.md). **Merged into `develop` (PR #9).**
    **Soft rules can be switched on/off (user's idea, option B agreed 2026-11-18):**
    `Settings.soft_rules: frozenset[str] = frozenset()` = the soft rules that are on;
    empty by default, so `Settings()` = hard rules only and every test switches on exactly
