@@ -1489,6 +1489,25 @@ After the minimal viable scheduler:
         Clamped **within the margin's own day** (user's idea), so margins of two days can
         never overlap. Tests renamed `test_margin_...` and call `margin=2`. 552 green;
         each clamp reds its own guard test (checked in a scratch copy).
+      **Continue here next session (status at the end of 2026-11-24, worked on the second
+      computer, see LOCAL_CLAUDE.md there):** branch `feature/individual_schedules`.
+      Done: `Schedule.shifts_of`, `end_time_of` (moved from checks.py), the margin
+      parameter of `rows_to_show`; 552 green. Next, in this order:
+      1. `MARGIN_BLOCKS = 2` at the top of schedule_sheet.py and
+         `rows_to_show(problem, margin=MARGIN_BLOCKS)` in `create_schedule_sheet`; then
+         fix the 4 tests in test_create_schedule_sheet.py and 1 in test_write_output.py
+         that go red (rows shift down by the margin).
+      2. New module `writing/individual_schedules_sheet.py` (add it to the map in
+         `writing/__init__.py`) with stubs `create_individual_schedules_sheet`,
+         `half_hour_rows` and `free_cell_is_white`; the 9 approved tests (10 cases) in
+         `tests/writing/test_individual_schedules_helpers.py`; `half_hour_rows` uses
+         `rows_to_show(problem, margin=2)`, so write its expected rows with the margin
+         (the tests in the proposal above were listed without it).
+      3. `shift_boxes` + `ShiftBox` (push down, shorten, bold flags), tests first.
+      4. The sheet itself (`_write_box` with rich text and borders, grey/white cells,
+         empty group row 2, freeze panes), a line in `write_output`; then step 2 of the
+         layout: read Group/Colour from Posts (and Team) and colour the boxes.
+      The user will show the hand-made PCH example of the grid from the usual computer.
 - [ ] **Output: an "Assignments" tab (user, 2026-11-24; idea, not planned yet).** A flat
       table, one row per shift (a run of consecutive blocks at one post), sorted by
       nickname then time: Nickname, Day, From, To, Post, Hours, **Notes** (empty, for the
