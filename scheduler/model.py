@@ -229,6 +229,24 @@ def day_and_time_of(block: int, settings: Settings) -> tuple[str, str]:
     return (day, f"{hours:02d}:{minutes:02d}")
 
 
+def end_time_of(block_after_last: int, settings: Settings) -> str:
+    """The end time ("HH:MM") of a time range that stops just before block_after_last.
+
+    Usually that is simply the time of block_after_last. But a range that runs until the
+    very end of the convention has a block_after_last that no longer exists, so day_and_time_of
+    would raise; that range ends at the day boundary (06:00).
+    """
+    final_block = (len(settings.days) * BLOCKS_PER_DAY) - 1
+
+    if block_after_last > final_block:
+        # The convention ends at 06:00, the same time of day as block 0.
+        _, end = day_and_time_of(block=0, settings=settings)
+    else:
+        _, end = day_and_time_of(block=block_after_last, settings=settings)
+
+    return end
+
+
 def day_of(block: int, settings: Settings) -> str:
     """The convention day a block belongs to, e.g. 172 -> "Saturday"."""
     if block < 0 or block >= len(settings.days) * BLOCKS_PER_DAY:

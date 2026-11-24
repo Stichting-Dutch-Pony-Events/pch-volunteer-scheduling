@@ -12,8 +12,8 @@ are probably a mistake in the input, and only returns them as lines of text.
 """
 from scheduler.debug import debug_print
 from scheduler.errors import NotEnoughHours, NotEnoughQualified, NotEnoughVolunteers
-from scheduler.model import (BLOCKS_PER_DAY, MINUTES_PER_BLOCK, Problem, Settings, Volunteer,
-                             block_of, day_and_time_of, day_of, runs_of_consecutive_blocks)
+from scheduler.model import (BLOCKS_PER_DAY, MINUTES_PER_BLOCK, Problem, Volunteer, block_of,
+                             day_and_time_of, day_of, end_time_of, runs_of_consecutive_blocks)
 
 # At most this many problem lines in one message; the rest is counted ("and 12 more").
 MAX_LINES = 10
@@ -96,7 +96,7 @@ def _not_enough_qualified_lines(problem: Problem) -> list[str]:
 
         for block, block_after_last in runs:
             day, start = day_and_time_of(block=block, settings=problem.settings)
-            end = _end_time(block_after_last=block_after_last, settings=problem.settings)
+            end = end_time_of(block_after_last=block_after_last, settings=problem.settings)
 
             line = f"{post}, {day} {start}-{end}" + end_line
 
@@ -145,7 +145,7 @@ def _not_enough_volunteers_lines(problem: Problem) -> list[str]:
 
         for block, block_after_last in runs:
             day, start = day_and_time_of(block=block, settings=problem.settings)
-            end = _end_time(block_after_last=block_after_last, settings=problem.settings)
+            end = end_time_of(block_after_last=block_after_last, settings=problem.settings)
 
             line = f"{day} {start}-{end}" + end_line
 
@@ -294,24 +294,6 @@ def _minutes_as_hours_text(minutes: int) -> str:
         return f"{minutes // 60} hours"
 
     return f"{minutes / 60:g} hours"
-
-
-def _end_time(block_after_last: int, settings: Settings) -> str:
-    """The end time ("HH:MM") of a time range that stops just before block_after_last.
-
-    Usually that is simply the time of block_after_last. But a range that runs until the
-    very end of the convention has a block_after_last that no longer exists, so day_and_time_of
-    would raise; that range ends at the day boundary (06:00).
-    """
-    final_block = (len(settings.days) * BLOCKS_PER_DAY) - 1
-
-    if block_after_last > final_block:
-        # The convention ends at 06:00, the same time of day as block 0.
-        _, end = day_and_time_of(block=0, settings=settings)
-    else:
-        _, end = day_and_time_of(block=block_after_last, settings=settings)
-
-    return end
 
 
 # --- Warnings: probably a mistake in the input, but no reason to stop ---

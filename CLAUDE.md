@@ -1437,6 +1437,36 @@ After the minimal viable scheduler:
       `key=lambda shift: (shift[1], shift[0])` (start, then post; not a dict keyed on the
       start block, which would silently drop a double-booked shift in a hand-edited
       schedule read back later). 545 green.
+      **Step 2 design (agreed 2026-11-24): module `writing/individual_schedules_sheet.py`**,
+      `create_individual_schedules_sheet(workbook, problem, schedule)` as the table of
+      contents (guard against a second tab, header, rows, free cells, boxes, freeze panes),
+      then the pure helpers, each with its own tests, then private writing helpers:
+      - `half_hour_rows(problem) -> list[int]`: the even block of every 30-minute row,
+        built on `rows_to_show` (`block - block % 2`, no duplicates).
+      - `shift_boxes(shifts) -> list[ShiftBox]` (frozen dataclass in the module: post,
+        first_block, block_after_last, first_row, last_row, start_bold, end_bold; rows
+        are named by their even block). Push down: a box whose first row is on or above
+        the previous box's last row starts at that row + 2. **A pushed box is shortened
+        if possible**, but always at least one row: if it would end before it starts, it
+        becomes one row (both times bold) and may push the next one down in turn (a
+        cascade, exceedingly rare; user).
+      - `shift_times(first_block, block_after_last, settings) -> tuple[str, str]`.
+      - `free_cell_is_white(volunteer, row, problem) -> bool`: available in at least one
+        of the row's two blocks and demand at some post in one of them.
+      - `_write_box(...)` etc.: text in the top and bottom cells (one cell for a one-row
+        box), rich text for the bold times (`CellRichText`), outside border.
+      - **Row 2 (the group/team row under the nicknames) is added now** (user), empty
+        until Team is read in the colours step.
+      - **Cells of a box are not merged** (user): an outside border only. Reading the
+        tab back is not needed; the Assignments tab will be for that.
+      - Order: first a small refactor, `_end_time` in solving/checks.py becomes public
+        `end_time_of(block_after_last, settings)` in model.py (used by checks.py and the
+        new tab), then `half_hour_rows`, `shift_times`, `free_cell_is_white`, then
+        `shift_boxes`, then the sheet itself.
+      - **Refactor done (2026-11-24, Claude, on request):** `end_time_of` in model.py
+        right after `day_and_time_of` (code unchanged), `_end_time` removed from
+        checks.py (`Settings` no longer imported there). 545 green. Next: 2 direct tests
+        in tests/model/test_time_blocks.py.
 - [ ] **Output: an "Assignments" tab (user, 2026-11-24; idea, not planned yet).** A flat
       table, one row per shift (a run of consecutive blocks at one post), sorted by
       nickname then time: Nickname, Day, From, To, Post, Hours, **Notes** (empty, for the
