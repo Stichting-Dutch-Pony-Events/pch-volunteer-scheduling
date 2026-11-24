@@ -285,11 +285,12 @@ def test_no_demand_gives_no_rows():
     assert result == []
 
 
-# Half an hour of margin before and after the demand of each day, so the days are separated
-# by rows without demand (grey on the individual schedules tab).
+# With a margin: extra blocks before the first and after the last demand of each day, so the
+# days are separated by rows without demand (grey on the individual schedules tab).
+# A margin of 2 blocks is half an hour.
 
-def test_rows_start_half_an_hour_before_the_first_demand_of_the_day():
-    """Demand from Friday 08:00 gives a first row at 07:30."""
+def test_margin_adds_rows_before_the_first_demand_of_the_day():
+    """A margin of 2 blocks before demand from Friday 08:00 gives a first row at 07:30."""
     # Arrange
     # Friday 08:00-09:00
     demand = {}
@@ -298,30 +299,30 @@ def test_rows_start_half_an_hour_before_the_first_demand_of_the_day():
     problem = _problem(["Tickets"], demand)
 
     # Act
-    result = rows_to_show(problem)
+    result = rows_to_show(problem, margin=2)
 
     # Assert
     assert result[0] == 6           # Friday 07:30
 
 
-def test_rows_end_half_an_hour_after_the_last_demand_of_the_day():
-    """Demand until Friday 09:00 (last block 08:45) gives a last row at 09:15."""
+def test_margin_adds_rows_after_the_last_demand_of_the_day():
+    """A margin of 2 blocks after demand until Friday 09:00 gives a last row at 09:15."""
     # Arrange
-    # Friday 08:00-09:00
+    # Friday 08:00-09:00 (last block 08:45)
     demand = {}
     for block in range(8, 12):
         demand[("Tickets", block)] = 1
     problem = _problem(["Tickets"], demand)
 
     # Act
-    result = rows_to_show(problem)
+    result = rows_to_show(problem, margin=2)
 
     # Assert
     assert result[-1] == 13         # Friday 09:15, the row that ends at 09:30
 
 
-def test_rows_do_not_start_before_the_convention():
-    """Demand from Friday 06:00 (block 0) gives no rows before block 0."""
+def test_margin_does_not_start_before_the_convention():
+    """A margin before demand from Friday 06:00 (block 0) adds no rows before block 0."""
     # Arrange
     # Friday 06:00-07:00
     demand = {}
@@ -330,14 +331,14 @@ def test_rows_do_not_start_before_the_convention():
     problem = _problem(["Tickets"], demand)
 
     # Act
-    result = rows_to_show(problem)
+    result = rows_to_show(problem, margin=2)
 
     # Assert
     assert result[0] == 0           # Friday 06:00
 
 
-def test_rows_do_not_go_past_the_end_of_the_convention():
-    """Demand until Sunday night 06:00 (last block 287) gives no rows after block 287."""
+def test_margin_does_not_go_past_the_end_of_the_convention():
+    """A margin after demand until Sunday night 06:00 (block 287) adds no rows after it."""
     # Arrange
     # Sunday night 05:00-06:00, the last hour of the convention
     demand = {}
@@ -346,24 +347,24 @@ def test_rows_do_not_go_past_the_end_of_the_convention():
     problem = _problem(["Tickets"], demand)
 
     # Act
-    result = rows_to_show(problem)
+    result = rows_to_show(problem, margin=2)
 
     # Assert
     assert result[-1] == 287        # Sunday night 05:45
 
 
 def test_margins_of_two_days_that_touch_give_each_row_once():
-    """When Saturday's margin after and Sunday's margin before overlap, each row comes once."""
+    """When the margins of Saturday and Sunday meet at 06:00, each row comes once."""
     # Arrange
     # Saturday night 05:00-05:30 (blocks 188-189) and Sunday 06:00-06:30 (blocks 192-193).
-    # Both margins cover blocks 190-191 (Saturday night 05:30-06:00).
+    # Saturday's margin after covers blocks 190-191; Sunday's margin before would too.
     demand = {}
     for block in [*range(188, 190), *range(192, 194)]:
         demand[("Tickets", block)] = 1
     problem = _problem(["Tickets"], demand)
 
     # Act
-    result = rows_to_show(problem)
+    result = rows_to_show(problem, margin=2)
 
     # Assert
     assert result == list(range(186, 196))   # Saturday night 04:30 to Sunday 07:00

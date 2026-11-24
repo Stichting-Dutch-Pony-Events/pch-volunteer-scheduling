@@ -1481,6 +1481,14 @@ After the minimal viable scheduler:
         test_write_helpers.py, 4 in test_create_schedule_sheet.py, 1 in
         test_write_output.py) for the user to update. Then `half_hour_rows` and
         `free_cell_is_white` (9 tests, 10 cases, agreed).
+        **Revised (user, 2026-11-24): the margin is a parameter,
+        `rows_to_show(problem, margin: int = 0)`** (in blocks; 0 = no margin, so the old
+        tests stay as they are); the caller passes it (`MARGIN_BLOCKS = 2` at the top of
+        schedule_sheet.py, still to add to the call in `create_schedule_sheet`; then 4
+        tests in test_create_schedule_sheet.py and 1 in test_write_output.py go red).
+        Clamped **within the margin's own day** (user's idea), so margins of two days can
+        never overlap. Tests renamed `test_margin_...` and call `margin=2`. 552 green;
+        each clamp reds its own guard test (checked in a scratch copy).
 - [ ] **Output: an "Assignments" tab (user, 2026-11-24; idea, not planned yet).** A flat
       table, one row per shift (a run of consecutive blocks at one post), sorted by
       nickname then time: Nickname, Day, From, To, Post, Hours, **Notes** (empty, for the

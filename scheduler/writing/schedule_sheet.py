@@ -99,11 +99,13 @@ def column_header(post: str, slot: int, slot_count: int) -> str:
         return post + " " + str(slot)
 
 
-def rows_to_show(problem: Problem) -> list[int]:
+def rows_to_show(problem: Problem, margin: int = 0) -> list[int]:
     """The blocks that get a row on the Schedule tab, in time order.
 
     Per convention day: every block from the first to the last block with demand that day,
-    gaps included. A day without any demand gets no rows.
+    gaps included, plus `margin` blocks before the first and after the last demand of that
+    day, but never outside that day (so the margins of two days cannot overlap). A day
+    without any demand gets no rows.
     """
 
     min_max_per_day = {}  # day: str -> (min_block: int, max_block: int)
@@ -121,6 +123,16 @@ def rows_to_show(problem: Problem) -> list[int]:
             min_max_per_day[day] = (block, max_block)
         elif block > max_block:
             min_max_per_day[day] = (min_block, block)
+
+    # Add the margins, but stay within the day itself. A margin of 0 changes nothing.
+    for day in min_max_per_day:
+        old_min, old_max = min_max_per_day[day]
+        day_number = problem.settings.days.index(day)
+
+        minimum = max(old_min - margin, day_number * BLOCKS_PER_DAY)
+        maximum = min(old_max + margin, (day_number + 1) * BLOCKS_PER_DAY - 1)
+
+        min_max_per_day[day] = (minimum, maximum)
 
     blocks_to_show = []
     for day in problem.settings.days:          # Friday, Saturday, Sunday: time order
