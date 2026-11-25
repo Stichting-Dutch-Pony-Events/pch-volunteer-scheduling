@@ -396,112 +396,181 @@ def test_shift_on_the_half_hour_fills_its_rows_without_bold():
                          start_bold=False, end_bold=False)]
 
     # Act
-    boxes = place_shift_boxes()
+    placed_boxes = place_shift_boxes(shifts)
 
     # Assert
-    pytest.skip("not written yet")
+    assert placed_boxes == expected
 
 
 def test_start_on_a_quarter_past_is_bold():
     """A shift starting at 14:15 starts in the row of 14:00, with its start time bold."""
     # Arrange
-    # Idea: [("Tickets", 33, 36)] -> rows 32-34, start_bold=True, end_bold=False.
+    # [("Tickets", 33, 36)] -> rows 32-34, start_bold=True, end_bold=False.
+    shifts = [("Tickets", 33, 36)]
+
+    expected = [ShiftBox(post="Tickets", first_block=33, block_after_last=36,
+                         first_row=32, last_row=34,
+                         start_bold=True, end_bold=False)]
 
     # Act
+    placed_boxes = place_shift_boxes(shifts)
 
     # Assert
-    pytest.skip("not written yet")
+    assert placed_boxes == expected
 
 
 def test_end_on_a_quarter_past_is_bold():
     """A shift ending at 15:15 ends in the row of 15:00, with its end time bold."""
     # Arrange
-    # Idea: [("Tickets", 32, 37)] -> rows 32-36, start_bold=False, end_bold=True.
+    # [("Tickets", 32, 37)] -> rows 32-36, start_bold=False, end_bold=True.
+    shifts = [("Tickets", 32, 37)]
+
+    expected = [ShiftBox(post="Tickets", first_block=32, block_after_last=37,
+                         first_row=32, last_row=36,
+                         start_bold=False, end_bold=True)]
 
     # Act
+    placed_boxes = place_shift_boxes(shifts)
 
     # Assert
-    pytest.skip("not written yet")
+    assert placed_boxes == expected
 
 
 def test_half_hour_shift_is_one_row():
     """A shift of exactly one half hour is a box of one row, nothing bold."""
     # Arrange
-    # Idea: [("Tickets", 32, 34)] -> first_row=32, last_row=32, both not bold.
+    # [("Tickets", 32, 34)] -> first_row=32, last_row=32, both not bold.
+    shifts = [("Tickets", 32, 34)]
+
+    expected = [ShiftBox(post="Tickets", first_block=32, block_after_last=34,
+                         first_row=32, last_row=32,
+                         start_bold=False, end_bold=False)]
 
     # Act
+    placed_boxes = place_shift_boxes(shifts)
 
     # Assert
-    pytest.skip("not written yet")
+    assert placed_boxes == expected
 
 
 def test_volunteer_without_shifts_has_no_boxes():
     """No shifts give no boxes."""
     # Arrange
-    # Idea: [] -> [].
+    shifts = []
+
+    expected = []
 
     # Act
+    placed_boxes = place_shift_boxes(shifts)
 
     # Assert
-    pytest.skip("not written yet")
+    assert placed_boxes == expected
 
 
 def test_shifts_with_a_break_between_do_not_touch():
     """Two shifts with a break between get the same boxes as each on its own."""
     # Arrange
-    # Idea: [("Tickets", 32, 36), ("Infobooth", 40, 44)] -> rows 32-34 and 40-42,
+    # [("Tickets", 32, 36), ("Infobooth", 40, 44)] -> rows 32-34 and 40-42,
     # nothing bold.
+    shifts = [("Tickets", 32, 36), ("Infobooth", 40, 44)]
+
+    expected = [ShiftBox(post="Tickets", first_block=32, block_after_last=36,
+                         first_row=32, last_row=34,
+                         start_bold=False, end_bold=False),
+                ShiftBox(post="Infobooth", first_block=40, block_after_last=44,
+                         first_row=40, last_row=42,
+                         start_bold=False, end_bold=False)]
 
     # Act
+    placed_boxes = place_shift_boxes(shifts)
 
     # Assert
-    pytest.skip("not written yet")
+    assert placed_boxes == expected
 
 
 def test_switch_on_the_half_hour_needs_no_push():
     """A switch at 15:00 puts the two boxes right under each other, without sharing a row."""
     # Arrange
-    # Idea: [("Tickets", 32, 36), ("Infobooth", 36, 40)] -> rows 32-34 and 36-38,
+    # [("Tickets", 32, 36), ("Infobooth", 36, 40)] -> rows 32-34 and 36-38,
     # nothing bold.
+    shifts = [("Tickets", 32, 36), ("Infobooth", 36, 40)]
+
+    expected = [ShiftBox(post="Tickets", first_block=32, block_after_last=36,
+                         first_row=32, last_row=34,
+                         start_bold=False, end_bold=False),
+                ShiftBox(post="Infobooth", first_block=36, block_after_last=40,
+                         first_row=36, last_row=38,
+                         start_bold=False, end_bold=False)]
 
     # Act
+    placed_boxes = place_shift_boxes(shifts)
 
     # Assert
-    pytest.skip("not written yet")
+    assert placed_boxes == expected
 
 
 def test_switch_on_a_quarter_hour_pushes_the_second_box_down():
     """A switch at 14:45 starts the second box one row lower, with its start time bold."""
     # Arrange
-    # Idea: [("Tickets", 32, 35), ("Infobooth", 35, 40)] -> Tickets rows 32-34, end bold
+    # [("Tickets", 32, 35), ("Infobooth", 35, 40)] -> Tickets rows 32-34, end bold
     # (14:45); Infobooth rows 36-38 (not 34), start bold, end not bold.
+    shifts = [("Tickets", 32, 35), ("Infobooth", 35, 40)]
+
+    expected = [ShiftBox(post="Tickets", first_block=32, block_after_last=35,
+                         first_row=32, last_row=34,
+                         start_bold=False, end_bold=True),
+                ShiftBox(post="Infobooth", first_block=35, block_after_last=40,
+                         first_row=36, last_row=38,
+                         start_bold=True, end_bold=False)]
 
     # Act
+    placed_boxes = place_shift_boxes(shifts)
 
     # Assert
-    pytest.skip("not written yet")
+    assert placed_boxes == expected
 
 
 def test_pushed_box_that_would_end_before_it_starts_becomes_one_row():
     """A pushed box with nothing left of its own rows becomes one row, both times bold."""
     # Arrange
-    # Idea: [("Tickets", 32, 35), ("Infobooth", 35, 36)] -> Infobooth 14:45-15:00 would
+    # [("Tickets", 32, 35), ("Infobooth", 35, 36)] -> Infobooth 14:45-15:00 would
     # be row 34, pushed to 36: first_row=36, last_row=36, start_bold=True, end_bold=True
     # (the box runs to 15:30, the shift ends at 15:00).
+    shifts = [("Tickets", 32, 35), ("Infobooth", 35, 36)]
+
+    expected = [ShiftBox(post="Tickets", first_block=32, block_after_last=35,
+                         first_row=32, last_row=34,
+                         start_bold=False, end_bold=True),
+                ShiftBox(post="Infobooth", first_block=35, block_after_last=36,
+                         first_row=36, last_row=36,
+                         start_bold=True, end_bold=True)]
 
     # Act
+    placed_boxes = place_shift_boxes(shifts)
 
     # Assert
-    pytest.skip("not written yet")
+    assert placed_boxes == expected
 
 
 def test_one_row_box_can_push_the_next_box_down():
     """A one-row box made by a push can push the box after it down in turn."""
     # Arrange
-    # Idea: as the test above, plus ("Gopher", 36, 40) (15:00-16:00) -> Gopher rows 38-38
+    # as the test above, plus ("Gopher", 36, 40) (15:00-16:00) -> Gopher rows 38-38
     # (not 36-38), start_bold=True, end_bold=False.
+    shifts = [("Tickets", 32, 35), ("Infobooth", 35, 36), ("Gopher", 36, 40)]
+
+    expected = [ShiftBox(post="Tickets", first_block=32, block_after_last=35,
+                         first_row=32, last_row=34,
+                         start_bold=False, end_bold=True),
+                ShiftBox(post="Infobooth", first_block=35, block_after_last=36,
+                         first_row=36, last_row=36,
+                         start_bold=True, end_bold=True),
+                ShiftBox(post="Gopher", first_block=36, block_after_last=40,
+                         first_row=38, last_row=38,
+                         start_bold=True, end_bold=False)]
 
     # Act
+    placed_boxes = place_shift_boxes(shifts)
 
     # Assert
-    pytest.skip("not written yet")
+    assert placed_boxes == expected
