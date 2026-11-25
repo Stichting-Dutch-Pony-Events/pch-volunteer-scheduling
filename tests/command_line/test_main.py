@@ -211,7 +211,7 @@ def test_existing_output_is_overwritten_when_the_user_says_yes(tmp_path, monkeyp
 
     # Assert
     assert result == 0
-    assert openpyxl.load_workbook(output).sheetnames == ["Schedule"]
+    assert openpyxl.load_workbook(output).sheetnames == ["Schedule", "Individual schedules"]
 
 
 @pytest.mark.parametrize("answer", ["n", "", "maybe"])
@@ -245,7 +245,7 @@ def test_overwrite_flag_skips_the_question(tmp_path, monkeypatch):
 
     # Assert
     assert result == 0
-    assert openpyxl.load_workbook(output).sheetnames == ["Schedule"]
+    assert openpyxl.load_workbook(output).sheetnames == ["Schedule", "Individual schedules"]
 
 
 def test_no_question_when_the_output_does_not_exist_yet(tmp_path, monkeypatch):

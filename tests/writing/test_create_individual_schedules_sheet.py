@@ -69,18 +69,26 @@ def _bold_parts(cell: Cell) -> list[str]:
 def _border_sides(cell: Cell) -> list[str]:
     """The sides of the cell that have a border, in the order top, bottom, left, right.
 
-    A side without a border has style None; any other style (thin, thick, ...) counts.
+    A side without a border is either None or a Side with style None (openpyxl allows
+    both); any other style (thin, thick, ...) counts.
     """
     sides = []
-    if cell.border.top.style is not None:
-        sides.append("top")
-    if cell.border.bottom.style is not None:
-        sides.append("bottom")
-    if cell.border.left.style is not None:
-        sides.append("left")
-    if cell.border.right.style is not None:
-        sides.append("right")
+    for name, side in [("top", cell.border.top), ("bottom", cell.border.bottom),
+                       ("left", cell.border.left), ("right", cell.border.right)]:
+        if side is not None and side.style is not None:
+            sides.append(name)
     return sides
+
+
+def _fill_colour(cell: Cell) -> str | None:
+    """The fill colour of the cell as "RRGGBB", or None when the cell has no fill.
+
+    openpyxl stores a colour as "AARRGGBB" (e.g. "D9D9D9" becomes "00D9D9D9"), so only the
+    last six characters are kept.
+    """
+    if cell.fill.fill_type is None:
+        return None
+    return cell.fill.fgColor.rgb[-6:]
 
 
 # The tab
@@ -252,7 +260,7 @@ def test_night_rows_show_their_convention_day():
 def test_post_is_in_the_top_cell_and_the_times_in_the_bottom_cell():
     """A shift shows its post in its first row and its times in its last row, between empty."""
     # Arrange
-    # Idea: Tickets 08:00-10:00 (blocks 8-15), so the leading zeros are checked too.
+    # Tickets 08:00-10:00 (blocks 8-15), so the leading zeros are checked too.
     workbook = openpyxl.Workbook()
     demand = {}
     for block in range(8, 16):
@@ -276,7 +284,7 @@ def test_post_is_in_the_top_cell_and_the_times_in_the_bottom_cell():
 def test_one_row_box_has_the_post_and_times_in_one_cell():
     """A shift of one half hour shows post and times together in its only cell."""
     # Arrange
-    # Idea: Tickets 14:00-14:30 (blocks 32-33).
+    # Tickets 14:00-14:30 (blocks 32-33).
     workbook = openpyxl.Workbook()
     demand = {}
     for block in range(32, 34):
@@ -298,7 +306,7 @@ def test_one_row_box_has_the_post_and_times_in_one_cell():
 def test_time_off_the_half_hour_is_bold():
     """A start on :15 or :45 is written in bold; the end on the half hour is not."""
     # Arrange
-    # Idea: Tickets 14:15-15:00 (blocks 33-35).
+    # Tickets 14:15-15:00 (blocks 33-35): a box in the rows 14:00 and 14:30.
     workbook = openpyxl.Workbook()
     demand = {}
     for block in range(33, 36):
@@ -311,11 +319,12 @@ def test_time_off_the_half_hour_is_bold():
     create_individual_schedules_sheet(workbook, problem, schedule)
 
     # Assert
+    # The times are in the bottom cell, the 14:30 row (row FIRST_ROW is the margin row 13:30).
     sheet = workbook["Individual schedules"]
-    box_text = sheet.cell(row=FIRST_ROW + 2, column=FIRST_VOLUNTEER_COLUMN).value
+    times_cell = sheet.cell(row=FIRST_ROW + 2, column=FIRST_VOLUNTEER_COLUMN)
 
-    assert str(box_text) == "14:15-15:00"
-    assert _bold_parts(box_text) == ["14:00"]
+    assert str(times_cell.value) == "14:15-15:00"
+    assert _bold_parts(times_cell) == ["14:15"]
 
 
 def test_times_on_the_half_hour_are_not_bold():
@@ -335,36 +344,38 @@ def test_times_on_the_half_hour_are_not_bold():
 
     # Assert
     sheet = workbook["Individual schedules"]
-    box_text = sheet.cell(row=FIRST_ROW + 1, column=FIRST_VOLUNTEER_COLUMN).value
+    box_cell = sheet.cell(row=FIRST_ROW + 1, column=FIRST_VOLUNTEER_COLUMN)
 
-    assert _bold_parts(box_text) == []
+    assert _bold_parts(box_cell) == []
 
 
 def test_pushed_box_starts_one_row_lower_with_its_start_in_bold():
     """After a post switch on :45 the next box starts in the row below, its start time bold."""
     # Arrange
-    # Idea: Tickets 14:00-14:45 (32-34), Infobooth 14:45-16:00 (35-39).
+    # Tickets 14:00-14:45 (blocks 32-34), then Infobooth 14:45-16:00 (blocks 35-39).
     workbook = openpyxl.Workbook()
     demand = {}
     for block in range(32, 35):
         demand[("Tickets", block)] = 1
-    for block in range(35, 39):
+    for block in range(35, 40):
         demand[("Infobooth", block)] = 1
     problem = _problem(volunteers=[_volunteer("Mock Mane", ALL_DAYS)],
                        demand=demand)
     schedule = Schedule(assignments=(_works("Mock Mane", "Tickets", 32, 35)
-                                     | _works("Mock Mane", "Infobooth", 35, 39)))
+                                     | _works("Mock Mane", "Infobooth", 35, 40)))
 
     # Act
     create_individual_schedules_sheet(workbook, problem, schedule)
 
     # Assert
+    # Rows: 13:30 (margin), 14:00 and 14:30 (Tickets), 15:00 and 15:30 (Infobooth, pushed
+    # down from the 14:30 row where its first block 14:45 falls).
     sheet = workbook["Individual schedules"]
-    post = sheet.cell(row=FIRST_ROW + 3, column=FIRST_VOLUNTEER_COLUMN).value
-    times = sheet.cell(row=FIRST_ROW + 4, column=FIRST_VOLUNTEER_COLUMN).value
-    assert str(post) == "Infobooth"
-    assert str(times) == "14:45-16:00"
-    assert _bold_parts(times) == ["14:45"]
+    post_cell = sheet.cell(row=FIRST_ROW + 3, column=FIRST_VOLUNTEER_COLUMN)
+    times_cell = sheet.cell(row=FIRST_ROW + 4, column=FIRST_VOLUNTEER_COLUMN)
+    assert post_cell.value == "Infobooth"
+    assert str(times_cell.value) == "14:45-16:00"
+    assert _bold_parts(times_cell) == ["14:45"]
 
 
 def test_box_has_an_outside_border():
@@ -400,26 +411,57 @@ def test_box_has_an_outside_border():
 def test_one_row_box_has_a_border_on_all_four_sides():
     """A box of one row has a border at the top, bottom, left and right of its cell."""
     # Arrange
+    # Tickets 14:00-14:30 (blocks 32-33): a box of one row (14:00).
+    workbook = openpyxl.Workbook()
+    demand = {}
+    for block in range(32, 34):
+        demand[("Tickets", block)] = 1
+    problem = _problem(volunteers=[_volunteer("Mock Mane", ALL_DAYS)],
+                       demand=demand)
+    schedule = Schedule(assignments=_works("Mock Mane", "Tickets", 32, 34))
+
+    expected = ["top", "bottom", "left", "right"]  # all sides, in the order of _border_sides
 
     # Act
+    create_individual_schedules_sheet(workbook, problem, schedule)
 
     # Assert
-    pytest.skip("not written yet")
+    sheet = workbook["Individual schedules"]
+    result = _border_sides(sheet.cell(row=FIRST_ROW + 1, column=FIRST_VOLUNTEER_COLUMN))
+    assert result == expected
 
 
 def test_box_pushed_past_the_end_of_its_day_still_gets_its_row():
     """A box pushed into the first row of the next day gets that row, so no shift is hidden."""
     # Arrange
-    # Idea: Tickets Friday 05:00-05:45 (blocks 92-94), Infobooth 05:45-06:00 (block 95). The
-    # Infobooth box is pushed to row 96 = Saturday 06:00, which has no demand (and the
-    # margin stays within Friday).
+    # Friday night: Tickets 05:00-05:45 (blocks 92-94), then Infobooth 05:45-06:00 (block 95),
+    # the last quarter of Friday. Mock Mane works both.
+    workbook = openpyxl.Workbook()
+    demand = {}
+    for block in range(92, 95):
+        demand[("Tickets", block)] = 1
+    demand[("Infobooth", 95)] = 1
+    problem = _problem(volunteers=[_volunteer("Mock Mane", ALL_DAYS)],
+                       demand=demand)
+    schedule = Schedule(assignments=_works("Mock Mane", "Tickets", 92, 95)
+                        | _works("Mock Mane", "Infobooth", 95, 96))
+
+    # The Tickets box fills the rows 05:00 and 05:30, so the Infobooth box is pushed to the
+    # next row: block 96 = Saturday 06:00. Saturday has no demand and the margin stays
+    # within Friday, so without the box that row would not be on the tab at all.
+    expected = (("Saturday", "06:00"), "Infobooth 05:45-06:00")
 
     # Act
+    create_individual_schedules_sheet(workbook, problem, schedule)
 
     # Assert
-    # Idea: the last row of the tab is ("Saturday", "06:00") and holds
-    # "Infobooth 05:45-06:00".
-    pytest.skip("not written yet")
+    # The last row of the tab. The text has bold times (rich text), so compare it as str.
+    sheet = workbook["Individual schedules"]
+    last_row = sheet.max_row
+    result = ((sheet.cell(row=last_row, column=1).value,
+               sheet.cell(row=last_row, column=2).value),
+              str(sheet.cell(row=last_row, column=FIRST_VOLUNTEER_COLUMN).value))
+    assert result == expected
 
 
 # Free cells
@@ -427,32 +469,80 @@ def test_box_pushed_past_the_end_of_its_day_still_gets_its_row():
 def test_free_cell_is_white_when_the_volunteer_could_work():
     """A free cell during convention hours of an available volunteer has no fill."""
     # Arrange
-    # Idea: two volunteers, only one of them works.
+    # Tickets 14:00-15:00. Mock Mane works, Testy Hooves (column D, alphabetical) is free
+    # but available all weekend.
+    workbook = openpyxl.Workbook()
+    demand = {}
+    for block in range(32, 36):
+        demand[("Tickets", block)] = 1
+    problem = _problem(volunteers=[_volunteer("Mock Mane", ALL_DAYS),
+                                   _volunteer("Testy Hooves", ALL_DAYS)],
+                       demand=demand)
+    schedule = Schedule(assignments=_works("Mock Mane", "Tickets", 32, 36))
+
+    expected = [None, None]  # 14:00 and 14:30: no fill
 
     # Act
+    create_individual_schedules_sheet(workbook, problem, schedule)
 
     # Assert
-    # Idea: cell.fill.fill_type is None.
-    pytest.skip("not written yet")
+    # Only the rows with demand (14:00, 14:30), not the margin rows 13:30 and 15:00.
+    sheet = workbook["Individual schedules"]
+    result = []
+    for row in range(FIRST_ROW + 1, FIRST_ROW + 3):
+        result.append(_fill_colour(sheet.cell(row=row, column=FIRST_VOLUNTEER_COLUMN + 1)))
+    assert result == expected
 
 
 def test_free_cell_is_grey_when_the_volunteer_is_not_available():
     """A free cell of a volunteer who is not available then is filled grey."""
     # Arrange
+    # Tickets Friday 14:00-15:00. Mock Mane works, Testy Hooves (column D, alphabetical) is
+    # only there on Saturday morning (blocks 96-105), so not on Friday.
+    workbook = openpyxl.Workbook()
+    demand = {}
+    for block in range(32, 36):
+        demand[("Tickets", block)] = 1
+    problem = _problem(volunteers=[_volunteer("Mock Mane", ALL_DAYS),
+                                   _volunteer("Testy Hooves", set(range(96, 106)))],
+                       demand=demand)
+    schedule = Schedule(assignments=_works("Mock Mane", "Tickets", 32, 36))
+
+    expected = [GREY, GREY]  # 14:00 and 14:30
 
     # Act
+    create_individual_schedules_sheet(workbook, problem, schedule)
 
     # Assert
-    # Idea: cell.fill.fill_type == "solid" and cell.fill.fgColor.rgb ends with GREY.
-    pytest.skip("not written yet")
+    # Only the rows with demand (14:00, 14:30), like the white test.
+    sheet = workbook["Individual schedules"]
+    result = []
+    for row in range(FIRST_ROW + 1, FIRST_ROW + 3):
+        result.append(_fill_colour(sheet.cell(row=row, column=FIRST_VOLUNTEER_COLUMN + 1)))
+    assert result == expected
 
 
 def test_margin_rows_are_grey():
     """The margin rows have no demand, so they are grey even for someone available all weekend."""
     # Arrange
-    # Idea: a volunteer with ALL_DAYS who doesn't work.
+    # Tickets Friday 14:00-15:00, so the margin rows are 13:30 and 15:00. Mock Mane is
+    # available all weekend and works the whole demand.
+    workbook = openpyxl.Workbook()
+    demand = {}
+    for block in range(32, 36):
+        demand[("Tickets", block)] = 1
+    problem = _problem(volunteers=[_volunteer("Mock Mane", ALL_DAYS)],
+                       demand=demand)
+    schedule = Schedule(assignments=_works("Mock Mane", "Tickets", 32, 36))
+
+    expected = [GREY, GREY]  # 13:30 and 15:00
 
     # Act
+    create_individual_schedules_sheet(workbook, problem, schedule)
 
     # Assert
-    pytest.skip("not written yet")
+    # The first row (13:30) and the last row (15:00) of the tab.
+    sheet = workbook["Individual schedules"]
+    result = [_fill_colour(sheet.cell(row=FIRST_ROW, column=FIRST_VOLUNTEER_COLUMN)),
+              _fill_colour(sheet.cell(row=sheet.max_row, column=FIRST_VOLUNTEER_COLUMN))]
+    assert result == expected

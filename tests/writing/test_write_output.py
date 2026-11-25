@@ -42,12 +42,15 @@ def test_writes_a_file_at_the_given_path(tmp_path):
 def test_file_has_the_schedule_and_individual_schedules_tabs(tmp_path: Path):
     """The workbook has "Schedule", then "Individual schedules", without openpyxl's "Sheet"."""
     # Arrange
+    problem, schedule = _small_problem_and_schedule()
+    path = tmp_path / "output.xlsx"
 
     # Act
+    write_output(problem, schedule, path)
 
     # Assert
-    # Idea: like the old test_file_has_only_the_schedule_tab, with both names in this order.
-    pytest.skip("not written yet")
+    workbook = openpyxl.load_workbook(path)
+    assert workbook.sheetnames == ["Schedule", "Individual schedules"]
 
 
 def test_written_file_contains_the_schedule(tmp_path: Path):
@@ -79,7 +82,7 @@ def test_written_file_contains_the_schedule(tmp_path: Path):
     assert result == expected_result
 
 
-def test_existing_file_is_overwritten(tmp_path):
+def test_existing_file_is_overwritten(tmp_path: Path):
     """An existing file at the path is replaced by the new output."""
     # Arrange
     problem, schedule = _small_problem_and_schedule()
@@ -93,7 +96,7 @@ def test_existing_file_is_overwritten(tmp_path):
 
     # Assert
     workbook = openpyxl.load_workbook(path)
-    assert workbook.sheetnames == ["Schedule"]
+    assert workbook.sheetnames == ["Schedule", "Individual schedules"]
 
 
 @pytest.mark.parametrize("file_name", ["output.ods", "output.xls", "output"])
