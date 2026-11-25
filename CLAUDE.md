@@ -1524,6 +1524,14 @@ After the minimal viable scheduler:
       rows. free_cell_is_white: available in convention hours = white; not available =
       grey; available for part of the half hour = white; no demand in the row = grey;
       demand at a post they're not qualified for still counts. 552 green, 10 skipped.
+      **Revised (user, 2026-11-25): `half_hour_rows(problem, margin_rows: int = 0)`, the
+      margin in half-hour rows** (1 = half an hour), added before/after each day's rows and
+      kept within that day; `create_individual_schedules_sheet` will pass 1. Tests: first
+      without a margin (on the half hour, quarter hours, each day, no demand), then with
+      one (one row each side, two rows, counted in whole rows from a :15 start, stays
+      within its day: block 0 and the day's end, parametrized). 8 test functions, 11
+      cases (the no-demand test is parametrized over no margin / a margin, user), filled
+      in by the user, all red; plus the 5 free cell stubs.
       3. `shift_boxes` + `ShiftBox` (push down, shorten, bold flags), tests first.
       4. The sheet itself (`_write_box` with rich text and borders, grey/white cells,
          empty group row 2, freeze panes), a line in `write_output`; then step 2 of the

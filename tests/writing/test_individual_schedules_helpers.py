@@ -1,6 +1,6 @@
 import pytest
 
-from scheduler.model import Post, Problem, Settings, Volunteer
+from scheduler.model import Post, Problem, Settings, Volunteer, all_blocks
 from scheduler.writing.individual_schedules_sheet import free_cell_is_white, half_hour_rows
 
 
@@ -9,59 +9,197 @@ from scheduler.writing.individual_schedules_sheet import free_cell_is_white, hal
 RULES = Settings(min_stretch_minutes=60, max_stretch_minutes=180, min_break_minutes=30,
                  days=("Friday", "Saturday", "Sunday"))
 
+ALL_DAYS = all_blocks(RULES)
 
-# half_hour_rows. It uses rows_to_show with the Schedule tab's margin of half an hour
-# (2 blocks) before and after each day's demand, so the expected rows include it.
+
+# half_hour_rows, first without a margin: only the half hours with demand.
 
 def test_demand_on_the_half_hour_gives_one_row_per_half_hour():
-    """Demand from 14:00 to 15:00 gives the rows 13:30 to 15:00 (with the margin)."""
+    """Demand from 14:00 to 15:00 gives the rows 14:00 and 14:30."""
     # Arrange
-    # Idea: Tickets needs 1 in blocks 32-35 -> rows_to_show 30-37 -> rows 30, 32, 34, 36.
+    # Tickets needs 1 in blocks 32-35 (14:00-15:00).
+    demand = {}
+    for block in range(32, 36):
+        demand[("Tickets", block)] = 1
+
+    problem = Problem(volunteers=[],
+                      posts=[Post("Tickets")],
+                      demand=demand,
+                      settings=RULES)
+
+    expected = [32, 34]  # 14:00, 14:30
 
     # Act
+    rows = half_hour_rows(problem, margin_rows=0)
 
     # Assert
-    pytest.skip("not written yet")
+    assert rows == expected
 
 
 @pytest.mark.parametrize("first_block, block_after_last, expected_rows", [
-    (33, 36, [30, 32, 34, 36]),         # 14:15-15:00: 14:15 falls in the row of 14:00
-    (32, 37, [30, 32, 34, 36, 38]),     # 14:00-15:15: 15:15 falls in the row of 15:00
+    (33, 36, [32, 34]),         # 14:15-15:00: 14:15 falls in the row of 14:00
+    (32, 37, [32, 34, 36]),     # 14:00-15:15: 15:00 gets a row of its own for 15:00-15:15
 ])
 def test_quarter_hours_fall_in_the_row_of_their_half_hour(
         first_block: int, block_after_last: int, expected_rows: list[int]):
     """A block on :15 or :45 belongs to the row of the half hour it falls in."""
     # Arrange
-    # Idea: Tickets needs 1 in range(first_block, block_after_last); the margin of 2 blocks
-    # is added first, then each block goes to its even row.
+    # Tickets needs 1 in range(first_block, block_after_last), margin_rows=0.
+    demand = {}
+    for block in range(first_block, block_after_last):
+        demand[("Tickets", block)] = 1
+
+    problem = Problem(volunteers=[],
+                      posts=[Post("Tickets")],
+                      demand=demand,
+                      settings=RULES)
 
     # Act
+    rows = half_hour_rows(problem, margin_rows=0)
 
     # Assert
-    pytest.skip("not written yet")
+    assert rows == expected_rows
 
 
 def test_each_day_with_demand_gets_its_own_rows():
     """Two days with demand each get their own rows; a day without demand gets none."""
     # Arrange
-    # Idea: Tickets needs 1 on Friday 14:00-15:00 (blocks 32-35) and Sunday 14:00-15:00
-    # (blocks 224-227), nothing on Saturday -> rows 30-36 and 222-228 (even), no Saturday.
+    # Tickets needs 1 on Friday 14:00-15:00 (blocks 32-35) and Sunday 14:00-15:00
+    # (blocks 224-227), nothing on Saturday, margin_rows=0 -> [32, 34, 224, 226].
+    demand = {}
+    for block in range(32, 36):
+        demand[("Tickets", block)] = 1
+    for block in range(224, 228):
+        demand[("Tickets", block)] = 1
+
+    problem = Problem(volunteers=[],
+                      posts=[Post("Tickets")],
+                      demand=demand,
+                      settings=RULES)
+
+    expected = [32, 34, 224, 226]  # Friday 14:00, 14:30; Sunday 14:00, 14:30
 
     # Act
+    rows = half_hour_rows(problem, margin_rows=0)
 
     # Assert
-    pytest.skip("not written yet")
+    assert rows == expected
 
 
-def test_without_demand_there_are_no_rows():
-    """With no demand at all, the tab has no rows."""
+@pytest.mark.parametrize("margin_rows", [0, 1], ids=["no_margin", "with_margin"])
+def test_without_demand_there_are_no_rows(margin_rows: int):
+    """With no demand at all, the tab has no rows, with or without margin"""
     # Arrange
-    # Idea: demand={} -> [].
+    problem = Problem(volunteers=[],
+                      posts=[],
+                      demand={},
+                      settings=RULES)
 
     # Act
+    result = half_hour_rows(problem, margin_rows=margin_rows)
 
     # Assert
-    pytest.skip("not written yet")
+    assert result == []
+
+
+# half_hour_rows with a margin: margin_rows half-hour rows before the first and after the
+# last row with demand of each day (1 = half an hour, like the Schedule tab), but never
+# outside that day.
+
+def test_margin_adds_rows_before_and_after_the_demand():
+    """A margin of one row adds the half hour before and the half hour after the demand."""
+    # Arrange
+    # Tickets needs 1 in blocks 32-35 (14:00-15:00), margin_rows=1
+    # -> [30, 32, 34, 36] (13:30 and 15:00 are the margin).
+    demand = {}
+    for block in range(32, 36):
+        demand[("Tickets", block)] = 1
+
+    problem = Problem(volunteers=[],
+                      posts=[Post("Tickets")],
+                      demand=demand,
+                      settings=RULES)
+
+    expected = [30, 32, 34, 36]  # (13:30 and 15:00 are the margin)
+
+    # Act
+    rows = half_hour_rows(problem, margin_rows=1)
+
+    # Assert
+    assert rows == expected
+
+
+def test_margin_of_two_rows_adds_an_hour_on_each_side():
+    """A margin of two rows adds a whole hour before and after the demand."""
+    # Arrange
+    # Tickets needs 1 in blocks 32-35, margin_rows=2 -> [28, 30, 32, 34, 36, 38]
+    # (catches a margin that is always one row, or counted in blocks).
+    demand = {}
+    for block in range(32, 36):
+        demand[("Tickets", block)] = 1
+
+    problem = Problem(volunteers=[],
+                      posts=[Post("Tickets")],
+                      demand=demand,
+                      settings=RULES)
+
+    expected = [28, 30, 32, 34, 36, 38]  # (13:00, 13:30, 15:00 and 15:30 are the margin)
+
+    # Act
+    rows = half_hour_rows(problem, margin_rows=2)
+
+    # Assert
+    assert rows == expected
+
+
+def test_margin_counts_whole_rows_from_a_quarter_hour():
+    """Demand starting on :15 still gets exactly one whole margin row before its row."""
+    # Arrange
+    # Tickets needs 1 in blocks 33-36 (14:15-15:15), margin_rows=1
+    # -> [30, 32, 34, 36, 38]: the margin is counted from the rows 14:00 and 15:00, not
+    # from the blocks.
+    demand = {}
+    for block in range(33, 37):
+        demand[("Tickets", block)] = 1
+
+    problem = Problem(volunteers=[],
+                      posts=[Post("Tickets")],
+                      demand=demand,
+                      settings=RULES)
+
+    expected = [30, 32, 34, 36, 38]  # (13:30 and 15:30 are the margin)
+
+    # Act
+    rows = half_hour_rows(problem, margin_rows=1)
+
+    # Assert
+    assert rows == expected
+
+
+@pytest.mark.parametrize("first_block, block_after_last, expected_rows", [
+    (0, 4, [0, 2, 4]),          # Friday 06:00-07:00: no row before 06:00 (block 0)
+    (92, 96, [90, 92, 94]),     # Friday 05:00-06:00 at night: no row after the day's end
+])
+def test_margin_stays_within_its_own_day(
+        first_block: int, block_after_last: int, expected_rows: list[int]):
+    """A margin row that would fall outside the demand's own convention day is left out."""
+    # Arrange
+    # Tickets needs 1 in range(first_block, block_after_last), margin_rows=1. (With
+    # demand on Saturday too, a row after Friday's end would be Saturday's first row.)
+    demand = {}
+    for block in range(first_block, block_after_last):
+        demand[("Tickets", block)] = 1
+
+    problem = Problem(volunteers=[],
+                      posts=[Post("Tickets")],
+                      demand=demand,
+                      settings=RULES)
+
+    # Act
+    rows = half_hour_rows(problem, margin_rows=1)
+
+    # Assert
+    assert rows == expected_rows
 
 
 # free_cell_is_white. The row is named by its even block (32 = Friday 14:00-14:30, with
@@ -70,55 +208,172 @@ def test_without_demand_there_are_no_rows():
 def test_cell_is_white_when_available_during_convention_hours():
     """Available in both blocks of a row with demand: white."""
     # Arrange
-    # Idea: Mock Mane available in blocks 32-35, row 32 -> True.
+    # Mock Mane available in blocks 32-35, row 32 -> True.
+    mock_mane = Volunteer(name="Mock Mane", skills={"Tickets": 1},
+                          available_blocks=set(range(32, 36)))
+
+    demand = {}
+    for block in range(32, 36):
+        demand[("Tickets", block)] = 1
+
+    problem = Problem(volunteers=[mock_mane],
+                      posts=[Post("Tickets")],
+                      demand=demand,
+                      settings=RULES)
 
     # Act
+    cell_is_white = free_cell_is_white(mock_mane, 32, problem)
 
     # Assert
-    pytest.skip("not written yet")
+    assert cell_is_white is True
 
 
 def test_cell_is_grey_when_not_available():
     """Not available in either block of the row: grey, even during convention hours."""
     # Arrange
-    # Idea: Mock Mane available only in blocks 34-35, row 32 -> False.
+    # Mock Mane available only in blocks 34-35, row 32 -> False.
+    mock_mane = Volunteer(name="Mock Mane", skills={"Tickets": 1},
+                          available_blocks=set(range(34, 36)))
+
+    demand = {}
+    for block in range(32, 36):
+        demand[("Tickets", block)] = 1
+
+    problem = Problem(volunteers=[mock_mane],
+                      posts=[Post("Tickets")],
+                      demand=demand,
+                      settings=RULES)
 
     # Act
+    cell_is_white = free_cell_is_white(mock_mane, 32, problem)
 
     # Assert
-    pytest.skip("not written yet")
+    assert cell_is_white is False
 
 
-def test_cell_is_white_when_available_for_part_of_the_half_hour():
-    """Available in only the second block of the row (arriving on :15): white."""
+@pytest.mark.parametrize("available_blocks", [
+    {30, 31, 32},   # leaving at 14:15: available only in the row's first block
+    {33, 34, 35},   # arriving at 14:15: available only in the row's second block
+], ids=["leaving_on_a_quarter_past", "arriving_on_a_quarter_past"])
+def test_cell_is_white_when_available_for_part_of_the_half_hour(available_blocks: set[int]):
+    """Available in only one of the row's two blocks: white."""
     # Arrange
-    # Idea: Mock Mane available from block 33 (14:15), row 32 -> True.
+    # Mock Mane available in only one block of row 32 (14:00-14:30), Tickets needs 1 in
+    # blocks 32-35 -> True. The mismatch is on purpose: the demand covers both blocks of
+    # the row, the availability only one of them (arriving or leaving at 14:15), and
+    # being there for part of the half hour is enough for a white cell.
+    mock_mane = Volunteer(name="Mock Mane", skills={"Tickets": 1},
+                          available_blocks=available_blocks)
+
+    demand = {}
+    for block in range(32, 36):
+        demand[("Tickets", block)] = 1
+
+    problem = Problem(volunteers=[mock_mane],
+                      posts=[Post("Tickets")],
+                      demand=demand,
+                      settings=RULES)
 
     # Act
+    cell_is_white = free_cell_is_white(mock_mane, 32, problem)
 
     # Assert
-    pytest.skip("not written yet")
+    assert cell_is_white is True
 
 
 def test_cell_is_grey_outside_convention_hours():
     """Available, but no post has demand in either block of the row: grey."""
     # Arrange
-    # Idea: Mock Mane available all weekend, row 30 (13:30, a margin row without demand)
-    # -> False.
+    # Mock Mane available all weekend, row 30 (13:30, a margin row without demand)
+    mock_mane = Volunteer(name="Mock Mane", skills={"Tickets": 1},
+                          available_blocks=ALL_DAYS)
+
+    demand = {}
+    for block in range(32, 36):
+        demand[("Tickets", block)] = 1
+
+    problem = Problem(volunteers=[mock_mane],
+                      posts=[Post("Tickets")],
+                      demand=demand,
+                      settings=RULES)
 
     # Act
+    cell_is_white = free_cell_is_white(mock_mane, 30, problem)
 
     # Assert
-    pytest.skip("not written yet")
+    assert cell_is_white is False
+
+
+@pytest.mark.parametrize("demand_blocks", [
+    [30, 31, 32],  # closing on 14:15: demand only in the row's first block
+    [33, 34, 35],  # opening on 14:15: demand only in the row's second block
+], ids=["closing_on_a_quarter_past", "opening_on_a_quarter_past"])
+def test_demand_in_one_block_of_the_row_makes_it_convention_hours(demand_blocks: list[int]):
+    """Demand in only one of the row's two blocks still makes the cell white."""
+    # Arrange
+    mock_mane = Volunteer(name="Mock Mane", skills={"Tickets": 1},
+                          available_blocks=ALL_DAYS)
+
+    demand = {}
+    for block in demand_blocks:
+        demand[("Tickets", block)] = 1
+
+    problem = Problem(volunteers=[mock_mane],
+                      posts=[Post("Tickets")],
+                      demand=demand,
+                      settings=RULES)
+
+    # Act
+    cell_is_white = free_cell_is_white(mock_mane, 32, problem)
+
+    # Assert
+    assert cell_is_white is True
 
 
 def test_demand_at_any_post_counts_as_convention_hours():
     """Demand at a post the volunteer is not qualified for still makes the cell white."""
     # Arrange
-    # Idea: Mock Mane qualified only for Tickets, available all weekend; only Infobooth
+    # Mock Mane qualified only for Tickets, available all weekend; only Infobooth
     # has demand in row 32 (blocks 32-33) -> True.
+    mock_mane = Volunteer(name="Mock Mane", skills={"Tickets": 1},
+                          available_blocks=ALL_DAYS)
+
+    demand = {}
+    for block in range(32, 36):
+        demand[("Infobooth", block)] = 1
+
+    problem = Problem(volunteers=[mock_mane],
+                      posts=[Post("Infobooth")],
+                      demand=demand,
+                      settings=RULES)
 
     # Act
+    cell_is_white = free_cell_is_white(mock_mane, 32, problem)
 
     # Assert
-    pytest.skip("not written yet")
+    assert cell_is_white is True
+
+
+def test_row_that_is_not_on_the_half_hour_raises_value_error():
+    """A row is named by its even block; an odd block (on :15 or :45) is an error."""
+    # Arrange
+    # Mock Mane available all weekend, Tickets needs 1 in blocks 32-35; row 33
+    # (14:15) -> ValueError mentioning 33 (pytest.raises(ValueError, match="33")).
+    mock_mane = Volunteer(name="Mock Mane", skills={"Tickets": 1},
+                          available_blocks=ALL_DAYS)
+
+    demand = {}
+    for block in range(32, 36):
+        demand[("Tickets", block)] = 1
+
+    problem = Problem(volunteers=[mock_mane],
+                      posts=[Post("Tickets")],
+                      demand=demand,
+                      settings=RULES)
+
+    # Act
+    # (Act and Assert are combined, pytest.raises checks the exception while the call runs.)
+
+    # Assert
+    with pytest.raises(ValueError, match="33"):
+        free_cell_is_white(mock_mane, 33, problem)
