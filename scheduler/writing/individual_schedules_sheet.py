@@ -84,4 +84,21 @@ def free_cell_is_white(volunteer: Volunteer, row: int, problem: Problem) -> bool
     going on). Grey otherwise. A row that is not an even block (not on the half hour)
     raises ValueError.
     """
-    raise NotImplementedError
+    # A row is named by the even block that starts its half hour; an odd block here means
+    # a mistake in the calling code, so say so instead of guessing.
+    if row % 2 != 0:
+        raise ValueError(f"Row {row} is not the start of a half hour (an even block).")
+
+    # Available for at least part of the half hour (arriving or leaving on :15 is enough)?
+    is_available = row in volunteer.available_blocks or (row + 1) in volunteer.available_blocks
+
+    # Is the convention going on: demand at any post (not only the volunteer's own posts)
+    # in at least one of the row's two blocks? Stop looking at the first one found.
+    convention_is_going_on = False
+    for post, block in problem.demand:
+        if block in [row, row + 1]:
+            convention_is_going_on = True
+            break
+
+    # White only when both are true; grey when either is false.
+    return is_available and convention_is_going_on

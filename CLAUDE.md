@@ -1532,6 +1532,13 @@ After the minimal viable scheduler:
       within its day: block 0 and the day's end, parametrized). 8 test functions, 11
       cases (the no-demand test is parametrized over no margin / a margin, user), filled
       in by the user, all red; plus the 5 free cell stubs.
+      **Both helpers done (2026-11-25, user; Claude tidied comments):** `half_hour_rows`
+      (rows per day via `block - block % 2`, margin `2 * margin_rows` blocks clamped to
+      the day) and `free_cell_is_white` (odd row = ValueError; available in row or row + 1;
+      demand at any post in row or row + 1). free_cell tests extended by the user: demand
+      and availability in only one block of the row (parametrized: on :15 before/after),
+      plus the odd-row test. 572 green; in a scratch copy every part of both functions
+      reds at least one test when broken.
       3. `shift_boxes` + `ShiftBox` (push down, shorten, bold flags), tests first.
       4. The sheet itself (`_write_box` with rich text and borders, grey/white cells,
          empty group row 2, freeze panes), a line in `write_output`; then step 2 of the
