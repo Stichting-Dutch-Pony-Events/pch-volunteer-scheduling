@@ -1,7 +1,8 @@
 import pytest
 
 from scheduler.model import Post, Problem, Settings, Volunteer, all_blocks
-from scheduler.writing.individual_schedules_sheet import free_cell_is_white, half_hour_rows
+from scheduler.writing.individual_schedules_sheet import (ShiftBox, free_cell_is_white,
+                                                          half_hour_rows, shift_boxes)
 
 
 # Passed explicitly instead of relying on the defaults in model.py. Friday = blocks 0-95,
@@ -377,3 +378,124 @@ def test_row_that_is_not_on_the_half_hour_raises_value_error():
     # Assert
     with pytest.raises(ValueError, match="33"):
         free_cell_is_white(mock_mane, 33, problem)
+
+
+# shift_boxes. Each test gives one volunteer's shifts as (post, first_block,
+# block_after_last), as Schedule.shifts_of gives them, and compares whole ShiftBoxes, so
+# the kept times are checked too. Rows are named by their even block (32 = 14:00).
+
+def test_shift_on_the_half_hour_fills_its_rows_without_bold():
+    """A shift from 14:00 to 15:00 covers the rows 14:00 and 14:30, nothing bold."""
+    # Arrange
+    # Idea: [("Tickets", 32, 36)] -> [ShiftBox("Tickets", 32, 36, first_row=32, last_row=34,
+    # start_bold=False, end_bold=False)].
+
+    # Act
+
+    # Assert
+    pytest.skip("not written yet")
+
+
+def test_start_on_a_quarter_past_is_bold():
+    """A shift starting at 14:15 starts in the row of 14:00, with its start time bold."""
+    # Arrange
+    # Idea: [("Tickets", 33, 36)] -> rows 32-34, start_bold=True, end_bold=False.
+
+    # Act
+
+    # Assert
+    pytest.skip("not written yet")
+
+
+def test_end_on_a_quarter_past_is_bold():
+    """A shift ending at 15:15 ends in the row of 15:00, with its end time bold."""
+    # Arrange
+    # Idea: [("Tickets", 32, 37)] -> rows 32-36, start_bold=False, end_bold=True.
+
+    # Act
+
+    # Assert
+    pytest.skip("not written yet")
+
+
+def test_half_hour_shift_is_one_row():
+    """A shift of exactly one half hour is a box of one row, nothing bold."""
+    # Arrange
+    # Idea: [("Tickets", 32, 34)] -> first_row=32, last_row=32, both not bold.
+
+    # Act
+
+    # Assert
+    pytest.skip("not written yet")
+
+
+def test_volunteer_without_shifts_has_no_boxes():
+    """No shifts give no boxes."""
+    # Arrange
+    # Idea: [] -> [].
+
+    # Act
+
+    # Assert
+    pytest.skip("not written yet")
+
+
+def test_shifts_with_a_break_between_do_not_touch():
+    """Two shifts with a break between get the same boxes as each on its own."""
+    # Arrange
+    # Idea: [("Tickets", 32, 36), ("Infobooth", 40, 44)] -> rows 32-34 and 40-42,
+    # nothing bold.
+
+    # Act
+
+    # Assert
+    pytest.skip("not written yet")
+
+
+def test_switch_on_the_half_hour_needs_no_push():
+    """A switch at 15:00 puts the two boxes right under each other, without sharing a row."""
+    # Arrange
+    # Idea: [("Tickets", 32, 36), ("Infobooth", 36, 40)] -> rows 32-34 and 36-38,
+    # nothing bold.
+
+    # Act
+
+    # Assert
+    pytest.skip("not written yet")
+
+
+def test_switch_on_a_quarter_hour_pushes_the_second_box_down():
+    """A switch at 14:45 starts the second box one row lower, with its start time bold."""
+    # Arrange
+    # Idea: [("Tickets", 32, 35), ("Infobooth", 35, 40)] -> Tickets rows 32-34, end bold
+    # (14:45); Infobooth rows 36-38 (not 34), start bold, end not bold.
+
+    # Act
+
+    # Assert
+    pytest.skip("not written yet")
+
+
+def test_pushed_box_that_would_end_before_it_starts_becomes_one_row():
+    """A pushed box with nothing left of its own rows becomes one row, both times bold."""
+    # Arrange
+    # Idea: [("Tickets", 32, 35), ("Infobooth", 35, 36)] -> Infobooth 14:45-15:00 would
+    # be row 34, pushed to 36: first_row=36, last_row=36, start_bold=True, end_bold=True
+    # (the box runs to 15:30, the shift ends at 15:00).
+
+    # Act
+
+    # Assert
+    pytest.skip("not written yet")
+
+
+def test_one_row_box_can_push_the_next_box_down():
+    """A one-row box made by a push can push the box after it down in turn."""
+    # Arrange
+    # Idea: as the test above, plus ("Gopher", 36, 40) (15:00-16:00) -> Gopher rows 38-38
+    # (not 36-38), start_bold=True, end_bold=False.
+
+    # Act
+
+    # Assert
+    pytest.skip("not written yet")

@@ -5,10 +5,29 @@ post on top and the times at the bottom. create_individual_schedules_sheet first
 helpers it uses. The helpers are plain functions without openpyxl, so they can be tested
 without writing a file.
 """
+from dataclasses import dataclass
+
 from openpyxl import Workbook
 
 from scheduler.model import BLOCKS_PER_DAY, Problem, Schedule, Volunteer
 from scheduler.writing.schedule_sheet import rows_to_show
+
+
+@dataclass(frozen=True)
+class ShiftBox:
+    """Where one shift goes on the tab: the cells of its box and which times are bold.
+
+    Rows are named by the even block that starts their half hour, like in half_hour_rows.
+    The box covers the rows first_row up to and including last_row (the same row for a
+    one-row box). The shift's own times are kept, so the text can show them exactly.
+    """
+    post: str
+    first_block: int        # the shift's real start
+    block_after_last: int   # the shift's real end (the block after its last one)
+    first_row: int          # the top row of the box
+    last_row: int           # the bottom row of the box
+    start_bold: bool        # the start time does not line up with the top of the box
+    end_bold: bool          # the end time does not line up with the bottom of the box
 
 
 def create_individual_schedules_sheet(workbook: Workbook, problem: Problem,
@@ -102,3 +121,17 @@ def free_cell_is_white(volunteer: Volunteer, row: int, problem: Problem) -> bool
 
     # White only when both are true; grey when either is false.
     return is_available and convention_is_going_on
+
+
+def shift_boxes(shifts: list[tuple[str, int, int]]) -> list[ShiftBox]:
+    """The boxes of one volunteer's shifts, in the same (time) order as the shifts.
+
+    shifts is a list of (post, first_block, block_after_last), as Schedule.shifts_of gives
+    it. A box runs from the row of its first block to the row of its last block. A box
+    whose first row is on or above the previous box's last row (a switch on :15 or :45)
+    starts one row lower instead; it keeps its own last row, but always has at least one
+    row, so it may in turn push the next box down. A time is bold when it does not line
+    up with its edge of the box: start_bold when first_row != first_block, end_bold when
+    last_row + 2 != block_after_last.
+    """
+    raise NotImplementedError

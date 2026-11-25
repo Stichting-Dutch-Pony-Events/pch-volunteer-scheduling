@@ -54,7 +54,10 @@ likes to write tests (and often code) themselves; Claude reviews and explains.
 4. **The user handles version control** in VS Code / Sourcetree.
    Do not commit, push, branch or run other git commands that change state, unless the
    user specifically asks for that one action (confirmed 2026-11-05). Suggest a
-   commit message when a step is done: **one line only** (user, 2026-11-24). Read-only git commands (status, log, branch) are fine.
+   commit message when a step is done: **one line only** (user, 2026-11-24). **No branch
+   name or topic in front** (user, 2026-11-25): a commit hook on both computers adds
+   `[<last part of the branch name>] ` itself, so don't repeat it (e.g. no "Individual
+   schedules: ..." on `feature/individual_schedules`); start with what changed. Read-only git commands (status, log, branch) are fine.
    **Branches (agreed 2026-11-01):** `main` = working versions (merge at milestones such
    as version 1.0, maybe tag `v1.0`). `develop` = everyday work; small one-session steps
    go straight on it. Bigger steps that take several sessions get a short-lived feature
