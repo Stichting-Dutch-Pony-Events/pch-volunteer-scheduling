@@ -80,8 +80,9 @@ def test_each_row_shows_the_day_and_time_of_its_block():
     problem = _problem(["Tickets"], demand)
     schedule = Schedule(assignments=_works("Mock Mane", "Tickets", 32, 36))
 
+    # The demand plus half an hour of margin before and after it: 13:30-15:15, rows 2-9.
     expected_result = []
-    for time in ["14:00", "14:15", "14:30", "14:45"]:
+    for time in ["13:30", "13:45", "14:00", "14:15", "14:30", "14:45", "15:00", "15:15"]:
         expected_result.append(("Friday", time))
 
     # Act
@@ -90,7 +91,7 @@ def test_each_row_shows_the_day_and_time_of_its_block():
     # Assert
     sheet = workbook["Schedule"]
     result = []
-    for row in range(2, 6):
+    for row in range(2, 10):
         result.append((sheet.cell(row=row, column=1).value, sheet.cell(row=row, column=2).value))
     assert result == expected_result
 
@@ -108,8 +109,9 @@ def test_night_rows_show_their_convention_day():
     create_schedule_sheet(workbook, problem, schedule)
 
     # Assert
+    # Row 1 = header, rows 2-3 = the half-hour margin (00:30, 00:45), row 4 = 01:00.
     sheet = workbook["Schedule"]
-    result = (sheet.cell(row=2, column=1).value, sheet.cell(row=2, column=2).value)
+    result = (sheet.cell(row=4, column=1).value, sheet.cell(row=4, column=2).value)
     assert result == ("Saturday", "01:00")
 
 
@@ -125,8 +127,9 @@ def test_nickname_is_in_the_column_of_their_slot():
     schedule = Schedule(assignments=_works("Mock Mane", "Tickets", 32, 36)
                         | _works("Testy Hooves", "Tickets", 32, 36))
 
+    # Row 1 = header, rows 2-3 = the half-hour margin, rows 4-7 = 14:00-15:00.
     expected_result = []
-    for row in range(2, 6):
+    for row in range(4, 8):
         expected_result.append(("Mock Mane", "Testy Hooves"))
 
     # Act
@@ -135,7 +138,7 @@ def test_nickname_is_in_the_column_of_their_slot():
     # Assert
     sheet = workbook["Schedule"]
     result = []
-    for row in range(2, 6):
+    for row in range(4, 8):
         result.append((sheet.cell(row=row, column=3).value, sheet.cell(row=row, column=4).value))
     assert result == expected_result
 
@@ -154,10 +157,12 @@ def test_cell_without_anyone_is_empty():
     schedule = Schedule(assignments=_works("Mock Mane", "Tickets", 32, 36)
                         | _works("Testy Hooves", "Tickets", 32, 34))
 
+    # Row 1 = header, rows 2-3 = the half-hour margin, rows 4-5 = 14:00-14:30 (Testy Hooves),
+    # rows 6-7 = 14:30-15:00 (nobody in slot 2).
     expected_result = []
-    for row in range(2, 4):
-        expected_result.append("Testy Hooves")
     for row in range(4, 6):
+        expected_result.append("Testy Hooves")
+    for row in range(6, 8):
         expected_result.append(None)
 
     # Act
@@ -166,7 +171,7 @@ def test_cell_without_anyone_is_empty():
     # Assert
     sheet = workbook["Schedule"]
     result = []
-    for row in range(2, 6):
+    for row in range(4, 8):
         result.append(sheet.cell(row=row, column=4).value)
     assert result == expected_result
 

@@ -53,15 +53,21 @@ def test_file_has_only_the_schedule_tab(tmp_path):
     assert workbook.sheetnames == ["Schedule"]
 
 
-def test_written_file_contains_the_schedule(tmp_path):
+def test_written_file_contains_the_schedule(tmp_path: Path):
     """The header and the nicknames can be read back from the saved file."""
     # Arrange
     problem, schedule = _small_problem_and_schedule()
     path = tmp_path / "output.xlsx"
 
+    # The header, then the demand (14:00-15:00) with half an hour of empty margin rows
+    # before and after it.
     expected_result = [("Day", "Time", "Tickets")]
+    for time in ["13:30", "13:45"]:
+        expected_result.append(("Friday", time, None))
     for time in ["14:00", "14:15", "14:30", "14:45"]:
         expected_result.append(("Friday", time, "Mock Mane"))
+    for time in ["15:00", "15:15"]:
+        expected_result.append(("Friday", time, None))
 
     # Act
     write_output(problem, schedule, path)
@@ -69,7 +75,7 @@ def test_written_file_contains_the_schedule(tmp_path):
     # Assert
     sheet = openpyxl.load_workbook(path)["Schedule"]
     result = []
-    for row in range(1, 6):
+    for row in range(1, 10):
         result.append((sheet.cell(row=row, column=1).value,
                        sheet.cell(row=row, column=2).value,
                        sheet.cell(row=row, column=3).value))

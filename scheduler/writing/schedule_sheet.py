@@ -8,14 +8,19 @@ from openpyxl import Workbook
 from scheduler.debug import debug_print
 from scheduler.model import BLOCKS_PER_DAY, Problem, Schedule, day_and_time_of
 
+# Empty rows before and after each day's demand, in blocks (2 = half an hour), so the days
+# are clearly separated.
+MARGIN_BLOCKS = 2
+
 
 def create_schedule_sheet(workbook: Workbook, problem: Problem, schedule: Schedule) -> None:
     """Add the tab "Schedule" to the workbook: one row per block, one column per post slot.
 
     Row 1 is the header: Day, Time, then one column per (post, slot) from slot_columns.
-    Below it one row per block from rows_to_show, with the day and time as text (night rows
-    under their convention day) and the nickname of whoever sits in that slot, or an empty
-    cell. The header row and the Day and Time columns are frozen. A workbook that already
+    Below it one row per block from rows_to_show (with MARGIN_BLOCKS empty rows before and
+    after each day's demand), with the day and time as text (night rows under their
+    convention day) and the nickname of whoever sits in that slot, or an empty cell. The
+    header row and the Day and Time columns are frozen. A workbook that already
     has a "Schedule" tab is a ValueError (e.g. the function was called twice).
     """
     debug_print("create_schedule_sheet: creating tab Schedule")
@@ -42,7 +47,7 @@ def create_schedule_sheet(workbook: Workbook, problem: Problem, schedule: Schedu
     # 4. One row per block. The cells follow the same columns list as the header, so each
     #    nickname lands under the right header. .get gives None (an empty cell) when nobody
     #    sits in that slot during this block.
-    for block in rows_to_show(problem):
+    for block in rows_to_show(problem, margin=MARGIN_BLOCKS):
         day, time = day_and_time_of(block, problem.settings)
         row = [day, time]
         for post, slot in columns:
