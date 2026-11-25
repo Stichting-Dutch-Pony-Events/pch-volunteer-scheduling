@@ -182,7 +182,9 @@ Fixture** for a volunteer who is clearly the preferred one ("star volunteer"; ad
 ## Repository layout
 
 ```
-ReferenceDocuments/   (not in git) real data, DATA_NOTES.md, draft input workbook
+ReferenceDocuments/   (not in git) real data: DATA_NOTES.md, RUN_TIMES.md, time_runs.py;
+                      one folder per convention (PCH2026/, UKPC26/), each with old/
+                      for input backups and older outputs (see DATA_NOTES.md)
 scheduler/            __main__.py (the command line, run with `python -m scheduler`),
                       model.py (data classes, time helpers), errors.py (WorkbookError,
                       NoScheduleFound and its children, TimeLimitReached), debug.py
@@ -1422,6 +1424,13 @@ After the minimal viable scheduler:
         = a half-hour row with demand at some post in at least one of its blocks. No
         event wishes on this tab (the solver already took them into account).
         Maybe later (user): light grey for shifts before the doors open (usually 10:00).
+      - **The hand-made example** (user, 2026-11-25): the "Individual Schedules" tab of
+        `ReferenceDocuments/PCH2026/030 - Volunteer schedule 2026.ods`. It differs (times
+        on top without leading zeros, teams merged in row 1, three event columns, meal
+        rows coloured); **what is agreed above supersedes it** (user): Day, Time, one
+        column per volunteer, post on top, times at the bottom with leading zeros.
+        **Later wish (user):** event columns (the programme per room) next to Day/Time,
+        once the Events tab is read.
       - Order of work: plain blocks first (borders and text, no colour), then reading
         Group and Colour from Posts and colouring the shifts and the group cells.
       Branch `feature/individual_schedules` made by the user (2026-11-24).
