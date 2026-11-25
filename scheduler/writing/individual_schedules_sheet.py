@@ -8,9 +8,15 @@ without writing a file.
 from dataclasses import dataclass
 
 from openpyxl import Workbook
+from openpyxl.worksheet.worksheet import Worksheet
 
-from scheduler.model import BLOCKS_PER_DAY, Problem, Schedule, Volunteer
+from scheduler.model import BLOCKS_PER_DAY, Problem, Schedule, Settings, Volunteer
 from scheduler.writing.schedule_sheet import rows_to_show
+
+
+# The fill of a free cell when the volunteer can't work then (not available, or the
+# convention is not going on). A white cell has no fill at all.
+GREY = "D9D9D9"
 
 
 @dataclass(frozen=True)
@@ -41,7 +47,17 @@ def create_individual_schedules_sheet(workbook: Workbook, problem: Problem,
     in the top cell, the times in the bottom cell. A free cell is white when the volunteer
     could work then (free_cell_is_white), grey otherwise.
     """
-    # TODO: written after the helpers (step 4); not yet called from write_output.
+    # TODO, the steps (tests in test_create_individual_schedules_sheet.py):
+    # 1. A tab "Individual schedules" already there = ValueError.
+    # 2. The boxes of every volunteer (Schedule.shifts_of, then place_shift_boxes).
+    # 3. The rows: half_hour_rows(problem, margin_rows=1), plus any row a box is in that
+    #    is missing (a box pushed past the end of its day); never hide a shift.
+    # 4. Header: Day, Time, the nicknames in alphabetical order; row 2 (groups) empty.
+    # 5. Day and time on every row from row 3 (day_and_time_of).
+    # 6. Free cells: grey (GREY) unless free_cell_is_white.
+    # 7. The boxes (_write_box).
+    # 8. Freeze panes at "C3".
+    # Not yet called from write_output.
     raise NotImplementedError
 
 
@@ -175,3 +191,16 @@ def place_shift_boxes(shifts: list[tuple[str, int, int]]) -> list[ShiftBox]:
         previous_last_row = last_row
 
     return shiftblocks
+
+
+def _write_box(sheet: Worksheet, column: int, box: ShiftBox, sheet_row_of: dict[int, int],
+               settings: Settings) -> None:
+    """Write one shift box into the volunteer's column of the sheet.
+
+    sheet_row_of turns a row (an even block) into the row number on the sheet. The post goes
+    in the top cell and the times ("08:15-10:00", day_and_time_of and end_time_of) in the
+    bottom cell; a one-row box gets both in one cell ("Tickets 14:00-14:30"). A bold time
+    (box.start_bold, box.end_bold) is written as rich text (CellRichText). The box gets an
+    outside border; its cells are not merged.
+    """
+    raise NotImplementedError
