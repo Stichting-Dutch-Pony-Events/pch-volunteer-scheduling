@@ -134,4 +134,44 @@ def place_shift_boxes(shifts: list[tuple[str, int, int]]) -> list[ShiftBox]:
     up with its edge of the box: start_bold when first_row != first_block, end_bold when
     last_row + 2 != block_after_last.
     """
-    raise NotImplementedError
+    shiftblocks = []
+    # The last row of the box before this one (after any push), so the next box can be
+    # pushed below it. None = no box yet, so the first box is never pushed.
+    previous_last_row = None
+    for post, first_block, block_after_last in shifts:
+        # 1. The rows the shift naturally covers: the row of its first block and the row of
+        #    its last block (block_after_last - 1, not block_after_last itself). An odd block
+        #    (:15 or :45) belongs to the row one block earlier, like in half_hour_rows.
+        first_row = first_block - first_block % 2
+        last_row = (block_after_last - 1) - (block_after_last - 1) % 2
+
+        # 2. The push: a box may not start on or above the previous box's last row (that
+        #    happens after a post switch on :15 or :45), so it starts one row below it.
+        if previous_last_row is not None and first_row <= previous_last_row:
+            first_row = previous_last_row + 2
+
+        # 3. A pushed box keeps its own last row, but always has at least one row: if the
+        #    push moved its top below its bottom, it becomes a one-row box. That box can
+        #    stick out below the shift's real end and push the next box down in turn.
+        if last_row <= first_row:
+            last_row = first_row
+
+        # 4. A time is bold when it doesn't line up with its edge of the box: the start
+        #    when the box starts at another block (on :15/:45, or pushed down), the end
+        #    when the box ends at another block (row + 2 = the block after the box).
+        start_bold = first_row != first_block
+        end_bold = last_row + 2 != block_after_last
+
+        shiftblocks.append(ShiftBox(post=post,
+                                    first_block=first_block,
+                                    block_after_last=block_after_last,
+                                    first_row=first_row,
+                                    last_row=last_row,
+                                    start_bold=start_bold,
+                                    end_bold=end_bold))
+
+        # 5. Remember where this box ends (pushed or not), for the next shift: this is what
+        #    makes a cascade work.
+        previous_last_row = last_row
+
+    return shiftblocks
