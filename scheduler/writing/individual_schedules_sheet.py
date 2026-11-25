@@ -7,7 +7,8 @@ without writing a file.
 """
 from openpyxl import Workbook
 
-from scheduler.model import Problem, Schedule, Volunteer
+from scheduler.model import BLOCKS_PER_DAY, Problem, Schedule, Volunteer
+from scheduler.writing.schedule_sheet import rows_to_show
 
 
 def create_individual_schedules_sheet(workbook: Workbook, problem: Problem,
@@ -34,7 +35,45 @@ def half_hour_rows(problem: Problem, margin_rows: int = 0) -> list[int]:
     after the last row of each day (in half-hour rows: 1 = half an hour), but never outside
     that day. A row appears only once.
     """
-    raise NotImplementedError
+    # 1. Every block from the first to the last demand of each day (gaps included), without
+    #    a margin: the margin is added below in whole rows.
+    blocks = rows_to_show(problem)
+
+    # 2. Each block to the row of its half hour, grouped per convention day. An even block
+    #    starts its own row; an odd one (:15 or :45) belongs to the row one block earlier,
+    #    so block - block % 2 is the row in both cases. A set keeps each row once.
+    rows_per_day = {}  # day number -> set of rows
+    for block in blocks:
+        day_number = block // BLOCKS_PER_DAY
+        if day_number not in rows_per_day:
+            rows_per_day[day_number] = set()
+        rows_per_day[day_number].add(block - block % 2)
+
+    # 3. The margin: margin_rows extra rows before the first and after the last row of each
+    #    day. One row is 2 blocks. The margin stays within its own day: not before the
+    #    day's first block, not after its last row (the last even block of the day).
+    for day_number in rows_per_day:
+        first_row = min(rows_per_day[day_number])
+        last_row = max(rows_per_day[day_number])
+
+        first_row_of_day = day_number * BLOCKS_PER_DAY
+        last_row_of_day = (day_number + 1) * BLOCKS_PER_DAY - 2
+        margin_start = max(first_row - 2 * margin_rows, first_row_of_day)
+        margin_end = min(last_row + 2 * margin_rows, last_row_of_day)
+
+        # With margin_rows = 0 both ranges are empty, so nothing is added.
+        for row in range(margin_start, first_row, 2):         # the rows before the first
+            rows_per_day[day_number].add(row)
+        for row in range(last_row + 2, margin_end + 2, 2):    # the rows after the last
+            rows_per_day[day_number].add(row)
+
+    # 4. All days together, in time order.
+    all_rows = []
+    for day_number in rows_per_day:
+        for row in rows_per_day[day_number]:
+            all_rows.append(row)
+
+    return sorted(all_rows)
 
 
 def free_cell_is_white(volunteer: Volunteer, row: int, problem: Problem) -> bool:
