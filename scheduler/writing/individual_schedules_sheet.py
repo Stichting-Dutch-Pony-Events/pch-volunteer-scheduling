@@ -123,7 +123,7 @@ def free_cell_is_white(volunteer: Volunteer, row: int, problem: Problem) -> bool
     return is_available and convention_is_going_on
 
 
-def shift_boxes(shifts: list[tuple[str, int, int]]) -> list[ShiftBox]:
+def place_shift_boxes(shifts: list[tuple[str, int, int]]) -> list[ShiftBox]:
     """The boxes of one volunteer's shifts, in the same (time) order as the shifts.
 
     shifts is a list of (post, first_block, block_after_last), as Schedule.shifts_of gives

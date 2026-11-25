@@ -1457,7 +1457,7 @@ After the minimal viable scheduler:
       then the pure helpers, each with its own tests, then private writing helpers:
       - `half_hour_rows(problem) -> list[int]`: the even block of every 30-minute row,
         built on `rows_to_show` (`block - block % 2`, no duplicates).
-      - `shift_boxes(shifts) -> list[ShiftBox]` (frozen dataclass in the module: post,
+      - `place_shift_boxes(shifts) -> list[ShiftBox]` (frozen dataclass in the module: post,
         first_block, block_after_last, first_row, last_row, start_bold, end_bold; rows
         are named by their even block). Push down: a box whose first row is on or above
         the previous box's last row starts at that row + 2. **A pushed box is shortened
@@ -1476,7 +1476,7 @@ After the minimal viable scheduler:
       - Order: first a small refactor, `_end_time` in solving/checks.py becomes public
         `end_time_of(block_after_last, settings)` in model.py (used by checks.py and the
         new tab), then `half_hour_rows`, `shift_times`, `free_cell_is_white`, then
-        `shift_boxes`, then the sheet itself.
+        `place_shift_boxes`, then the sheet itself.
       - **Refactor done (2026-11-24, Claude, on request):** `end_time_of` in model.py
         right after `day_and_time_of` (code unchanged), `_end_time` removed from
         checks.py (`Settings` no longer imported there). 545 green. 2 direct tests in
@@ -1542,7 +1542,13 @@ After the minimal viable scheduler:
       and availability in only one block of the row (parametrized: on :15 before/after),
       plus the odd-row test. 572 green; in a scratch copy every part of both functions
       reds at least one test when broken.
-      3. `shift_boxes` + `ShiftBox` (push down, shorten, bold flags), tests first.
+      3. `place_shift_boxes` + `ShiftBox` (push down, shorten, bold flags), tests first.
+         **Renamed (user, 2026-11-25):** `shift_boxes` -> `place_shift_boxes` (it decides
+         where each box goes). `create_` was avoided: in this project that prefix means
+         "adds something to something else" (create_schedule_sheet, create_variables);
+         functions that only compute a result are named after it or start with a verb.
+         `ShiftBox` dataclass and 10 test stubs written by Claude (2026-11-25); colour is
+         not a ShiftBox field (it belongs to the post, looked up when drawing).
       4. The sheet itself (`_write_box` with rich text and borders, grey/white cells,
          empty group row 2, freeze panes), a line in `write_output`; then step 2 of the
          layout: read Group/Colour from Posts (and Team) and colour the boxes.

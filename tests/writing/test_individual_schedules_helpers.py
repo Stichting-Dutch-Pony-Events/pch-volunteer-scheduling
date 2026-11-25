@@ -2,7 +2,7 @@ import pytest
 
 from scheduler.model import Post, Problem, Settings, Volunteer, all_blocks
 from scheduler.writing.individual_schedules_sheet import (ShiftBox, free_cell_is_white,
-                                                          half_hour_rows, shift_boxes)
+                                                          half_hour_rows, place_shift_boxes)
 
 
 # Passed explicitly instead of relying on the defaults in model.py. Friday = blocks 0-95,
@@ -380,17 +380,23 @@ def test_row_that_is_not_on_the_half_hour_raises_value_error():
         free_cell_is_white(mock_mane, 33, problem)
 
 
-# shift_boxes. Each test gives one volunteer's shifts as (post, first_block,
-# block_after_last), as Schedule.shifts_of gives them, and compares whole ShiftBoxes, so
-# the kept times are checked too. Rows are named by their even block (32 = 14:00).
+# place_shift_boxes. Each test gives one volunteer's shifts as (post, first_block,
+# block_after_last), as Schedule.shifts_of gives them, and compares whole ShiftBoxes,
+# so the kept times are checked too. Rows are named by their even block (32 = 14:00).
 
 def test_shift_on_the_half_hour_fills_its_rows_without_bold():
     """A shift from 14:00 to 15:00 covers the rows 14:00 and 14:30, nothing bold."""
     # Arrange
-    # Idea: [("Tickets", 32, 36)] -> [ShiftBox("Tickets", 32, 36, first_row=32, last_row=34,
+    # [("Tickets", 32, 36)] -> [ShiftBox("Tickets", 32, 36, first_row=32, last_row=34,
     # start_bold=False, end_bold=False)].
+    shifts = [("Tickets", 32, 36)]
+
+    expected = [ShiftBox(post="Tickets", first_block=32, block_after_last=36,
+                         first_row=32, last_row=34,
+                         start_bold=False, end_bold=False)]
 
     # Act
+    boxes = place_shift_boxes()
 
     # Assert
     pytest.skip("not written yet")
