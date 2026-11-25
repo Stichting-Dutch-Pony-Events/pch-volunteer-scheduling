@@ -196,7 +196,8 @@ scheduler/solving/    solver.py (solve, make_cp_sat_solver, run_cp_sat, raise_if
                       (check_problem, find_warnings), variables.py (Works,
                       create_variables, lookup helpers), hard_rules.py (add_<name>_rule)
 scheduler/writing/    output.py (write_output), schedule_sheet.py (the Schedule tab and
-                      its helpers)
+                      its helpers), individual_schedules_sheet.py (the Individual
+                      schedules tab and its helpers)
 tests/                test_debug.py; data/test_input.xlsx (made-up workbook)
 tests/model/          test_model.py, test_time_blocks.py (tests of model.py)
 tests/reading/        test_celltext.py, test_availability.py, test_find_columns.py,
@@ -209,8 +210,9 @@ tests/solving/        test_checks.py, test_warnings.py, test_solver_time_limit.p
                       test_solver_maximum_hours.py); soft_rules/
                       (test_solver_skill_score.py)
 tests/writing/        test_assign_slots.py, test_write_helpers.py,
-                      test_create_schedule_sheet.py, test_write_output.py (tests of
-                      writing the output workbook)
+                      test_create_schedule_sheet.py, test_write_output.py,
+                      test_individual_schedules_helpers.py (tests of writing the output
+                      workbook)
 tests/command_line/   test_main.py (tests of the command line)
 templates/            VolunteerInput_template.xlsx: empty input workbook (all tabs and
                       headers, Settings with example values from PonyCon Holland 2026,
@@ -1512,6 +1514,16 @@ After the minimal viable scheduler:
          `tests/writing/test_individual_schedules_helpers.py`; `half_hour_rows` uses
          `rows_to_show(problem, margin=2)`, so write its expected rows with the margin
          (the tests in the proposal above were listed without it).
+      **Points 1 and 2 done (2026-11-25, private computer, Claude on request):**
+      `MARGIN_BLOCKS = 2` in schedule_sheet.py, the 5 tests updated (552 green). The
+      module with the three stubs and 9 test stubs (10 cases, with "Idea:" comments and
+      the expected values including the margin). The list of the 9 tests was agreed on
+      the company laptop and not written down, so Claude rebuilt it from the design:
+      half_hour_rows: on the half hour; quarter hours fall in their half hour's row
+      (parametrized: start on :15, end on :15); each day its own rows; no demand = no
+      rows. free_cell_is_white: available in convention hours = white; not available =
+      grey; available for part of the half hour = white; no demand in the row = grey;
+      demand at a post they're not qualified for still counts. 552 green, 10 skipped.
       3. `shift_boxes` + `ShiftBox` (push down, shorten, bold flags), tests first.
       4. The sheet itself (`_write_box` with rich text and borders, grey/white cells,
          empty group row 2, freeze panes), a line in `write_output`; then step 2 of the
