@@ -15,7 +15,7 @@ from openpyxl.worksheet.worksheet import Worksheet
 
 from scheduler.debug import debug_print
 from scheduler.model import (BLOCKS_PER_DAY, Problem, Schedule, Settings, Volunteer,
-                             day_and_time_of)
+                             day_and_time_of, end_time_of)
 from scheduler.writing.schedule_sheet import rows_to_show
 
 FIRST_ROW = 3
@@ -279,7 +279,9 @@ def _write_box(sheet: Worksheet, column: int, box: ShiftBox, sheet_row_of: dict[
     outside border; its cells are not merged.
     """
     _, start_time = day_and_time_of(box.first_block, settings)
-    _, stop_time = day_and_time_of(box.block_after_last, settings)
+    # end_time_of, not day_and_time_of: a shift until the very end of the convention ends at
+    # a block after the last day, which day_and_time_of refuses ("06:00" here).
+    stop_time = end_time_of(box.block_after_last, settings)
 
     hyphen = "-"
 
@@ -293,9 +295,9 @@ def _write_box(sheet: Worksheet, column: int, box: ShiftBox, sheet_row_of: dict[
         text = [box.post, " ", start_time, hyphen, stop_time]
 
         sheet.cell(row=sheet_row_of[box.first_row],
-                    column=column).value = CellRichText(text)
+                   column=column).value = CellRichText(text)
         sheet.cell(row=sheet_row_of[box.first_row],
-                    column=column).border = BORDER_FULL
+                   column=column).border = BORDER_FULL
         return
 
     # else box_length > 1
@@ -314,4 +316,4 @@ def _write_box(sheet: Worksheet, column: int, box: ShiftBox, sheet_row_of: dict[
     # Middle cells
     for middle_row in range(box.first_row + 2, box.last_row, 2):
         sheet.cell(row=sheet_row_of[middle_row],
-                    column=column).border = BORDER_MIDDLE
+                   column=column).border = BORDER_MIDDLE

@@ -1552,6 +1552,16 @@ After the minimal viable scheduler:
       4. The sheet itself (`_write_box` with rich text and borders, grey/white cells,
          empty group row 2, freeze panes), a line in `write_output`; then step 2 of the
          layout: read Group/Colour from Posts (and Team) and colour the boxes.
+         **Done (2026-11-26, user; Claude wrote the end-of-convention test and fix):**
+         `create_individual_schedules_sheet` (rows from `half_hour_rows(margin_rows=1)` plus
+         any missing box row, `sheet_row_of` dict, `GREY = "D9D9D9"` / `GREY_FILL`,
+         `_write_box` with `end_time_of` for the end), called from `write_output` after the
+         Schedule tab. 19 tests in test_create_individual_schedules_sheet.py; 601 green.
+      5. **Next (proposed 2026-11-26):** `Post.group`, `Post.colour`, `Volunteer.team` (empty
+         defaults); read_posts reads Group and Colour (empty or 6 hex digits, case and `#`
+         ignored, stored in capitals), read_volunteers reads Team; required headers, format
+         version stays 3; then colour the boxes, team in row 2, and cosmetics (column
+         widths, header style).
       The user will show the hand-made PCH example of the grid from the usual computer.
 - [ ] **Output: an "Assignments" tab (user, 2026-11-24; idea, not planned yet).** A flat
       table, one row per shift (a run of consecutive blocks at one post), sorted by

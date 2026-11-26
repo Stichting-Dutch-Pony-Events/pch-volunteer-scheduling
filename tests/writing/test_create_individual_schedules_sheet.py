@@ -469,6 +469,35 @@ def test_box_pushed_past_the_end_of_its_day_still_gets_its_row():
     assert result == expected
 
 
+def test_shift_until_the_end_of_the_convention_ends_at_06_00():
+    """A shift that runs until the very end of the last day shows "06:00" as its end time."""
+    # Arrange
+    # Sunday night: Tickets 05:00-06:00 (blocks 284-287), the last hour of the convention.
+    # The block after it (288) is outside the convention days.
+    workbook = openpyxl.Workbook()
+    demand = {}
+    for block in range(284, 288):
+        demand[("Tickets", block)] = 1
+    problem = _problem(volunteers=[_volunteer("Mock Mane", ALL_DAYS)],
+                       demand=demand)
+    schedule = Schedule(assignments=_works("Mock Mane", "Tickets", 284, 288))
+
+    expected = (("Sunday", "05:30"), "05:00-06:00")
+
+    # Act
+    create_individual_schedules_sheet(workbook, problem, schedule)
+
+    # Assert
+    # The last row of the tab (05:30) is the bottom cell of the box: the margin stays within
+    # Sunday, so there is no row after it.
+    sheet = workbook["Individual schedules"]
+    last_row = sheet.max_row
+    result = ((sheet.cell(row=last_row, column=1).value,
+               sheet.cell(row=last_row, column=2).value),
+              str(sheet.cell(row=last_row, column=FIRST_VOLUNTEER_COLUMN).value))
+    assert result == expected
+
+
 # Free cells
 
 def test_free_cell_is_white_when_the_volunteer_could_work():
