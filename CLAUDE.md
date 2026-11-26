@@ -1557,11 +1557,40 @@ After the minimal viable scheduler:
          any missing box row, `sheet_row_of` dict, `GREY = "D9D9D9"` / `GREY_FILL`,
          `_write_box` with `end_time_of` for the end), called from `write_output` after the
          Schedule tab. 19 tests in test_create_individual_schedules_sheet.py; 601 green.
-      5. **Next (proposed 2026-11-26):** `Post.group`, `Post.colour`, `Volunteer.team` (empty
-         defaults); read_posts reads Group and Colour (empty or 6 hex digits, case and `#`
-         ignored, stored in capitals), read_volunteers reads Team; required headers, format
-         version stays 3; then colour the boxes, team in row 2, and cosmetics (column
-         widths, header style).
+      5. **Next: post and team colours (agreed 2026-11-26).** Colours are written as hex
+         codes in the workbooks (user: easier than coloured cells). Team colours on a new
+         **Teams tab** (columns Team, Colour; one row per team), not a colour column on
+         Volunteers (the colour belongs to the team; ~40 repeated cells could disagree).
+         No Team class: `read_teams` returns a plain `dict[str, str]` (team -> colour).
+         Teams matter little otherwise (skills already say who does what). Order, each
+         step with stubs first:
+         a. `parse_colour(name, text) -> str` in reading/cells.py (shared by Posts and
+            Teams): empty = "" (no colour, white), else 6 hex digits; case and a leading
+            `#` ignored, stored in capitals ("#c9daf8" -> "C9DAF8"); anything else
+            ValueError naming the setting/column. Tests in test_parse_values.py.
+            **Stubs written by Claude (2026-11-26):** `parse_colour` in cells.py
+            (NotImplementedError), 6 test stubs (14 cases) in section "parse_colour" of
+            test_parse_values.py (capitals kept; small letters -> capitals; leading `#`
+            dropped; empty = ""; invalid: 5/7/8 digits, not hex, two hashes, hash alone,
+            space inside, colour name; message names column and value). Note for the ReadMe
+            tab: a colour of only digits typed without `#` becomes a number in Excel
+            ("001122" -> 1122, then an error); typing the `#` keeps it text.
+            **Later (user, 2026-11-26):** an optional Settings row "Default post colour"
+            (default white), used for a post with an empty Colour.
+         b. Model fields with empty defaults (existing calls unchanged): `Post.group: str =
+            ""`, `Post.colour: str = ""`, `Volunteer.team: str = ""`. read_posts reads
+            Group (free text, may be empty) and Colour; read_volunteers reads Team (free
+            text). Required headers (every workbook already has them).
+         c. Teams tab: own module `reading/teams.py` with `read_teams`; a team on Volunteers
+            that is not on Teams = WorkbookError (catches typos); a team without a colour =
+            white. To confirm: an empty Team on Volunteers is allowed (row 2 stays empty).
+            New required tab -> **workbook format version 4**; add the tab to the template,
+            the test workbook and both real workbooks (backups of the real ones first);
+            `Problem` gets the teams (e.g. `team_colours: dict[str, str]`, empty default).
+         d. Output: boxes filled with their post's colour, row 2 = team name in the team's
+            colour.
+         e. Cosmetics: column widths (`_fit_column_width`), header style (bold, rotation?),
+            maybe post colours in the Schedule tab's header.
       The user will show the hand-made PCH example of the grid from the usual computer.
 - [ ] **Output: an "Assignments" tab (user, 2026-11-24; idea, not planned yet).** A flat
       table, one row per shift (a run of consecutive blocks at one post), sorted by

@@ -6,7 +6,7 @@ rules are tested in test_read_settings.py and test_read_volunteers.py.
 import pytest
 import re
 
-from scheduler.reading.cells import parse_hour_limit, parse_whole_number
+from scheduler.reading.cells import parse_colour, parse_hour_limit, parse_whole_number
 from scheduler.reading.settings import parse_days
 
 
@@ -141,3 +141,79 @@ def test_empty_day_name_raises_value_error(text: str):
     # Assert
     with pytest.raises(ValueError, match="empty"):
         parse_days(text)
+
+
+# parse_colour
+
+def test_colour_in_capitals_is_kept_as_it_is():
+    """Six hex digits in capitals are returned unchanged."""
+    # Idea: "C9DAF8" -> "C9DAF8".
+    # Arrange
+
+    # Act
+
+    # Assert
+    pytest.skip("not written yet")
+
+
+@pytest.mark.parametrize("text", ["c9daf8", "C9daF8"],
+                         ids=["small letters", "mixed"])
+def test_colour_in_small_letters_is_stored_in_capitals(text: str):
+    """Hex digits in small letters (or mixed) are returned in capitals."""
+    # Idea: both cases -> "C9DAF8".
+    # Arrange
+
+    # Act
+
+    # Assert
+    pytest.skip("not written yet")
+
+
+@pytest.mark.parametrize("text", ["#C9DAF8", "#c9daf8"],
+                         ids=["capitals", "small letters"])
+def test_leading_hash_is_dropped(text: str):
+    """One "#" in front of the hex digits is left out of the result."""
+    # Idea: both cases -> "C9DAF8".
+    # Arrange
+
+    # Act
+
+    # Assert
+    pytest.skip("not written yet")
+
+
+def test_empty_text_means_no_colour():
+    """An empty text gives "" (no colour, white)."""
+    # Idea: "" -> "".
+    # Arrange
+
+    # Act
+
+    # Assert
+    pytest.skip("not written yet")
+
+
+@pytest.mark.parametrize("text", ["C9DAF", "C9DAF8A", "FFC9DAF8", "G9DAF8", "##C9DAF8", "#",
+                                  "C9 DAF8", "blue"],
+                         ids=["5 digits", "7 digits", "8 digits (AARRGGBB)", "not hex",
+                              "two hashes", "hash alone", "space inside", "colour name"])
+def test_invalid_colour_raises_value_error(text: str):
+    """Anything but empty or six hex digits (with at most one "#") raises ValueError."""
+    # Idea: pytest.raises(ValueError) around parse_colour("Colour", text).
+    # Arrange
+
+    # Act
+
+    # Assert
+    pytest.skip("not written yet")
+
+
+def test_invalid_colour_message_names_the_column_and_the_value():
+    """The message of an invalid colour names the setting or column and the value."""
+    # Idea: parse_colour("Colour", "blue") raises with match="Colour.*blue".
+    # Arrange
+
+    # Act
+
+    # Assert
+    pytest.skip("not written yet")

@@ -187,3 +187,15 @@ def parse_hour_limit(name: str, text: str, max_hours: int) -> int | None:
         raise ValueError(f"{name}: {hours} is more than the maximum of {max_hours} hours.")
 
     return hours * 60  # hours -> minutes
+
+
+def parse_colour(name: str, text: str) -> str:
+    """A colour cell (already through cell_text) as six hex digits in capitals, e.g. "C9DAF8".
+
+    An empty text is no colour: "" (white). Otherwise six hex digits (0-9, A-F), in small
+    letters or capitals, with or without one leading "#": "#c9daf8" gives "C9DAF8".
+    Anything else raises ValueError naming the setting or column (name) and the value, with
+    a hint such as "(6 hex digits, e.g. #C9DAF8)"; the reader puts the tab (and row) in
+    front of the message. Used for the Colour columns on Posts and Teams.
+    """
+    raise NotImplementedError("parse_colour is not written yet")
