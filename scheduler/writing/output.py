@@ -8,6 +8,7 @@ from pathlib import Path
 from openpyxl import Workbook
 
 from scheduler.model import Problem, Schedule
+from scheduler.writing.individual_schedules_sheet import create_individual_schedules_sheet
 from scheduler.writing.schedule_sheet import create_schedule_sheet
 
 
@@ -27,6 +28,7 @@ def write_output(problem: Problem, schedule: Schedule, path: str | Path) -> None
 
     # 3. One line per tab. Later tabs (e.g. "No double check") are added here.
     create_schedule_sheet(workbook, problem, schedule)
+    create_individual_schedules_sheet(workbook, problem, schedule)
 
     # 4. Save. An existing file at path is overwritten without asking.
     workbook.save(path)

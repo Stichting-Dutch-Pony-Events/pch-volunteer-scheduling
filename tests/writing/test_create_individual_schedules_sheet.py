@@ -72,11 +72,11 @@ def _border_sides(cell: Cell) -> list[str]:
     A side without a border is either None or a Side with style None (openpyxl allows
     both); any other style (thin, thick, ...) counts.
     """
-    sides = []
+    sides = set()
     for name, side in [("top", cell.border.top), ("bottom", cell.border.bottom),
                        ("left", cell.border.left), ("right", cell.border.right)]:
         if side is not None and side.style is not None:
-            sides.append(name)
+            sides.add(name)
     return sides
 
 
@@ -86,6 +86,7 @@ def _fill_colour(cell: Cell) -> str | None:
     openpyxl stores a colour as "AARRGGBB" (e.g. "D9D9D9" becomes "00D9D9D9"), so only the
     last six characters are kept.
     """
+    # Every cell has a fill object, also an untouched one: then its fill_type is None.
     if cell.fill.fill_type is None:
         return None
     return cell.fill.fgColor.rgb[-6:]
@@ -276,7 +277,11 @@ def test_post_is_in_the_top_cell_and_the_times_in_the_bottom_cell():
     sheet = workbook["Individual schedules"]
     box_texts = []
     for row in range(4, 8):
-        box_texts.append(sheet.cell(row=row, column=FIRST_VOLUNTEER_COLUMN).value)
+        cell_value = sheet.cell(row=row, column=FIRST_VOLUNTEER_COLUMN).value
+        if cell_value is not None:
+            box_texts.append(str(cell_value))
+        else:
+            box_texts.append(None)
 
     assert box_texts == ["Tickets", None, None, "08:00-10:00"]
 
@@ -298,7 +303,7 @@ def test_one_row_box_has_the_post_and_times_in_one_cell():
 
     # Assert
     sheet = workbook["Individual schedules"]
-    box_text = sheet.cell(row=FIRST_ROW + 1, column=FIRST_VOLUNTEER_COLUMN).value
+    box_text = str(sheet.cell(row=FIRST_ROW + 1, column=FIRST_VOLUNTEER_COLUMN).value)
 
     assert box_text == "Tickets 14:00-14:30"
 
@@ -373,7 +378,7 @@ def test_pushed_box_starts_one_row_lower_with_its_start_in_bold():
     sheet = workbook["Individual schedules"]
     post_cell = sheet.cell(row=FIRST_ROW + 3, column=FIRST_VOLUNTEER_COLUMN)
     times_cell = sheet.cell(row=FIRST_ROW + 4, column=FIRST_VOLUNTEER_COLUMN)
-    assert post_cell.value == "Infobooth"
+    assert str(post_cell.value) == "Infobooth"
     assert str(times_cell.value) == "14:45-16:00"
     assert _bold_parts(times_cell) == ["14:45"]
 
@@ -392,9 +397,9 @@ def test_box_has_an_outside_border():
 
     # The top cell has no bottom border and the bottom cell no top one: inside the box no
     # lines at all, only on its outside edges.
-    expected = [["top", "left", "right"],      # 14:00, the top cell
-                ["left", "right"],             # 14:30, the middle cell
-                ["bottom", "left", "right"]]   # 15:00, the bottom cell
+    expected = [set(["top", "left", "right"]),      # 14:00, the top cell
+                set(["left", "right"]),             # 14:30, the middle cell
+                set(["left", "right", "bottom"])]   # 15:00, the bottom cell
 
     # Act
     create_individual_schedules_sheet(workbook, problem, schedule)
@@ -420,7 +425,7 @@ def test_one_row_box_has_a_border_on_all_four_sides():
                        demand=demand)
     schedule = Schedule(assignments=_works("Mock Mane", "Tickets", 32, 34))
 
-    expected = ["top", "bottom", "left", "right"]  # all sides, in the order of _border_sides
+    expected = set(["top", "left", "right", "bottom"])  # all sides, in the order of _border_sides
 
     # Act
     create_individual_schedules_sheet(workbook, problem, schedule)

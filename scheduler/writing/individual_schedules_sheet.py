@@ -8,15 +8,30 @@ without writing a file.
 from dataclasses import dataclass
 
 from openpyxl import Workbook
+from openpyxl.cell.rich_text import CellRichText, TextBlock
+from openpyxl.cell.text import InlineFont
+from openpyxl.styles import Border, Side, PatternFill
 from openpyxl.worksheet.worksheet import Worksheet
 
-from scheduler.model import BLOCKS_PER_DAY, Problem, Schedule, Settings, Volunteer
+from scheduler.debug import debug_print
+from scheduler.model import (BLOCKS_PER_DAY, Problem, Schedule, Settings, Volunteer,
+                             day_and_time_of)
 from scheduler.writing.schedule_sheet import rows_to_show
 
+FIRST_ROW = 3
+FIRST_VOLUNTEER_COLUMN = 3
 
 # The fill of a free cell when the volunteer can't work then (not available, or the
 # convention is not going on). A white cell has no fill at all.
 GREY = "D9D9D9"
+GREY_FILL = PatternFill(fill_type="solid", fgColor=GREY, bgColor=GREY)
+BOLD = InlineFont(b=True)
+
+LINE = Side(style="thin")
+BORDER_TOP = Border(top=LINE, left=LINE, right=LINE)
+BORDER_MIDDLE = Border(left=LINE, right=LINE)
+BORDER_BOTTOM = Border(left=LINE, right=LINE, bottom=LINE)
+BORDER_FULL = Border(top=LINE, left=LINE, right=LINE, bottom=LINE)
 
 
 @dataclass(frozen=True)
@@ -47,18 +62,78 @@ def create_individual_schedules_sheet(workbook: Workbook, problem: Problem,
     in the top cell, the times in the bottom cell. A free cell is white when the volunteer
     could work then (free_cell_is_white), grey otherwise.
     """
-    # TODO, the steps (tests in test_create_individual_schedules_sheet.py):
-    # 1. A tab "Individual schedules" already there = ValueError.
-    # 2. The boxes of every volunteer (Schedule.shifts_of, then place_shift_boxes).
+    debug_print("create_individual_schedules_sheet: creating tab Individual schedules")
+
+    # 1. Guard against duplicate sheets
+    if "Individual schedules" in workbook.sheetnames:
+        raise ValueError("The workbook already has an 'Individual schedules' tab.")
+    sheet: Worksheet = workbook.create_sheet("Individual schedules")
+
+    # 2. The boxes of every volunteer.
+    boxes_per_volunteer = {}
+    for volunteer in problem.volunteers:
+        shifts = schedule.shifts_of(volunteer.name)
+        boxes_per_volunteer[volunteer.name] = place_shift_boxes(shifts)
+
     # 3. The rows: half_hour_rows(problem, margin_rows=1), plus any row a box is in that
     #    is missing (a box pushed past the end of its day); never hide a shift.
+    rows = half_hour_rows(problem, margin_rows=1)
+    for boxes in boxes_per_volunteer.values():
+        for box in boxes:
+            if box.last_row not in rows:
+                rows.append(box.last_row)
+                rows.sort()  # Sort in place
+
     # 4. Header: Day, Time, the nicknames in alphabetical order; row 2 (groups) empty.
+    headers = ["Day", "Time"]
+    volunteer_names = []
+    for volunteer in problem.volunteers:
+        volunteer_names.append(volunteer.name)
+
+    volunteer_column_of = {}
+    volunteer_column = FIRST_VOLUNTEER_COLUMN
+    for name in sorted(volunteer_names):
+        headers.append(name)
+        volunteer_column_of[name] = volunteer_column
+
+        volunteer_column += 1
+
+    sheet.append(headers)
+    sheet.append([])
+
     # 5. Day and time on every row from row 3 (day_and_time_of).
+    sheet_row_of = {}
+    sheet_row = FIRST_ROW
+    for row in rows:
+        sheet_row_of[row] = sheet_row
+        day, time = day_and_time_of(row, problem.settings)
+
+        sheet.cell(row=sheet_row, column=1).value = day
+        sheet.cell(row=sheet_row, column=2).value = time
+
+        sheet_row += 1
+
     # 6. Free cells: grey (GREY) unless free_cell_is_white.
+    for row in rows:
+        for volunteer in problem.volunteers:
+            if free_cell_is_white(volunteer, row, problem) is True:
+                continue
+
+            sheet_row = sheet_row_of[row]
+            sheet_column = volunteer_column_of[volunteer.name]
+            sheet.cell(row=sheet_row, column=sheet_column).fill = GREY_FILL
+
     # 7. The boxes (_write_box).
+    for volunteer_name, boxes in boxes_per_volunteer.items():
+        for box in boxes:
+            _write_box(sheet=sheet,
+                       column=volunteer_column_of[volunteer_name],
+                       box=box,
+                       sheet_row_of=sheet_row_of,
+                       settings=problem.settings)
+
     # 8. Freeze panes at "C3".
-    # Not yet called from write_output.
-    raise NotImplementedError
+    sheet.freeze_panes = "C3"
 
 
 def half_hour_rows(problem: Problem, margin_rows: int = 0) -> list[int]:
@@ -203,4 +278,40 @@ def _write_box(sheet: Worksheet, column: int, box: ShiftBox, sheet_row_of: dict[
     (box.start_bold, box.end_bold) is written as rich text (CellRichText). The box gets an
     outside border; its cells are not merged.
     """
-    raise NotImplementedError
+    _, start_time = day_and_time_of(box.first_block, settings)
+    _, stop_time = day_and_time_of(box.block_after_last, settings)
+
+    hyphen = "-"
+
+    if box.start_bold:
+        start_time = TextBlock(BOLD, start_time)
+
+    if box.end_bold:
+        stop_time = TextBlock(BOLD, stop_time)
+
+    if box.first_row == box.last_row:
+        text = [box.post, " ", start_time, hyphen, stop_time]
+
+        sheet.cell(row=sheet_row_of[box.first_row],
+                    column=column).value = CellRichText(text)
+        sheet.cell(row=sheet_row_of[box.first_row],
+                    column=column).border = BORDER_FULL
+        return
+
+    # else box_length > 1
+    # Top cell
+    sheet.cell(row=sheet_row_of[box.first_row],
+               column=column).value = CellRichText(box.post)
+    sheet.cell(row=sheet_row_of[box.first_row],
+               column=column).border = BORDER_TOP
+
+    # Bottom cell
+    sheet.cell(row=sheet_row_of[box.last_row],
+               column=column).value = CellRichText([start_time, hyphen, stop_time])
+    sheet.cell(row=sheet_row_of[box.last_row],
+               column=column).border = BORDER_BOTTOM
+
+    # Middle cells
+    for middle_row in range(box.first_row + 2, box.last_row, 2):
+        sheet.cell(row=sheet_row_of[middle_row],
+                    column=column).border = BORDER_MIDDLE
