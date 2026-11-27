@@ -17,4 +17,30 @@ def read_teams(sheet: Worksheet) -> dict[str, str]:
     but no team name, a team that appears twice, or an invalid colour.
     """
     debug_print(f"read_teams: reading tab {sheet.title}")
-    raise NotImplementedError("read_teams is not written yet")
+    columns = find_columns(sheet, ["Team", "Colour"])
+
+    team_colours = {}
+    for row in range(2, sheet.max_row + 1):
+        # Read the values
+        name = cell_text(sheet.cell(row=row, column=columns["Team"]).value)
+        colour = cell_text(sheet.cell(row=row, column=columns["Colour"]).value)
+
+        # A row without a team name is only fine when it is completely empty.
+        if name == "":
+            if colour != "":
+                raise WorkbookError(f"Teams, row {row}: Colour but no team name.")
+
+            continue  # an empty row: skip it
+        if name in team_colours:
+            raise WorkbookError(f"Teams, row {row}: the team {name!r} appears more than once.")
+
+        # Parse colour
+        try:
+            parsed_colour = parse_colour("Colour", colour)
+        except ValueError as error:
+            raise WorkbookError(f"Teams, row {row} ({name}), {error}") from None
+
+        # Record the team
+        team_colours[name] = parsed_colour
+
+    return team_colours
