@@ -349,3 +349,34 @@ def test_groups_colours_and_teams_are_read_from_the_test_workbook():
     assert posts["Tickets"].group == "Ticketing"
     assert posts["Tickets"].colour == "C9DAF8"
     assert volunteers["Mock Mane"].team == "Ticketing"
+
+
+def test_team_on_volunteers_that_is_not_on_teams_raises_workbook_error(tmp_path: Path):
+    """A team on Volunteers that is not on the Teams tab (e.g. a typo) is an error naming
+    the volunteer and the team."""
+    # Arrange
+
+    # Act
+
+    # Assert
+    pytest.skip("not written yet")
+
+
+def test_volunteer_without_a_team_is_fine(tmp_path: Path):
+    """An empty Team cell on Volunteers needs no row on the Teams tab."""
+    # Arrange
+
+    # Act
+
+    # Assert
+    pytest.skip("not written yet")
+
+
+def test_team_colours_are_read_from_the_test_workbook():
+    """In the test workbook the team Ticketing has its colour from the Teams tab."""
+    # Arrange
+
+    # Act
+
+    # Assert
+    pytest.skip("not written yet")

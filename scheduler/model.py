@@ -1,7 +1,7 @@
 """The data the scheduler works with: volunteers, posts, settings, the problem to solve
 and the schedule that comes out, plus small helpers for blocks of time.
 """
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 # Time is measured in blocks of 15 minutes. Block 0 is 06:00 on the first day; a day
 # runs from 06:00 to 06:00 the next morning, so it has 24 * 4 = 96 blocks.
@@ -121,6 +121,10 @@ class Problem:
     # (post, block) -> number of volunteers needed (missing = closed)
     demand: dict[tuple[str, int], int]
     settings: Settings = Settings()
+    # team -> colour in the output as six hex digits in capitals ("" = no colour, white).
+    # field(default_factory=dict): every Problem gets its own new, empty dict. A plain
+    # "= {}" would be one dict shared by all Problems, so dataclasses refuse it.
+    team_colours: dict[str, str] = field(default_factory=dict)
 
 
 @dataclass

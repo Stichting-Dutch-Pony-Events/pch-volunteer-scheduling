@@ -143,6 +143,16 @@ def test_post_has_no_group_or_colour_unless_given():
     assert post.colour == ""
 
 
+def test_problem_has_no_team_colours_unless_given():
+    """A Problem made without team colours has an empty dict, its own for each Problem."""
+    # Arrange
+
+    # Act
+
+    # Assert
+    pytest.skip("not written yet")
+
+
 def test_schedule_made_by_hand_is_not_proven_optimal_and_has_no_penalty():
     """A Schedule made without the solver's information: not proven optimal, no penalties."""
     # Arrange

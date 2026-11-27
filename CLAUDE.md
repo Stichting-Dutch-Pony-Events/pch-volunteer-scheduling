@@ -1614,6 +1614,19 @@ After the minimal viable scheduler:
       test; the old reader skipped it). Missing-column tests on Volunteers merged into one
       parametrized test (Nickname, Team, both hour limits). 631 green. **Next:** on the
       personal PC check that both real workbooks still read (valid hex colours), then 5c.
+      **5c stubs written by Claude (2026-11-27).** Decided (user): an empty Team on Volunteers
+      is fine; a Teams tab with only a header gives {}. `Problem.team_colours: dict[str, str]
+      = field(default_factory=dict)` in model.py; `reading/teams.py` with `read_teams`
+      (NotImplementedError, not yet called from read_problem); 9 test stubs in
+      tests/reading/test_read_teams.py, 3 in test_read_problem.py (team not on Teams =
+      error; no team is fine; test workbook team colours), 1 in test_model.py. 631 green,
+      14 skipped. Still to do when implementing: "Teams" in REQUIRED_TABS and in the
+      missing-tab test, WORKBOOK_FORMAT_VERSION 4 (+ GOOD_ROWS), a Teams tab in
+      `_good_workbook()` and team_colours in GOOD_PROBLEM, the Teams tab + version 4 in the
+      template and the test workbook (Claude), the real workbooks on the personal PC.
+      **Order (user, 2026-11-27): the Teams tab right after Volunteers** in the workbooks,
+      REQUIRED_TABS, the missing-tab test and read_problem. In Problem `team_colours` stays
+      at the end (it has a default; fields with a default must come after those without).
 - [ ] **Output: an "Assignments" tab (user, 2026-11-24; idea, not planned yet).** A flat
       table, one row per shift (a run of consecutive blocks at one post), sorted by
       nickname then time: Nickname, Day, From, To, Post, Hours, **Notes** (empty, for the

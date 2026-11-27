@@ -4,6 +4,7 @@
     settings.py         read_settings()
     volunteers.py       read_volunteers()
     posts.py            read_posts()
+    teams.py            read_teams()
     skills.py           read_skills()
     demand.py           read_demand()
     cells.py            helpers shared by the readers: cell_text, find_columns,
