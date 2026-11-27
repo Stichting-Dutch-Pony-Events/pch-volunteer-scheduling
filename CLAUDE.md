@@ -1627,6 +1627,11 @@ After the minimal viable scheduler:
       **Order (user, 2026-11-27): the Teams tab right after Volunteers** in the workbooks,
       REQUIRED_TABS, the missing-tab test and read_problem. In Problem `team_colours` stays
       at the end (it has a default; fields with a default must come after those without).
+      **read_teams done (2026-11-27, user; Claude fixed the review points):** tests filled in
+      by the user, read_problem tests and the model test by Claude; 643 green, 2 red (the
+      read_problem team check and the test workbook's team colours). Next: wire read_teams
+      into read_problem (REQUIRED_TABS, version 4, GOOD_ROWS, _good_workbook, GOOD_PROBLEM),
+      then the Teams tab in the test workbook and the template.
 - [ ] **Output: an "Assignments" tab (user, 2026-11-24; idea, not planned yet).** A flat
       table, one row per shift (a run of consecutive blocks at one post), sorted by
       nickname then time: Nickname, Day, From, To, Post, Hours, **Notes** (empty, for the

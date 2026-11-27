@@ -1,6 +1,6 @@
 import pytest
 
-from scheduler.model import Post, Schedule, Settings, Volunteer, runs_of_consecutive_blocks
+from scheduler.model import Post, Problem, Schedule, Settings, Volunteer, runs_of_consecutive_blocks
 
 
 def test_default_settings_match_the_agreed_rules():
@@ -146,11 +146,15 @@ def test_post_has_no_group_or_colour_unless_given():
 def test_problem_has_no_team_colours_unless_given():
     """A Problem made without team colours has an empty dict, its own for each Problem."""
     # Arrange
+    # (nothing to arrange: we make two Problems without the team_colours field)
 
     # Act
+    first = Problem(volunteers=[], posts=[], demand={})
+    second = Problem(volunteers=[], posts=[], demand={})
 
     # Assert
-    pytest.skip("not written yet")
+    assert first.team_colours == {}
+    assert first.team_colours is not second.team_colours   # not one shared dict
 
 
 def test_schedule_made_by_hand_is_not_proven_optimal_and_has_no_penalty():

@@ -355,28 +355,43 @@ def test_team_on_volunteers_that_is_not_on_teams_raises_workbook_error(tmp_path:
     """A team on Volunteers that is not on the Teams tab (e.g. a typo) is an error naming
     the volunteer and the team."""
     # Arrange
+    workbook = _good_workbook()
+    workbook["Volunteers"].cell(row=3, column=2).value = "Infobooht"   # Testy Hooves, Team
+    path = _save(workbook, tmp_path)
 
     # Act
+    # (Act and Assert are combined, pytest.raises checks the exception while the call runs.)
 
     # Assert
-    pytest.skip("not written yet")
+    with pytest.raises(WorkbookError, match="Testy Hooves.*Infobooht"):
+        read_problem(path)
 
 
 def test_volunteer_without_a_team_is_fine(tmp_path: Path):
     """An empty Team cell on Volunteers needs no row on the Teams tab."""
     # Arrange
+    workbook = _good_workbook()
+    workbook["Volunteers"].cell(row=2, column=2).value = None         # Mock Mane, Team
+    path = _save(workbook, tmp_path)
 
     # Act
+    problem = read_problem(path)
 
     # Assert
-    pytest.skip("not written yet")
+    volunteers = {}
+    for volunteer in problem.volunteers:
+        volunteers[volunteer.name] = volunteer
+    assert volunteers["Mock Mane"].team == ""
 
 
 def test_team_colours_are_read_from_the_test_workbook():
-    """In the test workbook the team Ticketing has its colour from the Teams tab."""
+    """The test workbook's Teams tab gives every team its colour; Gopher has none ("")."""
     # Arrange
+    # (Nothing to arrange: the test workbook is TEST_WORKBOOK.)
 
     # Act
+    problem = read_problem(TEST_WORKBOOK)
 
     # Assert
-    pytest.skip("not written yet")
+    assert problem.team_colours == {"Ticketing": "C9DAF8", "Infobooth": "D9EAD3",
+                                    "Security": "F4CCCC", "Gopher": ""}
