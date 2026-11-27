@@ -175,6 +175,38 @@ def test_row_with_values_but_no_nickname_raises_workbook_error(row):
         read_volunteers(sheet, RULES)
 
 
+# --- Team ---
+
+def test_team_is_read_into_the_volunteer():
+    """The Team cell "Ticketing" becomes the volunteer's team."""
+    # Arrange
+
+    # Act
+
+    # Assert
+    pytest.skip("not written yet")
+
+
+def test_empty_team_gives_an_empty_string():
+    """A volunteer with an empty Team cell gets team "" (none)."""
+    # Arrange
+
+    # Act
+
+    # Assert
+    pytest.skip("not written yet")
+
+
+def test_missing_team_column_raises_workbook_error():
+    """A missing Team column is an error naming that column."""
+    # Arrange
+
+    # Act
+
+    # Assert
+    pytest.skip("not written yet")
+
+
 # --- Hour limits ---
 
 def test_written_hour_limits_are_read_in_minutes():

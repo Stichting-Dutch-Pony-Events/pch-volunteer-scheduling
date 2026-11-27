@@ -118,6 +118,26 @@ def test_volunteer_has_no_hour_limits_unless_given():
     assert (volunteer.max_minutes_per_day, volunteer.max_minutes_total) == (None, None)
 
 
+def test_volunteer_has_no_team_unless_given():
+    """A Volunteer made without a team has team "" (none)."""
+    # Arrange
+
+    # Act
+
+    # Assert
+    pytest.skip("not written yet")
+
+
+def test_post_has_no_group_or_colour_unless_given():
+    """A Post made with only a name has group "" and colour "" (no colour, white)."""
+    # Arrange
+
+    # Act
+
+    # Assert
+    pytest.skip("not written yet")
+
+
 def test_schedule_made_by_hand_is_not_proven_optimal_and_has_no_penalty():
     """A Schedule made without the solver's information: not proven optimal, no penalties."""
     # Arrange

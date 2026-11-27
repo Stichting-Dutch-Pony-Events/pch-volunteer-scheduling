@@ -105,3 +105,46 @@ def test_tab_without_posts_raises_workbook_error():
     # Assert
     with pytest.raises(WorkbookError, match="Posts"):
         read_posts(sheet)
+
+
+# --- Group and colour ---
+
+def test_group_and_colour_are_read_into_the_post():
+    """("Tickets", "Ticketing", "#c9daf8") gives Post("Tickets", "Ticketing", "C9DAF8")."""
+    # Arrange
+
+    # Act
+
+    # Assert
+    pytest.skip("not written yet")
+
+
+def test_empty_group_and_colour_give_empty_strings():
+    """A post without a group or colour gets group "" and colour "" (no colour, white)."""
+    # Arrange
+
+    # Act
+
+    # Assert
+    pytest.skip("not written yet")
+
+
+def test_invalid_colour_raises_workbook_error_naming_row_post_and_value():
+    """A colour like "blue" is an error naming the tab, row, post, column and value."""
+    # Arrange
+
+    # Act
+
+    # Assert
+    pytest.skip("not written yet")
+
+
+@pytest.mark.parametrize("column", ["Group", "Colour"])
+def test_missing_group_or_colour_column_raises_workbook_error(column: str):
+    """A missing Group or Colour column is an error naming that column."""
+    # Arrange
+
+    # Act
+
+    # Assert
+    pytest.skip("not written yet")

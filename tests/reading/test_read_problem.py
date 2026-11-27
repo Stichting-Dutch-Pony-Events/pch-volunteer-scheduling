@@ -322,3 +322,14 @@ def test_read_problem_gives_each_volunteer_their_hour_limits():
     assert volunteers["Testy Hooves"].max_minutes_total is None     # "none" = no limit
     assert volunteers["Mock Mane"].max_minutes_per_day == 480       # empty: the defaults
     assert volunteers["Mock Mane"].max_minutes_total == 960         # (8 and 16 hours)
+
+
+def test_groups_colours_and_teams_are_read_from_the_test_workbook():
+    """In the test workbook Tickets has group Ticketing and colour C9DAF8; Mock Mane is in
+    team Ticketing."""
+    # Arrange
+
+    # Act
+
+    # Assert
+    pytest.skip("not written yet")

@@ -1596,6 +1596,18 @@ After the minimal viable scheduler:
       in the parse_colour tests (step 5a).
       Tests filled in by the user (2026-11-27): 15 cases, all red; `name` kept (for the
       message, like the other parse functions), empty gives "" (not None).
+      **5a done (2026-11-27):** `parse_colour` implemented by the user, 616 green.
+      **5b stubs written by Claude (2026-11-27):** `Volunteer.team`, `Post.group` and
+      `Post.colour` (all `str = ""`) in model.py; 10 test stubs: 2 in test_model.py
+      (no team / no group or colour unless given), 4 in test_read_posts.py (section
+      "Group and colour": read, empty = "", invalid colour names row/post/value,
+      missing Group or Colour column), 3 in test_read_volunteers.py (section "Team":
+      read, empty = "", missing column), 1 in test_read_problem.py (test workbook:
+      Tickets Ticketing/C9DAF8, Mock Mane Ticketing). 616 green, 11 skipped. Team is
+      free text (no parsing; the check against the Teams tab in 5c catches typos).
+      Expected red after implementing: test_each_row_gives_a_post_in_the_order_of_the_
+      sheet, every test with `_good_workbook()` (its Posts tab has only a Post header)
+      and GOOD_PROBLEM (teams), test_the_test_workbook_can_be_read (posts).
 - [ ] **Output: an "Assignments" tab (user, 2026-11-24; idea, not planned yet).** A flat
       table, one row per shift (a run of consecutive blocks at one post), sorted by
       nickname then time: Nickname, Day, From, To, Post, Hours, **Notes** (empty, for the

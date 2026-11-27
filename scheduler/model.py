@@ -51,12 +51,18 @@ class Volunteer:
     # in minutes (None = no limit). The workbook gives whole hours.
     max_minutes_per_day: int | None = None
     max_minutes_total: int | None = None
+    # The team this volunteer belongs to, e.g. "Ticketing" (only for the output; "" = none).
+    team: str = ""
 
 
 @dataclass
 class Post:
     """A place or task that needs volunteers, e.g. Tickets or Infobooth."""
     name: str
+    # The group this post belongs to, e.g. "Ticketing" ("" = none), and its colour in the
+    # output as six hex digits in capitals, e.g. "C9DAF8" ("" = no colour, white).
+    group: str = ""
+    colour: str = ""
 
 
 # frozen=True: settings cannot be changed after creation. That also lets Python
