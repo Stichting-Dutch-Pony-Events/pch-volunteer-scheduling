@@ -14,7 +14,7 @@ RULES = Settings(min_stretch_minutes=60, max_stretch_minutes=180, min_break_minu
                  days=("Friday", "Saturday", "Sunday"),
                  default_max_minutes_per_day=360, default_max_minutes_total=720)
 
-# Like the real Volunteers tab: Team and Notes are there but not read. A row with only the
+# Like the real Volunteers tab: Notes is there but not read. A row with only the
 # first five values leaves the hour limit cells empty (= the defaults from the settings).
 HEADER = ("Nickname", "Team", "Friday", "Saturday", "Sunday", "Max hours per day",
           "Max hours total", "Notes")
@@ -37,8 +37,8 @@ def test_each_volunteer_gets_their_available_blocks():
     """Every volunteer gets the blocks of the days they are available."""
     # Arrange
     volunteer_rows = []
-    volunteer_rows.append(("Mock Mane",         None, "yes", "no", "no"))
-    volunteer_rows.append(("Testy Hooves",      None, "no", "08:00-18:00", "no"))
+    volunteer_rows.append(("Mock Mane", None, "yes", "no", "no"))
+    volunteer_rows.append(("Testy Hooves", None, "no", "08:00-18:00", "no"))
     sheet = _volunteers_sheet(volunteer_rows)
 
     # Act
@@ -113,6 +113,29 @@ def test_missing_day_column_raises_workbook_error():
         read_volunteers(sheet, RULES)
 
 
+@pytest.mark.parametrize("column", ["Nickname", "Team", "Max hours per day", "Max hours total"])
+def test_missing_column_raises_workbook_error(column: str):
+    """A missing column that is not a day is an error naming that column."""
+    # Arrange
+    # An empty header cell instead of the column name, so the values stay under the right
+    # columns (the day columns have their own test above).
+    header_without_column = []
+    for name in HEADER:
+        if name == column:
+            header_without_column.append(None)
+        else:
+            header_without_column.append(name)
+    volunteer_rows = [("Mock Mane", "Ticketing", "yes", "yes", "yes", 4, 10)]
+    sheet = _volunteers_sheet(volunteer_rows, header=tuple(header_without_column))
+
+    # Act
+    # (Act and Assert are combined, pytest.raises checks the exception while the call runs.)
+
+    # Assert
+    with pytest.raises(WorkbookError, match=f"Volunteers.*{column}"):
+        read_volunteers(sheet, RULES)
+
+
 def test_the_same_nickname_twice_raises_workbook_error():
     """Two rows with the same nickname are an error naming the nickname."""
     # Arrange
@@ -159,9 +182,10 @@ def test_volunteer_who_is_never_available_raises_workbook_error():
 
 @pytest.mark.parametrize(
     "row",
-    [(None, None, "yes", "yes", "yes"),           # availability, no nickname
-     (None, None, None, None, None, 8, None)],    # only an hour limit, no nickname
-    ids=["availability", "hour limit"])
+    [(None, None, "yes", "yes", "yes"),                     # availability, no nickname
+     (None, None, None, None, None, 8, None),               # only an hour limit, no nickname
+     (None, "Ticketing", None, None, None, None, None)],    # only a team
+    ids=["availability", "hour limit", "team"])
 def test_row_with_values_but_no_nickname_raises_workbook_error(row):
     """A row with availability or an hour limit but no nickname is an error naming the row."""
     # Arrange
@@ -180,31 +204,30 @@ def test_row_with_values_but_no_nickname_raises_workbook_error(row):
 def test_team_is_read_into_the_volunteer():
     """The Team cell "Ticketing" becomes the volunteer's team."""
     # Arrange
+    volunteer_rows = []
+    volunteer_rows.append(("Mock Mane",         "Ticketing", "yes", "no", "no"))
+    volunteer_rows.append(("Testy Hooves",      "Infobooth", "no", "08:00-18:00", "no"))
+    sheet = _volunteers_sheet(volunteer_rows)
 
     # Act
+    volunteers = read_volunteers(sheet, RULES)
 
     # Assert
-    pytest.skip("not written yet")
+    assert volunteers["Mock Mane"].team == "Ticketing"
+    assert volunteers["Testy Hooves"].team == "Infobooth"
 
 
 def test_empty_team_gives_an_empty_string():
     """A volunteer with an empty Team cell gets team "" (none)."""
     # Arrange
+    volunteer_rows = [("Mock Mane", None, "yes", "no", "no")]
+    sheet = _volunteers_sheet(volunteer_rows)
 
     # Act
+    volunteers = read_volunteers(sheet, RULES)
 
     # Assert
-    pytest.skip("not written yet")
-
-
-def test_missing_team_column_raises_workbook_error():
-    """A missing Team column is an error naming that column."""
-    # Arrange
-
-    # Act
-
-    # Assert
-    pytest.skip("not written yet")
+    assert volunteers["Mock Mane"].team == ""
 
 
 # --- Hour limits ---
@@ -323,23 +346,4 @@ def test_daily_limit_above_the_total_limit_in_the_same_row_raises_workbook_error
 
     # Assert
     with pytest.raises(WorkbookError, match="Mock Mane.*Max hours per day.*Max hours total"):
-        read_volunteers(sheet, RULES)
-
-
-@pytest.mark.parametrize("column", ["Max hours per day", "Max hours total"])
-def test_missing_hour_limit_column_raises_workbook_error(column):
-    """A missing Max hours column is an error naming that column."""
-    # Arrange
-    header_without_column = []
-    for name in HEADER:
-        if name != column:
-            header_without_column.append(name)
-    volunteer_rows = [("Mock Mane", None, "yes", "yes", "yes", 4)]
-    sheet = _volunteers_sheet(volunteer_rows, header=tuple(header_without_column))
-
-    # Act
-    # (Act and Assert are combined, pytest.raises checks the exception while the call runs.)
-
-    # Assert
-    with pytest.raises(WorkbookError, match=f"Volunteers.*{column}"):
         read_volunteers(sheet, RULES)

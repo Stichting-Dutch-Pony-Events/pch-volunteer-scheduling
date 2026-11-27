@@ -7,7 +7,7 @@ from scheduler.model import Post
 from scheduler.reading.posts import read_posts
 
 
-# Like the real Posts tab: Group, Colour and Notes are there but not read yet.
+# Like the real Posts tab: Post, Group and Colour are read, Notes is ignored.
 HEADER = ("Post", "Group", "Colour", "Notes")
 
 
@@ -23,7 +23,7 @@ def _posts_sheet(rows: list[tuple], header: tuple[str, ...] = HEADER) -> Workshe
 
 
 def test_each_row_gives_a_post_in_the_order_of_the_sheet():
-    """Every row becomes a Post, in the same order as on the tab."""
+    """Every row becomes a Post with its group and colour, in the same order as on the tab."""
     # Arrange
     rows = [("Tickets",   "Ticketing", "C9DAF8"),
             ("Infobooth", "Infobooth", "D9EAD3")]
@@ -33,7 +33,8 @@ def test_each_row_gives_a_post_in_the_order_of_the_sheet():
     posts = read_posts(sheet)
 
     # Assert
-    assert posts == [Post(name="Tickets"), Post(name="Infobooth")]
+    assert posts == [Post(name="Tickets", group="Ticketing", colour="C9DAF8"),
+                     Post(name="Infobooth", group="Infobooth", colour="D9EAD3")]
 
 
 def test_spaces_around_a_post_name_are_removed():
@@ -46,7 +47,10 @@ def test_spaces_around_a_post_name_are_removed():
     posts = read_posts(sheet)
 
     # Assert
-    assert posts == [Post(name="Tickets")]
+    names = []                   # only the names matter here, not group or colour
+    for post in posts:
+        names.append(post.name)
+    assert names == ["Tickets"]
 
 
 def test_empty_rows_are_skipped():
@@ -61,7 +65,10 @@ def test_empty_rows_are_skipped():
     posts = read_posts(sheet)
 
     # Assert
-    assert posts == [Post(name="Tickets"), Post(name="Infobooth")]
+    names = []                   # only the names matter here, not group or colour
+    for post in posts:
+        names.append(post.name)
+    assert names == ["Tickets", "Infobooth"]
 
 
 def test_missing_post_column_raises_workbook_error():
@@ -109,42 +116,81 @@ def test_tab_without_posts_raises_workbook_error():
 
 # --- Group and colour ---
 
-def test_group_and_colour_are_read_into_the_post():
-    """("Tickets", "Ticketing", "#c9daf8") gives Post("Tickets", "Ticketing", "C9DAF8")."""
+def test_colour_is_stored_as_six_hex_digits_in_capitals():
+    """A Colour cell "#c9daf8" is stored as "C9DAF8" (the value parse_colour gives)."""
     # Arrange
+    rows = [("Tickets", "Ticketing", "#c9daf8")]
+    sheet = _posts_sheet(rows)
 
     # Act
+    posts = read_posts(sheet)
 
     # Assert
-    pytest.skip("not written yet")
+    assert posts[0].colour == "C9DAF8"
 
 
 def test_empty_group_and_colour_give_empty_strings():
     """A post without a group or colour gets group "" and colour "" (no colour, white)."""
     # Arrange
+    rows = [("Tickets", "", "")]
+    sheet = _posts_sheet(rows)
 
     # Act
+    posts = read_posts(sheet)
 
     # Assert
-    pytest.skip("not written yet")
+    assert posts[0].group == ""
+    assert posts[0].colour == ""
 
 
 def test_invalid_colour_raises_workbook_error_naming_row_post_and_value():
     """A colour like "blue" is an error naming the tab, row, post, column and value."""
     # Arrange
+    rows = [("Tickets", "Ticketing", "blue")]
+    sheet = _posts_sheet(rows)
 
     # Act
+    # (Act and Assert in the same line)
 
     # Assert
-    pytest.skip("not written yet")
+    with pytest.raises(WorkbookError, match="Posts, row 2.*Tickets.*Colour.*blue"):
+        read_posts(sheet)
+
+
+@pytest.mark.parametrize("row", [("", "Ticketing", ""), ("", "", "C9DAF8")],
+                         ids=["group", "colour"])
+def test_row_with_group_or_colour_but_no_post_name_raises_workbook_error(row: tuple):
+    """A row with a group or a colour but no post name is an error naming the row."""
+    # Arrange
+    rows = [("Tickets", "Ticketing", "C9DAF8"),
+            row]                                   # row 3: the post name is forgotten
+    sheet = _posts_sheet(rows)
+
+    # Act
+    # (Act and Assert are combined, pytest.raises checks the exception while the call runs.)
+
+    # Assert
+    with pytest.raises(WorkbookError, match="Posts, row 3.*no post name"):
+        read_posts(sheet)
 
 
 @pytest.mark.parametrize("column", ["Group", "Colour"])
 def test_missing_group_or_colour_column_raises_workbook_error(column: str):
     """A missing Group or Colour column is an error naming that column."""
     # Arrange
+    new_headers = []
+    for header_column in HEADER:
+        if header_column == column:
+            new_headers.append(None)
+        else:
+            new_headers.append(header_column)
+
+    rows = [("Tickets", "Ticketing", "C9DAF8")]
+    sheet = _posts_sheet(rows=rows, header=tuple(new_headers))
 
     # Act
+    # (Act and Assert in the same line)
 
     # Assert
-    pytest.skip("not written yet")
+    with pytest.raises(WorkbookError, match=f"Posts.*{column}"):
+        read_posts(sheet)

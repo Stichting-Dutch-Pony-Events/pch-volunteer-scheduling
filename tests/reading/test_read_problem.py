@@ -20,13 +20,16 @@ TEST_WORKBOOK = Path(__file__).parent.parent / "data" / "test_input.xlsx"
 GOOD_PROBLEM = Problem(
     volunteers=[
         Volunteer(name="Mock Mane", skills={"Tickets": 3},
-                  available_blocks=set(range(0, 96)),         # all of Friday
-                  max_minutes_per_day=480, max_minutes_total=960),   # the defaults
+                  available_blocks=set(range(0, 96)),               # all of Friday
+                  max_minutes_per_day=480, max_minutes_total=960,   # the defaults
+                  team="Ticketing"),
         Volunteer(name="Testy Hooves", skills={"Tickets": 1, "Infobooth": 3},
                   available_blocks=set(range(112, 128)),      # Saturday 10:00-14:00
-                  max_minutes_per_day=480, max_minutes_total=960),
+                  max_minutes_per_day=480, max_minutes_total=960,
+                  team="Infobooth"),
     ],
-    posts=[Post(name="Tickets"), Post(name="Infobooth")],
+    posts=[Post(name="Tickets", group="Ticketing", colour="C9DAF8"),
+           Post(name="Infobooth", group="Infobooth", colour="D9EAD3")],
     demand={("Tickets", 32): 1, ("Tickets", 33): 1,           # Friday 14:00-15:00
             ("Tickets", 34): 1, ("Tickets", 35): 1,
             ("Infobooth", 112): 1, ("Infobooth", 113): 1,     # Saturday 10:00-11:00
@@ -64,9 +67,9 @@ def _good_workbook() -> Workbook:
         ("Mock Mane", "Ticketing", "yes", "no"),        # empty limits: the defaults
         ("Testy Hooves", "Infobooth", "no", "10:00-14:00")])
     _add_sheet(workbook, "Posts", [
-        ("Post",),
-        ("Tickets",),
-        ("Infobooth",)])
+        ("Post", "Group", "Colour"),
+        ("Tickets", "Ticketing", "C9DAF8"),
+        ("Infobooth", "Infobooth", "D9EAD3")])
     _add_sheet(workbook, "Skills", [
         ("Nickname", "Team", "Tickets", "Infobooth"),
         ("Mock Mane", "Ticketing", 3, None),
@@ -289,8 +292,10 @@ def test_the_test_workbook_can_be_read():
 
     # Assert
     assert len(problem.volunteers) == 5
-    assert problem.posts == [Post(name="Tickets"), Post(name="Infobooth"),
-                             Post(name="Security - Downstairs")]
+    post_names = []                  # only the names matter here, not group or colour
+    for post in problem.posts:
+        post_names.append(post.name)
+    assert post_names == ["Tickets", "Infobooth", "Security - Downstairs"]
     assert problem.settings.days == ("Friday", "Saturday", "Sunday")
 
 
@@ -328,8 +333,19 @@ def test_groups_colours_and_teams_are_read_from_the_test_workbook():
     """In the test workbook Tickets has group Ticketing and colour C9DAF8; Mock Mane is in
     team Ticketing."""
     # Arrange
+    # (Nothing to arrange: the test workbook is TEST_WORKBOOK.)
 
     # Act
+    problem = read_problem(TEST_WORKBOOK)
 
     # Assert
-    pytest.skip("not written yet")
+    posts = {}
+    for post in problem.posts:
+        posts[post.name] = post
+    volunteers = {}
+    for volunteer in problem.volunteers:
+        volunteers[volunteer.name] = volunteer
+
+    assert posts["Tickets"].group == "Ticketing"
+    assert posts["Tickets"].colour == "C9DAF8"
+    assert volunteers["Mock Mane"].team == "Ticketing"

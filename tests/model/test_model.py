@@ -1,6 +1,6 @@
 import pytest
 
-from scheduler.model import Schedule, Settings, Volunteer, runs_of_consecutive_blocks
+from scheduler.model import Post, Schedule, Settings, Volunteer, runs_of_consecutive_blocks
 
 
 def test_default_settings_match_the_agreed_rules():
@@ -121,21 +121,26 @@ def test_volunteer_has_no_hour_limits_unless_given():
 def test_volunteer_has_no_team_unless_given():
     """A Volunteer made without a team has team "" (none)."""
     # Arrange
+    # (Nothing to arrange: default volunteer call will be checked)
 
     # Act
+    volunteer = Volunteer(name="Mock Mane", skills={}, available_blocks=set())
 
     # Assert
-    pytest.skip("not written yet")
+    assert volunteer.team == ""
 
 
 def test_post_has_no_group_or_colour_unless_given():
     """A Post made with only a name has group "" and colour "" (no colour, white)."""
     # Arrange
+    # (Nothing to arrange: default post call will be checked)
 
     # Act
+    post = Post(name="Tickets")
 
     # Assert
-    pytest.skip("not written yet")
+    assert post.group == ""
+    assert post.colour == ""
 
 
 def test_schedule_made_by_hand_is_not_proven_optimal_and_has_no_penalty():
