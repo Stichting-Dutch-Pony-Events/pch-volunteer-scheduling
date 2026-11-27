@@ -1591,7 +1591,11 @@ After the minimal viable scheduler:
             colour.
          e. Cosmetics: column widths (`_fit_column_width`), header style (bold, rotation?),
             maybe post colours in the Schedule tab's header.
-      The user will show the hand-made PCH example of the grid from the usual computer.
+      **Status 2026-11-27 (company laptop):** pulled up to `0b530e7` (stubs for
+      `parse_colour`); 601 green, 15 skipped (the parse_colour stubs). Next: the user fills
+      in the parse_colour tests (step 5a).
+      Tests filled in by the user (2026-11-27): 15 cases, all red; `name` kept (for the
+      message, like the other parse functions), empty gives "" (not None).
 - [ ] **Output: an "Assignments" tab (user, 2026-11-24; idea, not planned yet).** A flat
       table, one row per shift (a run of consecutive blocks at one post), sorted by
       nickname then time: Nickname, Day, From, To, Post, Hours, **Notes** (empty, for the

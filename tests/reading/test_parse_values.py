@@ -147,50 +147,54 @@ def test_empty_day_name_raises_value_error(text: str):
 
 def test_colour_in_capitals_is_kept_as_it_is():
     """Six hex digits in capitals are returned unchanged."""
-    # Idea: "C9DAF8" -> "C9DAF8".
     # Arrange
+    # (No arrangement is needed)
 
     # Act
+    result = parse_colour("Colour", "C9DAF8")
 
     # Assert
-    pytest.skip("not written yet")
+    assert result == "C9DAF8"
 
 
 @pytest.mark.parametrize("text", ["c9daf8", "C9daF8"],
                          ids=["small letters", "mixed"])
 def test_colour_in_small_letters_is_stored_in_capitals(text: str):
     """Hex digits in small letters (or mixed) are returned in capitals."""
-    # Idea: both cases -> "C9DAF8".
     # Arrange
+    # (No arrangement is needed)
 
     # Act
+    result = parse_colour("Colour", text)
 
     # Assert
-    pytest.skip("not written yet")
+    assert result == "C9DAF8"
 
 
 @pytest.mark.parametrize("text", ["#C9DAF8", "#c9daf8"],
                          ids=["capitals", "small letters"])
 def test_leading_hash_is_dropped(text: str):
     """One "#" in front of the hex digits is left out of the result."""
-    # Idea: both cases -> "C9DAF8".
     # Arrange
+    # (No arrangement is needed)
 
     # Act
+    result = parse_colour("Colour", text)
 
     # Assert
-    pytest.skip("not written yet")
+    assert result == "C9DAF8"
 
 
 def test_empty_text_means_no_colour():
     """An empty text gives "" (no colour, white)."""
-    # Idea: "" -> "".
     # Arrange
+    # (No arrangement is needed)
 
     # Act
+    result = parse_colour("Colour", "")
 
     # Assert
-    pytest.skip("not written yet")
+    assert result == ""
 
 
 @pytest.mark.parametrize("text", ["C9DAF", "C9DAF8A", "FFC9DAF8", "G9DAF8", "##C9DAF8", "#",
@@ -199,21 +203,25 @@ def test_empty_text_means_no_colour():
                               "two hashes", "hash alone", "space inside", "colour name"])
 def test_invalid_colour_raises_value_error(text: str):
     """Anything but empty or six hex digits (with at most one "#") raises ValueError."""
-    # Idea: pytest.raises(ValueError) around parse_colour("Colour", text).
     # Arrange
+    # (No arrangement is needed)
 
     # Act
+    # (Act and Assert done in the same step)
 
     # Assert
-    pytest.skip("not written yet")
+    with pytest.raises(ValueError):
+        parse_colour("Colour", text)
 
 
 def test_invalid_colour_message_names_the_column_and_the_value():
     """The message of an invalid colour names the setting or column and the value."""
-    # Idea: parse_colour("Colour", "blue") raises with match="Colour.*blue".
     # Arrange
+    # (No arrangement is needed)
 
     # Act
+    # (Act and Assert done in the same step)
 
     # Assert
-    pytest.skip("not written yet")
+    with pytest.raises(ValueError, match="Team colour.*blue"):
+        parse_colour("Team colour", "blue")
