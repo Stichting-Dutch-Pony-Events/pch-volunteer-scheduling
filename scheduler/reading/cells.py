@@ -198,4 +198,29 @@ def parse_colour(name: str, text: str) -> str:
     a hint such as "(6 hex digits, e.g. #C9DAF8)"; the reader puts the tab (and row) in
     front of the message. Used for the Colour columns on Posts and Teams.
     """
-    raise NotImplementedError("parse_colour is not written yet")
+    # 1. Check for empty text
+    if text == "":
+        return ""
+
+    # 2. Capitalise, and remove prefix
+    colour = text.upper().removeprefix("#")
+
+    # 3. Check for value errors
+    error = False
+    if len(colour) != 6:
+        # Length error
+        error = True
+
+    for character in colour:
+        if character not in "0123456789ABCDEF":
+            # Character invalid error
+            error = True
+            break
+
+    if error:
+        raise ValueError(f"{name}: {text!r} is not a colour "
+                         "(6 hex characters with at most 1 leading '#', "
+                         "e.g. #C9DAF8).")
+
+    # 4. Return the parsed colour string
+    return colour
