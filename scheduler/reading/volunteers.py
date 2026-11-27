@@ -10,24 +10,27 @@ from scheduler.reading.cells import cell_text, find_columns, parse_availability,
 def read_volunteers(sheet: Worksheet, settings: Settings) -> dict[str, Volunteer]:
     """The Volunteers tab as {nickname: Volunteer}, in the order of the sheet.
 
-    Reads the Nickname column, one availability column per day in settings.days and the
-    columns Max hours per day and Max hours total (a missing column is an error). Each
-    day's cell goes through parse_availability and the days are combined. An hour limit
-    is whole hours or "none" (no limit); an empty cell gets the default from the
-    settings. Skills stay empty here: read_problem adds them from the Skills tab. A
-    completely empty row is skipped. Raises WorkbookError (naming row, volunteer and day
-    or column where possible) for a missing column, a nickname used twice, a row with
-    values but no nickname, an invalid availability or hour limit, a volunteer who is not
-    available on any day, or a written per day limit above the written total.
+    Reads the Nickname column, the Team column (free text, may be empty), one availability
+    column per day in settings.days and the columns Max hours per day and Max hours total
+    (a missing column is an error). Each day's cell goes through parse_availability and the
+    days are combined. An hour limit is whole hours or "none" (no limit); an empty cell
+    gets the default from the settings. Skills stay empty here: read_problem adds them
+    from the Skills tab. A completely empty row is skipped. Raises WorkbookError (naming
+    row, volunteer and day or column where possible) for a missing column, a nickname used
+    twice, a row with values but no nickname, an invalid availability or hour limit, a
+    volunteer who is not available on any day, or a written per day limit above the
+    written total.
     """
     debug_print(f"read_volunteers: reading tab {sheet.title}")
-    # 1. The Nickname column, one column per convention day and the two hour limit columns.
+    # 1. The Nickname and Team columns, one column per convention day and the two hour
+    #    limit columns.
     limit_columns = ["Max hours per day", "Max hours total"]
-    columns = find_columns(sheet, ["Nickname"] + list(settings.days) + limit_columns)
+    columns = find_columns(sheet, ["Nickname", "Team"] + list(settings.days) + limit_columns)
 
     volunteers = {}
     for row in range(2, sheet.max_row + 1):
         nickname = cell_text(sheet.cell(row=row, column=columns["Nickname"]).value)
+        team = cell_text(sheet.cell(row=row, column=columns["Team"]).value)
 
         # 2. The cells of this row: availability per day {"Friday": "yes", ...} and the
         #    hour limits {"Max hours per day": "8", ...}
@@ -40,6 +43,8 @@ def read_volunteers(sheet: Worksheet, settings: Settings) -> dict[str, Volunteer
 
         # 3. A row without nickname is only fine when it is completely empty.
         if nickname == "":
+            if team != "":
+                raise WorkbookError(f"Volunteers, row {row}: Team but no nickname.")
             for day in settings.days:
                 if availability[day] != "":
                     raise WorkbookError(f"Volunteers, row {row}: availability but no nickname.")
@@ -62,7 +67,8 @@ def read_volunteers(sheet: Worksheet, settings: Settings) -> dict[str, Volunteer
                                          skills={},
                                          available_blocks=blocks,
                                          max_minutes_per_day=max_minutes_per_day,
-                                         max_minutes_total=max_minutes_total)
+                                         max_minutes_total=max_minutes_total,
+                                         team=team)
 
     return volunteers
 

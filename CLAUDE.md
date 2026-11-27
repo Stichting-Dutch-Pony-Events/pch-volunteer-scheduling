@@ -1608,6 +1608,12 @@ After the minimal viable scheduler:
       Expected red after implementing: test_each_row_gives_a_post_in_the_order_of_the_
       sheet, every test with `_good_workbook()` (its Posts tab has only a Post header)
       and GOOD_PROBLEM (teams), test_the_test_workbook_can_be_read (posts).
+      **5b done (2026-11-27, user; Claude tidied):** read_posts reads Group and Colour
+      (parse_colour; "Posts, row N (post), Colour: ..."), read_volunteers reads Team; a row
+      with only a Group/Colour (Posts) or Team (Volunteers) but no name is now an error (new
+      test; the old reader skipped it). Missing-column tests on Volunteers merged into one
+      parametrized test (Nickname, Team, both hour limits). 631 green. **Next:** on the
+      personal PC check that both real workbooks still read (valid hex colours), then 5c.
 - [ ] **Output: an "Assignments" tab (user, 2026-11-24; idea, not planned yet).** A flat
       table, one row per shift (a run of consecutive blocks at one post), sorted by
       nickname then time: Nickname, Day, From, To, Post, Hours, **Notes** (empty, for the
