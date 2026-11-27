@@ -14,7 +14,7 @@ HEADER = ("Setting", "Value", "Unit", "Meaning")
 # A complete, correct Settings tab. The values differ from the defaults in model.py, so a
 # test can't pass by accident through those defaults.
 GOOD_ROWS = [
-    ("Workbook format version", 3),
+    ("Workbook format version", 4),
     ("Time step", 15),
     ("Day boundary", "06:00"),
     ("Days", "Friday, Saturday"),

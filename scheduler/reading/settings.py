@@ -9,7 +9,7 @@ from scheduler.reading.cells import cell_text, find_columns, parse_hour_limits, 
 # The layout of the input workbook this scheduler reads (the "Workbook format version"
 # setting). Raise it only when the workbook layout changes, e.g. a renamed setting or a
 # new required column, not for every new version of the scheduler.
-WORKBOOK_FORMAT_VERSION = 3
+WORKBOOK_FORMAT_VERSION = 4
 
 KNOWN_SETTINGS = {"Workbook format version", "Time step", "Day boundary", "Days",
                   "Shift start step", "Minimum work stretch", "Preferred maximum work stretch",

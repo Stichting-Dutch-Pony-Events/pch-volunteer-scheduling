@@ -37,7 +37,8 @@ GOOD_PROBLEM = Problem(
     settings=Settings(min_stretch_minutes=60, max_stretch_minutes=180,
                       min_break_minutes=30, days=("Friday", "Saturday"),
                       default_max_minutes_per_day=480, default_max_minutes_total=960,
-                      soft_rules=ALL_SOFT_RULES))
+                      soft_rules=ALL_SOFT_RULES),
+    team_colours={"Ticketing": "C9DAF8", "Infobooth": ""})
 
 
 def _add_sheet(workbook: Workbook, title: str, rows: list[tuple]) -> None:
@@ -53,7 +54,7 @@ def _good_workbook() -> Workbook:
     workbook.remove(workbook.active)   # a new workbook starts with a tab "Sheet"
     _add_sheet(workbook, "Settings", [
         ("Setting", "Value"),
-        ("Workbook format version", 3),
+        ("Workbook format version", 4),
         ("Time step", 15),
         ("Day boundary", "06:00"),
         ("Days", "Friday, Saturday"),
@@ -66,6 +67,10 @@ def _good_workbook() -> Workbook:
         ("Nickname", "Team", "Friday", "Saturday", "Max hours per day", "Max hours total"),
         ("Mock Mane", "Ticketing", "yes", "no"),        # empty limits: the defaults
         ("Testy Hooves", "Infobooth", "no", "10:00-14:00")])
+    _add_sheet(workbook, "Teams", [
+        ("Team", "Colour"),
+        ("Ticketing", "C9DAF8"),
+        ("Infobooth", "")])                             # a team without a colour
     _add_sheet(workbook, "Posts", [
         ("Post", "Group", "Colour"),
         ("Tickets", "Ticketing", "C9DAF8"),
@@ -176,7 +181,8 @@ def test_file_that_is_not_a_real_workbook_raises_workbook_error(tmp_path):
         read_problem(path)
 
 
-@pytest.mark.parametrize("tab", ["Settings", "Volunteers", "Posts", "Skills", "Demand"])
+@pytest.mark.parametrize("tab", ["Settings", "Volunteers", "Teams", "Posts", "Skills",
+                                 "Demand"])
 def test_missing_tab_raises_workbook_error(tmp_path, tab):
     """Each required tab must be there; a missing one is an error naming it."""
     # Arrange

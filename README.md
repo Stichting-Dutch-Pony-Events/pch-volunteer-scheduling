@@ -102,8 +102,8 @@ Input workbook (.xlsx)  (later also the form answers, .csv)
         scheduler/writing/     writes the output workbook (.xlsx)
 ```
 
-The input workbook has these tabs: ReadMe, Settings, Volunteers, Posts, Skills, Events,
-Demand, Wishes and Fixed. The ReadMe tab inside the workbook explains each one.
+The input workbook has these tabs: ReadMe, Settings, Volunteers, Teams, Posts, Skills,
+Events, Demand, Wishes and Fixed. The ReadMe tab inside the workbook explains each one.
 Time is planned in 15-minute blocks; times after midnight belong to the convention day
 before (Saturday 01:00 is the Saturday night).
 

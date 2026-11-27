@@ -16,21 +16,23 @@ from scheduler.reading.demand import read_demand
 from scheduler.reading.posts import read_posts
 from scheduler.reading.settings import read_settings
 from scheduler.reading.skills import read_skills
+from scheduler.reading.teams import read_teams
 from scheduler.reading.volunteers import read_volunteers
 
 # The tabs read_problem needs, and the ones it knows but does not read yet.
-REQUIRED_TABS = ["Settings", "Volunteers", "Posts", "Skills", "Demand"]
+REQUIRED_TABS = ["Settings", "Volunteers", "Teams", "Posts", "Skills", "Demand"]
 TABS_NOT_USED_YET = ["ReadMe", "Events", "Wishes", "Fixed"]
 
 
 def read_problem(path: str | Path) -> Problem:
     """Read the input workbook at path into a Problem the solver can work with.
 
-    Checks the file (.xlsx, exists) and the tabs (Settings, Volunteers, Posts, Skills and
-    Demand are required; ReadMe, Events, Wishes and Fixed are known and ignored for now;
-    any other tab is an error), calls the tab readers, checks across tabs (every
-    volunteer has a Skills row and every Skills row is a volunteer; Posts, the Skills
-    columns and the Demand columns name the same posts) and combines it all.
+    Checks the file (.xlsx, exists) and the tabs (Settings, Volunteers, Teams, Posts, Skills
+    and Demand are required; ReadMe, Events, Wishes and Fixed are known and ignored for now;
+    any other tab is an error), calls the tab readers, checks across tabs (every team on
+    Volunteers is on Teams; every volunteer has a Skills row and every Skills row is a
+    volunteer; Posts, the Skills columns and the Demand columns name the same posts) and
+    combines it all.
     Raises WorkbookError for the first problem it finds.
     """
     # 1. The file: an .xlsx that exists and can be opened.
@@ -61,11 +63,18 @@ def read_problem(path: str | Path) -> Problem:
     # 3. Each tab on its own. Settings first: the other readers need the days.
     settings = read_settings(workbook["Settings"])
     volunteers = read_volunteers(workbook["Volunteers"], settings)
+    team_colours = read_teams(workbook["Teams"])
     posts = read_posts(workbook["Posts"])
     skills = read_skills(workbook["Skills"])
     demand = read_demand(workbook["Demand"], settings)
 
-    # 4. Across tabs: the same volunteers on Volunteers and Skills...
+    # 4. Across tabs: every team on Volunteers is on Teams (an empty team is fine)...
+    for nickname, volunteer in volunteers.items():
+        if volunteer.team != "" and volunteer.team not in team_colours:
+            raise WorkbookError(f"Volunteers, {nickname}: the team {volunteer.team!r} is not on "
+                                f"the Teams tab.")
+
+    # ...the same volunteers on Volunteers and Skills...
     for nickname in volunteers:
         if nickname not in skills:
             raise WorkbookError(f"Skills: no row for {nickname} (from the Volunteers tab).")
@@ -87,7 +96,8 @@ def read_problem(path: str | Path) -> Problem:
     return Problem(volunteers=list(volunteers.values()),
                    posts=posts,
                    demand=demand,
-                   settings=settings)
+                   settings=settings,
+                   team_colours=team_colours)
 
 
 def _check_same_posts(sheet: Worksheet, not_posts: list[str], post_names: list[str]) -> None:

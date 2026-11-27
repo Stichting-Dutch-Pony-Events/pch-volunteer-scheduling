@@ -8,6 +8,21 @@ real volunteer data and is kept out of git for privacy.
 **And read `LOCAL_CLAUDE.md` if it exists** (not in git, `LOCAL*` in .gitignore): notes
 about that particular clone/computer, e.g. a second machine without ReferenceDocuments.
 
+> **URGENT, do this first on the personal PC (user, 2026-11-27):** update the two real
+> workbooks (PCH 2026 draft and UKPC) to **workbook format version 4**. Since commit
+> "Teams tab read by read_problem ..." the scheduler only reads version 4, so both real
+> workbooks fail ("this scheduler reads version 4") until this is done. Per workbook:
+> 1. Make a backup first (`..._before_teams_tab.xlsx` in the convention's `old/` folder).
+> 2. Add a tab **Teams right after Volunteers**: header Team, Colour, Notes (styled like
+>    the Posts header), one row per team used in the Team column on Volunteers; colours as
+>    6 hex digits (take the group colours from Posts where they match, else leave empty).
+> 3. Settings: Workbook format version 3 -> 4.
+> 4. ReadMe: the Teams line after the Volunteers line (copy it from the template).
+> 5. Check that every other tab is unchanged (values and conditional formatting), that
+>    every Colour on Posts and Teams is valid hex, and that `read_problem` reads both
+>    workbooks (reading only; solving = a real-data run, ask permission first).
+> Then remove this note and record it in DATA_NOTES.md.
+
 ## What this is
 
 A tool to automate the volunteer schedule of **PonyCon Holland**, a 3-day convention
@@ -288,7 +303,7 @@ Meals: Saturday lunch 12:00-14:00, Saturday dinner 18:00-19:00, Sunday lunch 12:
 
 ## Input workbook format
 
-Tabs: ReadMe, Settings, Volunteers, Posts, Skills, Events, Demand, Wishes, Fixed (there
+Tabs: ReadMe, Settings, Volunteers, Teams, Posts, Skills, Events, Demand, Wishes, Fixed (there
 is no separate Meals tab; the meal windows are rows in Settings).
 The workbook has its own ReadMe tab explaining each tab. **Formatting (user,
 2026-11-11):** header row coloured, everything below it white (no fixed fills; the
@@ -1632,6 +1647,15 @@ After the minimal viable scheduler:
       read_problem team check and the test workbook's team colours). Next: wire read_teams
       into read_problem (REQUIRED_TABS, version 4, GOOD_ROWS, _good_workbook, GOOD_PROBLEM),
       then the Teams tab in the test workbook and the template.
+      **5c done (2026-11-27, Claude on request), 646 green:** read_problem reads Teams right
+      after Volunteers ("Teams" in REQUIRED_TABS), checks every non-empty team on Volunteers
+      against it ("Volunteers, <nickname>: the team '...' is not on the Teams tab.") and passes
+      `team_colours` to Problem; WORKBOOK_FORMAT_VERSION = 4. Test workbook and template: a
+      Teams tab after Volunteers (Team, Colour, Notes; header styled like Posts), version 4,
+      a ReadMe line about Teams; test workbook teams Ticketing C9DAF8, Infobooth D9EAD3,
+      Security F4CCCC, Gopher (no colour). **The two real workbooks still need this (personal
+      PC, backups first):** until then they fail with "version 3". Next: 5d, colour the boxes
+      and the team row.
 - [ ] **Output: an "Assignments" tab (user, 2026-11-24; idea, not planned yet).** A flat
       table, one row per shift (a run of consecutive blocks at one post), sorted by
       nickname then time: Nickname, Day, From, To, Post, Hours, **Notes** (empty, for the
